@@ -1,4 +1,4 @@
-// ==================== APP.JS COMPLETO ====================
+// ==================== APP.JS COMPLETO (CORREGIDO) ====================
 document.addEventListener('DOMContentLoaded', () => {
   const mainNav = document.getElementById('mainNav');
   const views = document.querySelectorAll('.view');
@@ -316,14 +316,16 @@ document.addEventListener('DOMContentLoaded', () => {
       let ejerciciosPar = '';
       for (const cuant of parData.cuantificadores) {
         const catActual = seleccionesPar[cuant.id];
-        if (catActual && catActual < objetivo) {
-          for (let cat = catActual; cat < objetivo; cat++) {
-            const transicion = `${cat}_${cat+1}`;
+        // CORRECCIÓN: el objetivo es mejor (menor número) que la categoría actual
+        if (catActual && catActual > objetivo) {
+          // Recorremos desde la categoría actual hacia la objetivo (descendente)
+          for (let cat = catActual; cat > objetivo; cat--) {
+            const transicion = `${cat}_${cat-1}`;  // ej: "7_6", "6_5"
             const ejercicio = window.EJERCICIOS?.[evaluacion.golpe]?.[parKey]?.[cuant.id]?.[transicion];
             if (ejercicio) {
               ejerciciosPar += `
                 <div class="ejercicio-item">
-                  <strong>${cuant.nombre} (${cat}ª → ${cat+1}ª):</strong> ${ejercicio.nombre}<br>
+                  <strong>${cuant.nombre} (${cat}ª → ${cat-1}ª):</strong> ${ejercicio.nombre}<br>
                   <span class="series">${ejercicio.series} series x ${ejercicio.repeticiones}</span><br>
                   <em>${ejercicio.descripcion}</em><br>
                   ✅ Criterio: ${ejercicio.criterioExito}
@@ -335,7 +337,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       if (ejerciciosPar) html += `<div class="plan-par"><h4>${parData.nombre}</h4>${ejerciciosPar}</div>`;
     }
-    if (!encontro) html += '<p>✅ Ya alcanza el nivel en todos los aspectos evaluados.</p>';
+    if (!encontro) html += '<p>✅ Ya alcanza o supera el nivel en todos los aspectos evaluados.</p>';
     return html;
   }
 
