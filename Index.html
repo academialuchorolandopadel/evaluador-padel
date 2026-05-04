@@ -3,49 +3,70 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Evaluador de Pádel FAP | Par I - Smash</title>
+    <title>CATEGORIZACIÓN | Academia Lucho Rolando</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700&family=Oswald:wght@500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
 </head>
-<body>
+<body class="modo-alumno">
     <header class="app-header">
-        <div class="header-content">
-            <span class="logo-icon">🎾</span>
-            <h1>Pádel <span class="highlight">FAP</span></h1>
+        <div class="header-brand">
+            <img src="1000001630.png" alt="Logo Academia Lucho Rolando" class="logo-img">
+            <div class="header-titles">
+                <h1>CATEGORIZACIÓN</h1>
+                <div class="subtitle">Sistema Academia Lucho Rolando</div>
+            </div>
         </div>
-        <nav class="nav-tabs">
-            <a href="#" class="tab active">Evaluación</a>
-            <a href="#" class="tab">Historial</a>
-            <a href="#" class="tab">Manual</a>
-        </nav>
+        <div class="header-actions">
+            <div class="mode-toggle">
+                <span>👤 Alumno</span>
+                <input type="checkbox" id="modoFiscalCheckbox">
+                <span>🔍 Fiscal</span>
+            </div>
+            <nav class="nav-tabs" id="mainNav">
+                <span class="tab active" data-view="evaluacion">Evaluación</span>
+                <span class="tab" data-view="historial">Historial</span>
+                <span class="tab" data-view="manual">Manual</span>
+            </nav>
+        </div>
     </header>
 
-    <main class="container">
-        <section class="hero">
-            <h2>Par I – Golpe-Impacto Smash</h2>
-            <p class="subtitle">Observá al jugador ejecutando el smash desde la <strong>mitad de Zona II</strong> y seleccioná la opción que mejor describa cada aspecto.</p>
-        </section>
-
-        <div id="evaluador" class="evaluador-grid"></div>
-
-        <div class="actions">
-            <button id="evaluarBtn" class="btn-primary">
-                <span>🔍</span> Obtener Diagnóstico del Par I
-            </button>
-            <button id="limpiarBtn" class="btn-secondary">
-                Limpiar selección
-            </button>
-        </div>
-
-        <div id="resultado" class="resultado-panel" style="display:none;">
-            <div class="resultado-header">
-                <h3>Diagnóstico Par I – Smash</h3>
-                <span id="categoriaBadge" class="categoria-badge"></span>
+    <main class="container" id="appContainer">
+        <div id="evaluacionView" class="view active">
+            <div class="evaluacion-layout">
+                <aside class="golpes-sidebar">
+                    <h3>Golpes</h3>
+                    <ul id="golpesList">
+                        <li data-golpe="smash" class="active">🏐 Sobre Cabeza</li>
+                        <li data-golpe="volea">🏸 Volea</li>
+                        <li data-golpe="pegadaFondo">🎯 Pegada de Fondo</li>
+                        <li data-golpe="salidaPared">🧱 Salida de Pared</li>
+                    </ul>
+                    <div class="jugador-info">
+                        <label for="playerName">Jugador</label>
+                        <input type="text" id="playerName" placeholder="Nombre (opcional)">
+                    </div>
+                </aside>
+                <section id="golpeContent" class="golpe-content"></section>
             </div>
-            <div id="diagnosticoTexto" class="diagnostico-detalle"></div>
-            <p class="sugerencia">Categoría sugerida para este Par: <span id="categoriaSugerida"></span></p>
+        </div>
+        <div id="historialView" class="view">
+            <h2>Evaluaciones Guardadas</h2>
+            <div id="historialLista" class="historial-lista"></div>
+            <button id="limpiarHistorialBtn" class="btn-secondary">🗑️ Limpiar todo</button>
+        </div>
+        <div id="manualView" class="view">
+            <h2>Manual de Referencia</h2>
+            <p>Consulta el <strong>Método Sistemático de Categorización</strong> del Colegio de Fiscales F.A.P. (2010) para más detalles.</p>
+            <div style="background:white;padding:16px;border-radius:8px;margin-top:16px;">
+                <h3>Capítulo Séptimo</h3>
+                <p>Descripciones completas de cada categoría para los cuatro golpes.</p>
+            </div>
+            <div style="background:white;padding:16px;border-radius:8px;margin-top:16px;">
+                <h3>Capítulos Primero a Sexto</h3>
+                <p>Fundamentos de los golpes, devolución, posicionamiento y pares.</p>
+            </div>
         </div>
     </main>
 
@@ -54,83 +75,6 @@
     </footer>
 
     <script src="data.js"></script>
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            const data = window.DATA.PARES_SMASH.parI;
-            const evaluadorDiv = document.getElementById('evaluador');
-            const resultadoDiv = document.getElementById('resultado');
-            const diagnosticoTexto = document.getElementById('diagnosticoTexto');
-            const categoriaSugeridaSpan = document.getElementById('categoriaSugerida');
-            const categoriaBadge = document.getElementById('categoriaBadge');
-            const evaluarBtn = document.getElementById('evaluarBtn');
-            const limpiarBtn = document.getElementById('limpiarBtn');
-
-            // Construir tarjetas de cuantificadores
-            data.cuantificadores.forEach(cuant => {
-                const card = document.createElement('div');
-                card.className = 'cuantificador-card';
-                card.innerHTML = `
-                    <div class="card-header">
-                        <h3>${cuant.nombre}</h3>
-                        <span class="info-icon" title="${cuant.descripcion}">ⓘ</span>
-                    </div>
-                    <p class="card-desc">${cuant.descripcion}</p>
-                    <div class="opciones-grid">
-                        ${[7,6,5,4,3,2].map(cat => `
-                            <label class="opcion-card ${cat <= 4 ? 'opcion-avanzada' : ''}">
-                                <input type="radio" name="${cuant.id}" value="${cat}" hidden>
-                                <span class="cat-badge cat-${cat}">${cat}ª</span>
-                                <span class="opcion-texto">${cuant.categorias[cat]}</span>
-                            </label>
-                        `).join('')}
-                    </div>
-                `;
-                evaluadorDiv.appendChild(card);
-            });
-
-            // Evento del botón evaluar
-            evaluarBtn.addEventListener('click', () => {
-                const selecciones = {};
-                let completo = true;
-                data.cuantificadores.forEach(cuant => {
-                    const selected = document.querySelector(`input[name="${cuant.id}"]:checked`);
-                    if (selected) {
-                        selecciones[cuant.id] = parseInt(selected.value);
-                    } else {
-                        completo = false;
-                    }
-                });
-
-                if (!completo) {
-                    alert('⚠️ Por favor, seleccioná una opción para cada cuantificador.');
-                    return;
-                }
-
-                const valores = Object.values(selecciones);
-                const promedio = valores.reduce((a, b) => a + b, 0) / valores.length;
-                const categoriaSugerida = Math.round(promedio);
-                
-                let detalle = '<ul class="detalle-lista">';
-                for (const [id, cat] of Object.entries(selecciones)) {
-                    const nombreCuant = data.cuantificadores.find(c => c.id === id).nombre;
-                    detalle += `<li><strong>${nombreCuant}:</strong> <span class="cat-badge cat-${cat}">${cat}ª</span></li>`;
-                }
-                detalle += '</ul>';
-                
-                diagnosticoTexto.innerHTML = detalle;
-                categoriaSugeridaSpan.innerHTML = `<span class="cat-badge cat-${categoriaSugerida}">${categoriaSugerida}ª Categoría</span>`;
-                categoriaBadge.textContent = `${categoriaSugerida}ª`;
-                categoriaBadge.className = `categoria-badge cat-${categoriaSugerida}`;
-                resultadoDiv.style.display = 'block';
-                resultadoDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-            });
-
-            // Limpiar selección
-            limpiarBtn.addEventListener('click', () => {
-                document.querySelectorAll('input[type="radio"]').forEach(input => input.checked = false);
-                resultadoDiv.style.display = 'none';
-            });
-        });
-    </script>
+    <script src="app.js"></script>
 </body>
 </html>
