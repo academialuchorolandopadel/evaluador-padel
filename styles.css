@@ -507,4 +507,68 @@ body {
   color: var(--texto-secundario);
   border-top: 1px solid var(--borde);
   margin-top: 40px;
+   .entrenamiento-layout {
+  display: flex;
+  gap: 24px;
+}
+.panel-control {
+  width: 280px;
+  background: var(--fondo-tarjeta);
+  padding: 20px;
+  border-radius: var(--radio);
+  box-shadow: var(--sombra);
+}
+.panel-control h3 {
+  font-family: 'Oswald', sans-serif;
+  color: var(--azul);
+  margin-bottom: 16px;
+}
+.form-group {
+  margin-bottom: 16px;
+}
+.form-group label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+.form-group select {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid var(--borde);
+  border-radius: 6px;
+  background: white;
+}
+.plan-content {
+  flex: 1;
+}
+.plan-golpe {
+  background: var(--fondo-tarjeta);
+  border-radius: var(--radio);
+  padding: 16px;
+  margin-bottom: 16px;
+  box-shadow: var(--sombra);
+}
+.plan-golpe h3 {
+  color: var(--azul);
+  border-bottom: 2px solid var(--dorado);
+  padding-bottom: 4px;
+}
+.plan-par {
+  margin-top: 12px;
+}
+.plan-par h4 {
+  color: var(--dorado);
+  font-size: 1rem;
+}
+.ejercicio-item {
+  background: #F4F2EC;
+  padding: 12px;
+  border-radius: 8px;
+  margin-top: 8px;
+  border-left: 4px solid var(--azul);
+}
+.ejercicio-item .series {
+  font-weight: 600;
+  color: var(--azul);
+}
 }
