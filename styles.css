@@ -297,3 +297,37 @@ body {
 .veredicto.ascenso { color: #2d6a4f; }
 .veredicto.repetir { color: var(--dorado); }
 .veredicto.descenso { color: var(--rojo); }
+.resultado-sesion {
+  margin-top: 30px;
+  padding: 20px;
+  background: var(--fondo-tarjeta);
+  border-radius: var(--radio);
+  box-shadow: var(--sombra);
+  border: 1px solid var(--borde);
+}
+.resultado-sesion h3 {
+  color: var(--azul);
+  margin-bottom: 16px;
+}
+.tabla-veredicto {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 16px;
+}
+.tabla-veredicto th {
+  background: var(--azul-claro);
+  padding: 10px;
+  text-align: left;
+}
+.tabla-veredicto td, .tabla-veredicto th {
+  border-bottom: 1px solid var(--borde);
+  padding: 10px;
+}
+.veredicto-global {
+  font-size: 1.2rem;
+  font-weight: 700;
+  margin-top: 16px;
+}
+.veredicto.ascenso { color: #2d6a4f; }
+.veredicto.repetir { color: var(--dorado); }
+.veredicto.descenso { color: var(--rojo); }
