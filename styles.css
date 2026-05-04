@@ -1,80 +1,210 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CATEGORIZACIÓN | Academia Lucho Rolando</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700&family=Oswald:wght@500;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css">
-</head>
-<body class="modo-alumno">
-    <header class="app-header">
-        <div class="header-brand">
-            <img src="1000001630.png" alt="Logo Academia Lucho Rolando" class="logo-img">
-            <div class="header-titles">
-                <h1>CATEGORIZACIÓN</h1>
-                <div class="subtitle">Sistema Academia Lucho Rolando</div>
-            </div>
-        </div>
-        <div class="header-actions">
-            <div class="mode-toggle">
-                <span>👤 Alumno</span>
-                <input type="checkbox" id="modoFiscalCheckbox">
-                <span>🔍 Fiscal</span>
-            </div>
-            <nav class="nav-tabs" id="mainNav">
-                <span class="tab active" data-view="evaluacion">Evaluación</span>
-                <span class="tab" data-view="historial">Historial</span>
-                <span class="tab" data-view="manual">Manual</span>
-            </nav>
-        </div>
-    </header>
+:root {
+    --rojo: #E30613;
+    --rojo-oscuro: #b30000;
+    --dorado: #C8963E;
+    --dorado-claro: #f5e6d3;
+    --negro: #1A1A1A;
+    --blanco: #FFFFFF;
+    --gris-fondo: #F5F5F5;
+    --gris-borde: #D1D5DB;
+    --texto: #1F2937;
+    --texto-secundario: #4B5563;
+    --sombra: 0 8px 20px rgba(0,0,0,0.08);
+    --radio: 12px;
+}
 
-    <main class="container" id="appContainer">
-        <div id="evaluacionView" class="view active">
-            <div class="evaluacion-layout">
-                <aside class="golpes-sidebar">
-                    <h3>Golpes</h3>
-                    <ul id="golpesList">
-                        <li data-golpe="smash" class="active">🏐 Sobre Cabeza</li>
-                        <li data-golpe="volea">🏸 Volea</li>
-                        <li data-golpe="pegadaFondo">🎯 Pegada de Fondo</li>
-                        <li data-golpe="salidaPared">🧱 Salida de Pared</li>
-                    </ul>
-                    <div class="jugador-info">
-                        <label for="playerName">Jugador</label>
-                        <input type="text" id="playerName" placeholder="Nombre (opcional)">
-                    </div>
-                </aside>
-                <section id="golpeContent" class="golpe-content"></section>
-            </div>
-        </div>
-        <div id="historialView" class="view">
-            <h2>Evaluaciones Guardadas</h2>
-            <div id="historialLista" class="historial-lista"></div>
-            <button id="limpiarHistorialBtn" class="btn-secondary">🗑️ Limpiar todo</button>
-        </div>
-        <div id="manualView" class="view">
-            <h2>Manual de Referencia</h2>
-            <p>Consulta el <strong>Método Sistemático de Categorización</strong> del Colegio de Fiscales F.A.P. (2010) para más detalles.</p>
-            <div style="background:white;padding:16px;border-radius:8px;margin-top:16px;">
-                <h3>Capítulo Séptimo</h3>
-                <p>Descripciones completas de cada categoría para los cuatro golpes.</p>
-            </div>
-            <div style="background:white;padding:16px;border-radius:8px;margin-top:16px;">
-                <h3>Capítulos Primero a Sexto</h3>
-                <p>Fundamentos de los golpes, devolución, posicionamiento y pares.</p>
-            </div>
-        </div>
-    </main>
+* { margin: 0; padding: 0; box-sizing: border-box; }
 
-    <footer class="app-footer">
-        <p>Basado en el Método Sistemático de Categorización – Colegio de Fiscales F.A.P. 2010</p>
-    </footer>
+body {
+    font-family: 'Inter', sans-serif;
+    background-color: var(--gris-fondo);
+    color: var(--texto);
+    line-height: 1.5;
+}
 
-    <script src="data.js"></script>
-    <script src="app.js"></script>
-</body>
-</html>
+.app-header {
+    background: linear-gradient(135deg, var(--negro) 0%, #2d2d2d 100%);
+    color: var(--blanco);
+    padding: 16px 30px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    border-bottom: 3px solid var(--dorado);
+}
+.header-brand { display: flex; align-items: center; gap: 16px; }
+.logo-img {
+    height: 60px;
+    width: auto;
+    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5));
+}
+.header-titles h1 {
+    font-family: 'Oswald', sans-serif;
+    font-weight: 700;
+    font-size: 2rem;
+    letter-spacing: 1px;
+    color: var(--dorado);
+    line-height: 1.2;
+}
+.header-titles .subtitle {
+    font-size: 0.9rem;
+    font-weight: 400;
+    color: #ccc;
+    letter-spacing: 0.5px;
+}
+.header-actions { display: flex; align-items: center; gap: 20px; flex-wrap: wrap; }
+.mode-toggle {
+    display: flex; align-items: center; gap: 10px;
+    background: rgba(255,255,255,0.1);
+    padding: 8px 16px; border-radius: 30px; font-size: 0.9rem;
+}
+.mode-toggle span { color: #ccc; }
+.mode-toggle input[type="checkbox"] {
+    width: 44px; height: 24px; -webkit-appearance: none;
+    background: #555; border-radius: 12px; position: relative;
+    cursor: pointer; transition: background 0.3s;
+}
+.mode-toggle input[type="checkbox"]::before {
+    content: ''; position: absolute; width: 20px; height: 20px;
+    border-radius: 50%; top: 2px; left: 2px; background: white;
+    transition: 0.3s;
+}
+.mode-toggle input[type="checkbox"]:checked { background: var(--rojo); }
+.mode-toggle input[type="checkbox"]:checked::before { left: 22px; }
+.nav-tabs { display: flex; gap: 20px; }
+.tab {
+    color: rgba(255,255,255,0.75); text-decoration: none;
+    font-weight: 500; padding: 6px 0;
+    border-bottom: 2px solid transparent; transition: all 0.2s; cursor: pointer;
+}
+.tab.active, .tab:hover { color: var(--dorado); border-bottom-color: var(--dorado); }
+
+.container { max-width: 1200px; margin: 30px auto; padding: 0 20px; }
+.view { display: none; }
+.view.active { display: block; }
+
+.evaluacion-layout { display: flex; gap: 24px; }
+.golpes-sidebar {
+    width: 240px; flex-shrink: 0; background: var(--blanco);
+    border-radius: var(--radio); padding: 20px; box-shadow: var(--sombra);
+}
+.golpes-sidebar h3 {
+    font-family: 'Oswald', sans-serif;
+    color: var(--negro); margin-bottom: 16px; font-size: 1.3rem;
+}
+.golpes-sidebar ul { list-style: none; }
+.golpes-sidebar li {
+    padding: 10px 12px; border-radius: 8px; cursor: pointer;
+    transition: all 0.2s; margin-bottom: 4px; font-weight: 500;
+}
+.golpes-sidebar li:hover { background: var(--dorado-claro); }
+.golpes-sidebar li.active {
+    background: var(--negro); color: white; font-weight: 600;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+}
+.jugador-info { margin-top: 20px; }
+.jugador-info label { font-size: 0.9rem; color: var(--texto-secundario); }
+.jugador-info input {
+    width: 100%; padding: 8px; border: 1px solid var(--gris-borde);
+    border-radius: 6px; margin-top: 4px;
+}
+.golpe-content { flex: 1; }
+
+.par-acordeon {
+    background: var(--blanco); border-radius: var(--radio);
+    margin-bottom: 16px; box-shadow: var(--sombra);
+}
+.par-header {
+    padding: 16px 20px; display: flex; justify-content: space-between;
+    align-items: center; cursor: pointer; background: #f9f9f9;
+    border-radius: var(--radio) var(--radio) 0 0;
+    border-bottom: 1px solid var(--gris-borde);
+}
+.par-header h3 { font-size: 1.1rem; color: var(--negro); }
+.par-header .toggle-icon { font-size: 1.2rem; transition: transform 0.3s; }
+.par-header.collapsed .toggle-icon { transform: rotate(-90deg); }
+.par-body { padding: 20px; display: block; }
+.par-body.collapsed { display: none; }
+
+.evaluador-grid { display: flex; flex-direction: column; gap: 16px; }
+.cuantificador-card {
+    background: var(--blanco); border-radius: 8px;
+    padding: 16px; border: 1px solid var(--gris-borde);
+}
+.card-header { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.card-header h3 { color: var(--negro); font-size: 1rem; font-weight: 600; }
+.info-icon { color: var(--rojo); cursor: help; }
+.card-desc {
+    color: var(--texto-secundario); font-size: 0.85rem;
+    margin-bottom: 12px; padding-left: 8px;
+    border-left: 3px solid var(--dorado);
+}
+.opciones-grid { display: flex; flex-direction: column; gap: 6px; }
+.opcion-card {
+    display: flex; align-items: center; gap: 12px;
+    padding: 10px 12px; border: 2px solid var(--gris-borde);
+    border-radius: 8px; cursor: pointer; transition: all 0.2s;
+}
+.opcion-card:hover { border-color: var(--dorado); background: #fdf8f2; }
+.opcion-card:has(input:checked) {
+    border-color: var(--negro); background: #f0f0f0;
+    box-shadow: 0 0 0 3px rgba(0,0,0,0.05);
+}
+.cat-badge {
+    display: inline-block; min-width: 36px; text-align: center;
+    padding: 4px 10px; border-radius: 20px; font-weight: 700;
+    font-size: 0.85rem; color: white; flex-shrink: 0;
+}
+.cat-7 { background: #94a3b8; }
+.cat-6 { background: #48bb78; }
+.cat-5 { background: #3C99DC; }
+.cat-4 { background: var(--dorado); }
+.cat-3 { background: #e53e3e; }
+.cat-2 { background: #805ad5; }
+.opcion-texto { color: var(--texto); font-size: 0.9rem; }
+
+/* Modo alumno: oculta los badges */
+.modo-alumno .cat-badge { display: none; }
+.modo-alumno .opcion-card { padding-left: 16px; }
+
+.actions { display: flex; gap: 12px; margin-top: 16px; }
+.btn-primary {
+    background: var(--negro); color: white; border: none;
+    padding: 12px 24px; border-radius: 8px; font-weight: 600;
+    cursor: pointer; display: flex; align-items: center; gap: 8px;
+    transition: all 0.2s;
+}
+.btn-primary:hover { background: #333; }
+.btn-secondary {
+    background: transparent; color: var(--negro);
+    border: 2px solid var(--negro); padding: 12px 24px;
+    border-radius: 8px; font-weight: 600; cursor: pointer;
+}
+.btn-secondary:hover { background: #f0f0f0; }
+
+.resultado-par {
+    margin-top: 16px; padding: 16px; background: #f8f8f8;
+    border-radius: 8px; border-left: 4px solid var(--dorado);
+}
+.diagnostico-golpe {
+    margin-top: 24px; padding: 20px; background: var(--dorado-claro);
+    border-radius: var(--radio); border: 1px solid var(--dorado);
+}
+
+.variantes-golpe {
+    font-size: 0.85rem; color: var(--texto-secundario);
+    margin-top: 4px; margin-bottom: 0; font-style: italic;
+}
+
+.historial-lista { margin-top: 20px; }
+.historial-item {
+    background: var(--blanco); padding: 16px; margin-bottom: 12px;
+    border-radius: 8px; box-shadow: var(--sombra);
+    display: flex; justify-content: space-between; align-items: center;
+}
+
+.app-footer {
+    text-align: center; padding: 20px; color: var(--texto-secundario);
+    border-top: 1px solid var(--gris-borde); margin-top: 40px;
+}
