@@ -27,6 +27,7 @@
             <nav class="nav-tabs" id="mainNav">
                 <span class="tab active" data-view="evaluacion">Evaluación</span>
                 <span class="tab" data-view="entrenamiento">Entrenamiento</span>
+                <span class="tab" data-view="alumnos">Alumnos</span>
                 <span class="tab" data-view="historial">Historial</span>
                 <span class="tab" data-view="manual">Manual</span>
             </nav>
@@ -76,10 +77,16 @@
                         </select>
                     </div>
                     <button id="generarPlanBtn" class="btn-primary">📋 Generar Plan</button>
-                    <button id="imprimirPlanBtn" class="btn-secondary" style="display:none;">🖨️ Imprimir</button>
+                    <button id="descargarPlanBtn" class="btn-secondary" style="display:none;">📥 Descargar PDF</button>
                 </aside>
                 <section id="planEntrenamiento" class="plan-content"></section>
             </div>
+        </div>
+
+        <!-- Vista Alumnos -->
+        <div id="alumnosView" class="view">
+            <h2>Alumnos Registrados</h2>
+            <div id="alumnosLista" class="alumnos-lista"></div>
         </div>
 
         <!-- Vista Historial -->
