@@ -228,3 +228,38 @@ body {
   padding: 4px 12px;
   margin-right: 4px;
 }
+/* ===== VISTA SEGUIMIENTO ===== */
+.seguimiento-layout {
+  display: flex;
+  gap: 24px;
+}
+.sesion-ejercicio {
+  background: var(--fondo-tarjeta);
+  border-radius: var(--radio);
+  padding: 16px;
+  margin-bottom: 16px;
+  box-shadow: var(--sombra);
+}
+.sesion-ejercicio h4 {
+  color: var(--azul);
+  margin-bottom: 8px;
+}
+.sesion-campos {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  margin-top: 8px;
+}
+.sesion-campos label {
+  font-weight: 600;
+  margin-right: 4px;
+}
+.sesion-campos input {
+  width: 70px;
+  padding: 6px;
+  border: 1px solid var(--borde);
+  border-radius: 6px;
+}
+.historial-sesiones {
+  margin-top: 30px;
+}
