@@ -1,4 +1,4 @@
-// ==================== APP.JS COMPLETO (con Alumnos y PDF) ====================
+// ==================== APP.JS COMPLETO (con Seguimiento) ====================
 document.addEventListener('DOMContentLoaded', () => {
   const mainNav = document.getElementById('mainNav');
   const views = document.querySelectorAll('.view');
@@ -14,6 +14,7 @@ document.addEventListener('DOMContentLoaded', () => {
   let evaluacionesCache = {};
   let planGeneradoHTML = '';
 
+  // ========== MODO ALUMNO/FISCAL ==========
   function actualizarModo() {
     if (modoFiscalCheckbox.checked) {
       body.classList.remove('modo-alumno');
@@ -26,6 +27,7 @@ document.addEventListener('DOMContentLoaded', () => {
   modoFiscalCheckbox.addEventListener('change', actualizarModo);
   actualizarModo();
 
+  // ========== NAVEGACIÓN PRINCIPAL ==========
   mainNav.addEventListener('click', (e) => {
     if (e.target.classList.contains('tab')) {
       const view = e.target.dataset.view;
@@ -36,9 +38,11 @@ document.addEventListener('DOMContentLoaded', () => {
       if (view === 'historial') cargarHistorial();
       if (view === 'entrenamiento') cargarAlumnosEnSelect();
       if (view === 'alumnos') cargarAlumnos();
+      if (view === 'seguimiento') cargarAlumnosSeguimiento();
     }
   });
 
+  // ========== SIDEBAR DE GOLPES ==========
   golpesList.addEventListener('click', (e) => {
     if (e.target.tagName === 'LI') {
       golpesList.querySelectorAll('li').forEach(li => li.classList.remove('active'));
@@ -264,7 +268,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // ============ ENTRENAMIENTO ============
+  // ========== ENTRENAMIENTO (ya existente) ==========
   const alumnoSelect = document.getElementById('alumnoSelect');
   const categoriaObjetivo = document.getElementById('categoriaObjetivo');
   const generarPlanBtn = document.getElementById('generarPlanBtn');
@@ -296,20 +300,12 @@ document.addEventListener('DOMContentLoaded', () => {
   descargarPlanBtn.addEventListener('click', () => {
     const ventana = window.open('', '_blank');
     ventana.document.write(`
-      <html>
-        <head>
-          <title>Plan de Entrenamiento</title>
-          <style>
-            body { font-family: Arial, sans-serif; padding: 30px; }
-            h2 { color: #002244; }
-            .ejercicio-item { margin-bottom: 12px; border: 1px solid #ccc; padding: 8px; }
-          </style>
-        </head>
-        <body>${planGeneradoHTML}</body>
-      </html>
+      <html><head><title>Plan de Entrenamiento</title>
+      <style> body { font-family: Arial; padding:20px; } .ejercicio-item { margin-bottom:12px; } </style>
+      </head><body>${planGeneradoHTML}</body></html>
     `);
     ventana.document.close();
-    ventana.print();  // El usuario puede guardar como PDF desde el diálogo
+    ventana.print();
   });
 
   function construirPlan(evaluacion, objetivo) {
@@ -348,7 +344,7 @@ document.addEventListener('DOMContentLoaded', () => {
     return html;
   }
 
-  // ============ ALUMNOS (base de datos) ============
+  // ========== ALUMNOS (base de datos) ==========
   const alumnosLista = document.getElementById('alumnosLista');
 
   function cargarAlumnos() {
@@ -358,7 +354,6 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
 
-    // Agrupar por nombre de jugador (puede tener varias evaluaciones)
     const alumnos = {};
     historial.forEach(eva => {
       if (!alumnos[eva.jugador]) {
@@ -388,19 +383,16 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     alumnosLista.innerHTML = html;
 
-    // Eventos para los botones dentro de la vista Alumnos
     alumnosLista.addEventListener('click', (e) => {
       if (e.target.classList.contains('generar-plan-alumno')) {
         const id = Number(e.target.dataset.id);
         const historial = JSON.parse(localStorage.getItem('padelEvalHistorial')) || [];
         const eva = historial.find(e => e.id === id);
         if (eva) {
-          // Nos movemos a la pestaña Entrenamiento y seleccionamos automáticamente
           document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
           document.querySelector('.tab[data-view="entrenamiento"]').classList.add('active');
           views.forEach(v => v.classList.remove('active'));
           document.getElementById('entrenamientoView').classList.add('active');
-          // Cargar el select y seleccionar el alumno correspondiente
           cargarAlumnosEnSelect();
           const options = alumnoSelect.options;
           for (let i = 0; i < options.length; i++) {
@@ -415,9 +407,153 @@ document.addEventListener('DOMContentLoaded', () => {
         let historial = JSON.parse(localStorage.getItem('padelEvalHistorial')) || [];
         historial = historial.filter(e => e.id !== id);
         localStorage.setItem('padelEvalHistorial', JSON.stringify(historial));
-        cargarAlumnos(); // recargar la lista
+        cargarAlumnos();
       }
     });
+  }
+
+  // ========== NUEVO: SEGUIMIENTO EN CLASE ==========
+  const alumnoSelectSeg = document.getElementById('alumnoSelectSeg');
+  const categoriaObjetivoSeg = document.getElementById('categoriaObjetivoSeg');
+  const cargarPlanSegBtn = document.getElementById('cargarPlanSeg');
+  const guardarSesionBtn = document.getElementById('guardarSesionBtn');
+  const sesionContent = document.getElementById('sesionContent');
+
+  let planSesion = null; // Guardará los datos del plan cargado
+
+  function cargarAlumnosSeguimiento() {
+    const historial = JSON.parse(localStorage.getItem('padelEvalHistorial')) || [];
+    alumnoSelectSeg.innerHTML = '<option value="">-- Seleccionar alumno --</option>';
+    historial.forEach((eva, idx) => {
+      const opt = document.createElement('option');
+      opt.value = idx;
+      opt.textContent = `${eva.jugador} - ${eva.golpe} (${eva.fecha})`;
+      alumnoSelectSeg.appendChild(opt);
+    });
+  }
+
+  cargarPlanSegBtn.addEventListener('click', () => {
+    const idx = alumnoSelectSeg.value;
+    if (idx === '') return alert('⚠️ Seleccioná un alumno.');
+    const historial = JSON.parse(localStorage.getItem('padelEvalHistorial')) || [];
+    const evaluacion = historial[parseInt(idx)];
+    const objetivo = parseInt(categoriaObjetivoSeg.value);
+
+    // Construir estructura del plan para seguimiento
+    const ejercicios = [];
+    const golpeData = DATA.golpes[evaluacion.golpe];
+    if (!golpeData) return alert('No hay datos del golpe.');
+
+    for (const [parKey, parData] of Object.entries(golpeData.pares)) {
+      const seleccionesPar = evaluacion.selecciones[parKey] || {};
+      for (const cuant of parData.cuantificadores) {
+        const catActual = seleccionesPar[cuant.id];
+        if (catActual && catActual > objetivo) {
+          for (let cat = catActual; cat > objetivo; cat--) {
+            const transicion = `${cat}_${cat-1}`;
+            const ejercicio = window.EJERCICIOS?.[evaluacion.golpe]?.[parKey]?.[cuant.id]?.[transicion];
+            if (ejercicio) {
+              ejercicios.push({
+                parKey,
+                cuantId: cuant.id,
+                nombreCuant: cuant.nombre,
+                transicion,
+                catInicio: cat,
+                catFin: cat-1,
+                ejercicio,
+                seriesRealizadas: 0,
+                repeticionesExitosas: 0,
+                totalRepeticiones: parseInt(ejercicio.repeticiones) * ejercicio.series || 30
+              });
+            }
+          }
+        }
+      }
+    }
+
+    if (ejercicios.length === 0) {
+      sesionContent.innerHTML = '<p>✅ Ya alcanza la categoría objetivo en todos los aspectos.</p>';
+      planSesion = null;
+      guardarSesionBtn.style.display = 'none';
+      return;
+    }
+
+    planSesion = {
+      jugador: evaluacion.jugador,
+      golpe: evaluacion.golpe,
+      objetivo,
+      ejercicios
+    };
+
+    // Renderizar los ejercicios con campos de entrada
+    let html = `<h3>Plan para ${evaluacion.jugador} (objetivo: ${objetivo}ª)</h3>`;
+    ejercicios.forEach((ej, index) => {
+      html += `
+        <div class="sesion-ejercicio">
+          <h4>${ej.nombreCuant} – ${ej.transicion.replace('_', 'ª → ')}ª</h4>
+          <p><em>${ej.ejercicio.nombre}</em></p>
+          <p>${ej.ejercicio.series} series x ${ej.ejercicio.repeticiones}</p>
+          <div class="sesion-campos">
+            <label>Series completadas:</label>
+            <input type="number" min="0" max="${ej.ejercicio.series}" value="0" data-index="${index}" data-campo="series">
+            <label>Repeticiones exitosas:</label>
+            <input type="number" min="0" max="${ej.totalRepeticiones}" value="0" data-index="${index}" data-campo="exitosas">
+          </div>
+        </div>
+      `;
+    });
+    sesionContent.innerHTML = html;
+    guardarSesionBtn.style.display = 'inline-block';
+
+    // Eventos para actualizar el planSesion con los valores de los inputs
+    const inputs = sesionContent.querySelectorAll('input');
+    inputs.forEach(input => {
+      input.addEventListener('input', (e) => {
+        const idx = parseInt(e.target.dataset.index);
+        const campo = e.target.dataset.campo;
+        if (planSesion && planSesion.ejercicios[idx]) {
+          planSesion.ejercicios[idx][campo] = parseInt(e.target.value) || 0;
+        }
+      });
+    });
+  });
+
+  guardarSesionBtn.addEventListener('click', () => {
+    if (!planSesion) return alert('No hay plan cargado.');
+    // Validar que todos los campos estén llenos (opcional)
+    const sesionCompleta = {
+      id: Date.now(),
+      fecha: new Date().toLocaleString(),
+      ...planSesion
+    };
+    let sesiones = JSON.parse(localStorage.getItem('padelSesiones')) || [];
+    sesiones.push(sesionCompleta);
+    localStorage.setItem('padelSesiones', JSON.stringify(sesiones));
+    alert('✅ Sesión guardada correctamente.');
+    cargarHistorialSesiones(); // Si hubiera historial visible
+  });
+
+  // Mostrar historial de sesiones del alumno seleccionado (opcional)
+  function cargarHistorialSesiones() {
+    const idx = alumnoSelectSeg.value;
+    if (idx === '') return;
+    const historial = JSON.parse(localStorage.getItem('padelEvalHistorial')) || [];
+    const eva = historial[parseInt(idx)];
+    if (!eva) return;
+    const sesiones = JSON.parse(localStorage.getItem('padelSesiones')) || [];
+    const sesionesAlumno = sesiones.filter(s => s.jugador === eva.jugador && s.golpe === eva.golpe);
+    if (sesionesAlumno.length > 0) {
+      let htmlHist = '<div class="historial-sesiones"><h3>Últimas sesiones</h3>';
+      sesionesAlumno.slice(-3).reverse().forEach(ses => {
+        htmlHist += `<div class="sesion-ejercicio"><strong>${ses.fecha}</strong> - Objetivo: ${ses.objetivo}ª<br>`;
+        ses.ejercicios.forEach(ej => {
+          htmlHist += `${ej.nombreCuant}: ${ej.seriesRealizadas} series, ${ej.repeticionesExitosas} éxitos<br>`;
+        });
+        htmlHist += '</div>';
+      });
+      htmlHist += '</div>';
+      sesionContent.insertAdjacentHTML('beforeend', htmlHist);
+    }
   }
 
   // Inicializar
