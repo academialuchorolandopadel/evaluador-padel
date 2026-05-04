@@ -1,193 +1,36 @@
-/* ============================================================
-   CATEGORIZACIÓN - Academia Lucho Rolando
-   Paleta: Azul marino + Dorado (basada en el logo)
-   ============================================================ */
-:root {
-  --azul: #003366;
-  --azul-oscuro: #002244;
-  --azul-claro: #E8F0FE;
-  --dorado: #C8963E;
-  --dorado-claro: #E0C78A;
-  --dorado-palido: #F5ECD7;
-  --rojo: #E30613;
-  --rojo-claro: #FCE8EA;
-
-  --fondo-pagina: #F7F5F0;
-  --fondo-tarjeta: #FFFFFF;
-  --fondo-header: #003366;
-  --fondo-sidebar: #FFFFFF;
-
-  --texto: #1A1A1A;
-  --texto-secundario: #5C5547;
-  --texto-claro: #FFFFFF;
-
-  --borde: #D9D0BD;
-  --sombra: 0 6px 18px rgba(0, 0, 0, 0.07);
-  --radio: 10px;
-}
-
-* { margin: 0; padding: 0; box-sizing: border-box; }
-
-body {
-  font-family: 'Inter', sans-serif;
-  background-color: var(--fondo-pagina);
-  color: var(--texto);
-  line-height: 1.5;
-}
-
-/* Header */
-.app-header {
-  background: linear-gradient(135deg, var(--azul) 0%, var(--azul-oscuro) 100%);
-  color: var(--texto-claro);
-  padding: 16px 30px;
+/* ===== VISTA ALUMNOS ===== */
+.alumnos-lista {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  flex-wrap: wrap;
-  box-shadow: 0 4px 16px rgba(0,0,0,0.2);
-  border-bottom: 3px solid var(--dorado);
+  flex-direction: column;
+  gap: 20px;
 }
-.header-brand { display: flex; align-items: center; gap: 16px; }
-.logo-img { height: 60px; width: auto; filter: drop-shadow(0 2px 6px rgba(0,0,0,0.3)); }
-.header-titles h1 {
-  font-family: 'Oswald', sans-serif; font-weight: 700;
-  font-size: 2rem; letter-spacing: 1px; color: var(--dorado); line-height: 1.2;
+.alumno-card {
+  background: var(--fondo-tarjeta);
+  border-radius: var(--radio);
+  padding: 20px;
+  box-shadow: var(--sombra);
 }
-.header-titles .subtitle { font-size: 0.9rem; font-weight: 400; color: #C0B9A8; letter-spacing: 0.5px; }
-.header-actions { display: flex; align-items: center; gap: 20px; flex-wrap: wrap; }
-
-/* Toggle modo */
-.mode-toggle {
-  display: flex; align-items: center; gap: 10px;
-  background: rgba(255,255,255,0.08); padding: 8px 16px; border-radius: 30px; font-size: 0.9rem;
+.alumno-card h3 {
+  color: var(--azul);
+  margin-bottom: 10px;
+  border-bottom: 2px solid var(--dorado);
+  padding-bottom: 4px;
 }
-.mode-toggle span { color: #C0B9A8; }
-.mode-toggle input[type="checkbox"] {
-  width: 44px; height: 24px; -webkit-appearance: none; background: #5C5547;
-  border-radius: 12px; position: relative; cursor: pointer; transition: background 0.3s;
+.alumno-card table {
+  width: 100%;
+  border-collapse: collapse;
 }
-.mode-toggle input[type="checkbox"]::before {
-  content: ''; position: absolute; width: 20px; height: 20px;
-  border-radius: 50%; top: 2px; left: 2px; background: white; transition: 0.3s;
+.alumno-card th {
+  text-align: left;
+  background: var(--azul-claro);
+  padding: 8px;
 }
-.mode-toggle input[type="checkbox"]:checked { background: var(--rojo); }
-.mode-toggle input[type="checkbox"]:checked::before { left: 22px; }
-
-/* Navegación */
-.nav-tabs { display: flex; gap: 20px; }
-.tab {
-  color: rgba(255,255,255,0.7); text-decoration: none; font-weight: 500;
-  padding: 6px 0; border-bottom: 2px solid transparent; transition: all 0.2s; cursor: pointer;
-}
-.tab.active, .tab:hover { color: var(--dorado); border-bottom-color: var(--dorado); }
-
-/* Contenedor principal */
-.container { max-width: 1200px; margin: 30px auto; padding: 0 20px; }
-.view { display: none; }
-.view.active { display: block; }
-
-/* Layout evaluación */
-.evaluacion-layout { display: flex; gap: 24px; }
-.golpes-sidebar {
-  width: 240px; flex-shrink: 0; background: var(--fondo-sidebar);
-  border-radius: var(--radio); padding: 20px; box-shadow: var(--sombra);
-}
-.golpes-sidebar h3 { font-family: 'Oswald', sans-serif; color: var(--azul); margin-bottom: 16px; font-size: 1.3rem; }
-.golpes-sidebar ul { list-style: none; }
-.golpes-sidebar li {
-  padding: 10px 12px; border-radius: 8px; cursor: pointer; transition: all 0.2s;
-  margin-bottom: 4px; font-weight: 500; color: var(--texto);
-}
-.golpes-sidebar li:hover { background: var(--dorado-palido); }
-.golpes-sidebar li.active { background: var(--azul); color: white; font-weight: 600; box-shadow: 0 2px 8px rgba(0,0,0,0.2); }
-.jugador-info { margin-top: 20px; }
-.jugador-info label { font-size: 0.9rem; color: var(--texto-secundario); }
-.jugador-info input { width: 100%; padding: 8px; border: 1px solid var(--borde); border-radius: 6px; margin-top: 4px; background: #FFFDF9; }
-.golpe-content { flex: 1; }
-
-/* Acordeón de pares */
-.par-acordeon { background: var(--fondo-tarjeta); border-radius: var(--radio); margin-bottom: 16px; box-shadow: var(--sombra); border: 1px solid var(--borde); }
-.par-header {
-  padding: 16px 20px; display: flex; justify-content: space-between; align-items: center;
-  cursor: pointer; background: #E8F0FE; border-radius: var(--radio) var(--radio) 0 0;
+.alumno-card td {
+  padding: 8px;
   border-bottom: 1px solid var(--borde);
 }
-.par-header h3 { font-size: 1.1rem; color: var(--azul); }
-.par-header .toggle-icon { font-size: 1.2rem; transition: transform 0.3s; color: var(--dorado); }
-.par-header.collapsed .toggle-icon { transform: rotate(-90deg); }
-.par-body { padding: 20px; display: block; }
-.par-body.collapsed { display: none; }
-
-/* Tarjetas cuantificador */
-.evaluador-grid { display: flex; flex-direction: column; gap: 16px; }
-.cuantificador-card { background: #FFFFFF; border-radius: 8px; padding: 16px; border: 1px solid var(--borde); }
-.card-header { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
-.card-header h3 { color: var(--azul); font-size: 1rem; font-weight: 600; }
-.info-icon { color: var(--rojo); cursor: help; }
-.card-desc { color: var(--texto-secundario); font-size: 0.85rem; margin-bottom: 12px; padding-left: 8px; border-left: 3px solid var(--dorado); }
-.opciones-grid { display: flex; flex-direction: column; gap: 6px; }
-.opcion-card {
-  display: flex; align-items: center; gap: 12px; padding: 10px 12px;
-  border: 2px solid var(--borde); border-radius: 8px; cursor: pointer; transition: all 0.2s; background: #FFFFFF;
+.btn-chico {
+  font-size: 0.85rem;
+  padding: 4px 12px;
+  margin-right: 4px;
 }
-.opcion-card:hover { border-color: var(--dorado); background: var(--dorado-palido); }
-.opcion-card:has(input:checked) { border-color: var(--azul); background: #E8F0FE; box-shadow: 0 0 0 3px rgba(0,51,102,0.1); }
-.cat-badge {
-  display: inline-block; min-width: 36px; text-align: center; padding: 4px 10px;
-  border-radius: 20px; font-weight: 700; font-size: 0.85rem; color: white; flex-shrink: 0;
-}
-.cat-7 { background: #8C8279; } .cat-6 { background: #5E8C5E; } .cat-5 { background: #6A9FB5; }
-.cat-4 { background: var(--dorado); } .cat-3 { background: var(--rojo); } .cat-2 { background: #7C5CBF; }
-.opcion-texto { color: var(--texto); font-size: 0.9rem; }
-.modo-alumno .cat-badge { display: none; }
-.modo-alumno .opcion-card { padding-left: 16px; }
-
-/* Botones */
-.actions { display: flex; gap: 12px; margin-top: 16px; }
-.btn-primary {
-  background: var(--azul); color: white; border: none; padding: 12px 24px;
-  border-radius: 8px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px;
-  transition: background 0.2s;
-}
-.btn-primary:hover { background: var(--azul-oscuro); }
-.btn-secondary {
-  background: transparent; color: var(--azul); border: 2px solid var(--azul);
-  padding: 12px 24px; border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 0.2s;
-}
-.btn-secondary:hover { background: var(--azul-claro); }
-
-/* Resultado y diagnóstico */
-.resultado-par { margin-top: 16px; padding: 16px; background: #F4F2EC; border-radius: 8px; border-left: 4px solid var(--dorado); }
-.diagnostico-golpe { margin-top: 24px; padding: 20px; background: #E8F0FE; border-radius: var(--radio); border: 1px solid var(--azul-claro); }
-.variantes-golpe { font-size: 0.85rem; color: var(--texto-secundario); margin-top: 4px; margin-bottom: 0; font-style: italic; }
-
-/* Historial */
-.historial-lista { margin-top: 20px; }
-.historial-item {
-  background: var(--fondo-tarjeta); padding: 16px; margin-bottom: 12px;
-  border-radius: 8px; box-shadow: var(--sombra); display: flex; justify-content: space-between; align-items: center;
-}
-
-/* Footer */
-.app-footer { text-align: center; padding: 20px; color: var(--texto-secundario); border-top: 1px solid var(--borde); margin-top: 40px; }
-
-/* ===== VISTA ENTRENAMIENTO ===== */
-.entrenamiento-layout { display: flex; gap: 24px; }
-.panel-control {
-  width: 280px; background: var(--fondo-tarjeta); padding: 20px;
-  border-radius: var(--radio); box-shadow: var(--sombra);
-}
-.panel-control h3 { font-family: 'Oswald', sans-serif; color: var(--azul); margin-bottom: 16px; }
-.form-group { margin-bottom: 16px; }
-.form-group label { display: block; font-weight: 600; margin-bottom: 4px; }
-.form-group select { width: 100%; padding: 8px; border: 1px solid var(--borde); border-radius: 6px; background: white; }
-.plan-content { flex: 1; }
-.plan-golpe { background: var(--fondo-tarjeta); border-radius: var(--radio); padding: 16px; margin-bottom: 16px; box-shadow: var(--sombra); }
-.plan-golpe h3 { color: var(--azul); border-bottom: 2px solid var(--dorado); padding-bottom: 4px; }
-.plan-par { margin-top: 12px; }
-.plan-par h4 { color: var(--dorado); font-size: 1rem; }
-.ejercicio-item {
-  background: #F4F2EC; padding: 12px; border-radius: 8px; margin-top: 8px;
-  border-left: 4px solid var(--azul);
-}
-.ejercicio-item .series { font-weight: 600; color: var(--azul); }
