@@ -1,4 +1,4 @@
-// ==================== APP.JS COMPLETO (con Seguimiento) ====================
+// ==================== APP.JS COMPLETO (con Seguimiento mejorado) ====================
 document.addEventListener('DOMContentLoaded', () => {
   const mainNav = document.getElementById('mainNav');
   const views = document.querySelectorAll('.view');
@@ -42,7 +42,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // ========== SIDEBAR DE GOLPES ==========
+  // ========== SIDEBAR GOLPES ==========
   golpesList.addEventListener('click', (e) => {
     if (e.target.tagName === 'LI') {
       golpesList.querySelectorAll('li').forEach(li => li.classList.remove('active'));
@@ -268,7 +268,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // ========== ENTRENAMIENTO (ya existente) ==========
+  // ========== ENTRENAMIENTO ==========
   const alumnoSelect = document.getElementById('alumnoSelect');
   const categoriaObjetivo = document.getElementById('categoriaObjetivo');
   const generarPlanBtn = document.getElementById('generarPlanBtn');
@@ -344,7 +344,7 @@ document.addEventListener('DOMContentLoaded', () => {
     return html;
   }
 
-  // ========== ALUMNOS (base de datos) ==========
+  // ========== ALUMNOS ==========
   const alumnosLista = document.getElementById('alumnosLista');
 
   function cargarAlumnos() {
@@ -412,14 +412,15 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // ========== NUEVO: SEGUIMIENTO EN CLASE ==========
+  // ========== SEGUIMIENTO EN CLASE (MEJORADO) ==========
   const alumnoSelectSeg = document.getElementById('alumnoSelectSeg');
   const categoriaObjetivoSeg = document.getElementById('categoriaObjetivoSeg');
   const cargarPlanSegBtn = document.getElementById('cargarPlanSeg');
   const guardarSesionBtn = document.getElementById('guardarSesionBtn');
   const sesionContent = document.getElementById('sesionContent');
 
-  let planSesion = null; // Guardará los datos del plan cargado
+  let planSesion = null;   // estructura original
+  let ejerciciosCompletados = []; // indices de ejercicios finalizados
 
   function cargarAlumnosSeguimiento() {
     const historial = JSON.parse(localStorage.getItem('padelEvalHistorial')) || [];
@@ -439,7 +440,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const evaluacion = historial[parseInt(idx)];
     const objetivo = parseInt(categoriaObjetivoSeg.value);
 
-    // Construir estructura del plan para seguimiento
     const ejercicios = [];
     const golpeData = DATA.golpes[evaluacion.golpe];
     if (!golpeData) return alert('No hay datos del golpe.');
@@ -461,9 +461,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 catInicio: cat,
                 catFin: cat-1,
                 ejercicio,
-                seriesRealizadas: 0,
-                repeticionesExitosas: 0,
-                totalRepeticiones: parseInt(ejercicio.repeticiones) * ejercicio.series || 30
+                totalSeries: ejercicio.series,
+                totalRepsPorSerie: parseInt(ejercicio.repeticiones)
               });
             }
           }
@@ -484,20 +483,23 @@ document.addEventListener('DOMContentLoaded', () => {
       objetivo,
       ejercicios
     };
+    ejerciciosCompletados = new Array(ejercicios.length).fill(false);
 
-    // Renderizar los ejercicios con campos de entrada
+    // Renderizar cada ejercicio con botón Finalizar
     let html = `<h3>Plan para ${evaluacion.jugador} (objetivo: ${objetivo}ª)</h3>`;
     ejercicios.forEach((ej, index) => {
       html += `
-        <div class="sesion-ejercicio">
+        <div class="sesion-ejercicio" id="ejercicio-${index}">
           <h4>${ej.nombreCuant} – ${ej.transicion.replace('_', 'ª → ')}ª</h4>
           <p><em>${ej.ejercicio.nombre}</em></p>
-          <p>${ej.ejercicio.series} series x ${ej.ejercicio.repeticiones}</p>
+          <p>${ej.totalSeries} series x ${ej.totalRepsPorSerie}</p>
           <div class="sesion-campos">
             <label>Series completadas:</label>
-            <input type="number" min="0" max="${ej.ejercicio.series}" value="0" data-index="${index}" data-campo="series">
-            <label>Repeticiones exitosas:</label>
-            <input type="number" min="0" max="${ej.totalRepeticiones}" value="0" data-index="${index}" data-campo="exitosas">
+            <input type="number" min="0" max="${ej.totalSeries}" value="0" data-index="${index}" data-campo="series" ${ejerciciosCompletados[index] ? 'disabled' : ''}>
+            <label>Reps exitosas:</label>
+            <input type="number" min="0" max="${ej.totalSeries * ej.totalRepsPorSerie}" value="0" data-index="${index}" data-campo="exitosas" ${ejerciciosCompletados[index] ? 'disabled' : ''}>
+            <button class="btn-primary btn-chico finalizar-ejercicio" data-index="${index}" ${ejerciciosCompletados[index] ? 'disabled' : ''}>✔ Finalizar</button>
+            ${ejerciciosCompletados[index] ? '<span class="completado-msg">✅ Completado</span>' : ''}
           </div>
         </div>
       `;
@@ -505,57 +507,113 @@ document.addEventListener('DOMContentLoaded', () => {
     sesionContent.innerHTML = html;
     guardarSesionBtn.style.display = 'inline-block';
 
-    // Eventos para actualizar el planSesion con los valores de los inputs
-    const inputs = sesionContent.querySelectorAll('input');
-    inputs.forEach(input => {
-      input.addEventListener('input', (e) => {
+    // Evento para botón Finalizar
+    const botonesFinalizar = sesionContent.querySelectorAll('.finalizar-ejercicio');
+    botonesFinalizar.forEach(btn => {
+      btn.addEventListener('click', (e) => {
         const idx = parseInt(e.target.dataset.index);
-        const campo = e.target.dataset.campo;
-        if (planSesion && planSesion.ejercicios[idx]) {
-          planSesion.ejercicios[idx][campo] = parseInt(e.target.value) || 0;
-        }
+        finalizarEjercicio(idx);
       });
     });
+
+    // Evento para actualizar planSesion con los inputs (aunque se recolectarán al guardar)
+    // No es necesario almacenar en tiempo real, pero si querés mostrar algo, podés.
   });
+
+  function finalizarEjercicio(idx) {
+    const ejercicioDiv = document.getElementById(`ejercicio-${idx}`);
+    const inputs = ejercicioDiv.querySelectorAll('input');
+    inputs.forEach(input => input.disabled = true);
+    const btn = ejercicioDiv.querySelector('.finalizar-ejercicio');
+    btn.disabled = true;
+    // Agregar mensaje de completado si no existe
+    if (!ejercicioDiv.querySelector('.completado-msg')) {
+      btn.insertAdjacentHTML('afterend', '<span class="completado-msg">✅ Completado</span>');
+    }
+    ejerciciosCompletados[idx] = true;
+    // También podríamos guardar los valores en planSesion
+    const series = parseInt(inputs[0].value) || 0;
+    const exitosas = parseInt(inputs[1].value) || 0;
+    if (planSesion) {
+      planSesion.ejercicios[idx].seriesRealizadas = series;
+      planSesion.ejercicios[idx].repeticionesExitosas = exitosas;
+    }
+  }
 
   guardarSesionBtn.addEventListener('click', () => {
     if (!planSesion) return alert('No hay plan cargado.');
-    // Validar que todos los campos estén llenos (opcional)
-    const sesionCompleta = {
+
+    // Recolectar valores actuales de todos los inputs (incluso los que no se finalizaron)
+    const inputs = sesionContent.querySelectorAll('input');
+    inputs.forEach(input => {
+      const idx = parseInt(input.dataset.index);
+      const campo = input.dataset.campo;
+      if (!isNaN(idx) && planSesion.ejercicios[idx]) {
+        planSesion.ejercicios[idx][campo] = parseInt(input.value) || 0;
+      }
+    });
+
+    // Guardar sesión
+    const sesionParaGuardar = {
       id: Date.now(),
       fecha: new Date().toLocaleString(),
-      ...planSesion
+      jugador: planSesion.jugador,
+      golpe: planSesion.golpe,
+      objetivo: planSesion.objetivo,
+      ejercicios: planSesion.ejercicios.map(ej => ({
+        nombreCuant: ej.nombreCuant,
+        transicion: ej.transicion,
+        seriesRealizadas: ej.seriesRealizadas || 0,
+        repeticionesExitosas: ej.repeticionesExitosas || 0,
+        totalSeries: ej.totalSeries,
+        totalRepsPorSerie: ej.totalRepsPorSerie
+      }))
     };
+
     let sesiones = JSON.parse(localStorage.getItem('padelSesiones')) || [];
-    sesiones.push(sesionCompleta);
+    sesiones.push(sesionParaGuardar);
     localStorage.setItem('padelSesiones', JSON.stringify(sesiones));
     alert('✅ Sesión guardada correctamente.');
-    cargarHistorialSesiones(); // Si hubiera historial visible
+    // Mostrar historial actualizado
+    cargarHistorialSesiones();
   });
 
-  // Mostrar historial de sesiones del alumno seleccionado (opcional)
   function cargarHistorialSesiones() {
     const idx = alumnoSelectSeg.value;
     if (idx === '') return;
     const historial = JSON.parse(localStorage.getItem('padelEvalHistorial')) || [];
     const eva = historial[parseInt(idx)];
     if (!eva) return;
+
     const sesiones = JSON.parse(localStorage.getItem('padelSesiones')) || [];
     const sesionesAlumno = sesiones.filter(s => s.jugador === eva.jugador && s.golpe === eva.golpe);
-    if (sesionesAlumno.length > 0) {
-      let htmlHist = '<div class="historial-sesiones"><h3>Últimas sesiones</h3>';
-      sesionesAlumno.slice(-3).reverse().forEach(ses => {
-        htmlHist += `<div class="sesion-ejercicio"><strong>${ses.fecha}</strong> - Objetivo: ${ses.objetivo}ª<br>`;
-        ses.ejercicios.forEach(ej => {
-          htmlHist += `${ej.nombreCuant}: ${ej.seriesRealizadas} series, ${ej.repeticionesExitosas} éxitos<br>`;
-        });
-        htmlHist += '</div>';
-      });
-      htmlHist += '</div>';
-      sesionContent.insertAdjacentHTML('beforeend', htmlHist);
+
+    let containerHistorial = document.getElementById('historialSesiones');
+    if (!containerHistorial) {
+      containerHistorial = document.createElement('div');
+      containerHistorial.className = 'historial-sesiones';
+      containerHistorial.id = 'historialSesiones';
+      sesionContent.appendChild(containerHistorial);
     }
+    containerHistorial.innerHTML = '';
+
+    if (sesionesAlumno.length === 0) {
+      containerHistorial.innerHTML = '<p>No hay sesiones anteriores para este alumno.</p>';
+      return;
+    }
+
+    sesionesAlumno.slice(-5).reverse().forEach(ses => {
+      const div = document.createElement('div');
+      div.className = 'sesion-ejercicio';
+      let innerHTML = `<strong>${ses.fecha}</strong> - Objetivo: ${ses.objetivo}ª<br>`;
+      ses.ejercicios.forEach(ej => {
+        innerHTML += `${ej.nombreCuant}: ${ej.seriesRealizadas} de ${ej.totalSeries} series, ${ej.repeticionesExitosas} éxitos de ${ej.totalSeries * ej.totalRepsPorSerie} posibles<br>`;
+      });
+      div.innerHTML = innerHTML;
+      containerHistorial.appendChild(div);
+    });
   }
 
-  // Inicializar
+  // Inicializar con smash
   renderizarGolpe('smash');
 });
