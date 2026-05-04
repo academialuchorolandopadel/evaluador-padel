@@ -1,4 +1,4 @@
-// ==================== APP.JS COMPLETO (CORREGIDO) ====================
+// ==================== APP.JS COMPLETO (con Alumnos y PDF) ====================
 document.addEventListener('DOMContentLoaded', () => {
   const mainNav = document.getElementById('mainNav');
   const views = document.querySelectorAll('.view');
@@ -35,6 +35,7 @@ document.addEventListener('DOMContentLoaded', () => {
       document.getElementById(view + 'View').classList.add('active');
       if (view === 'historial') cargarHistorial();
       if (view === 'entrenamiento') cargarAlumnosEnSelect();
+      if (view === 'alumnos') cargarAlumnos();
     }
   });
 
@@ -267,7 +268,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const alumnoSelect = document.getElementById('alumnoSelect');
   const categoriaObjetivo = document.getElementById('categoriaObjetivo');
   const generarPlanBtn = document.getElementById('generarPlanBtn');
-  const imprimirPlanBtn = document.getElementById('imprimirPlanBtn');
+  const descargarPlanBtn = document.getElementById('descargarPlanBtn');
   const planEntrenamiento = document.getElementById('planEntrenamiento');
 
   function cargarAlumnosEnSelect() {
@@ -289,18 +290,26 @@ document.addEventListener('DOMContentLoaded', () => {
     const objetivo = parseInt(categoriaObjetivo.value);
     planGeneradoHTML = construirPlan(evaluacion, objetivo);
     planEntrenamiento.innerHTML = planGeneradoHTML;
-    imprimirPlanBtn.style.display = 'inline-block';
+    descargarPlanBtn.style.display = 'inline-block';
   });
 
-  imprimirPlanBtn.addEventListener('click', () => {
+  descargarPlanBtn.addEventListener('click', () => {
     const ventana = window.open('', '_blank');
     ventana.document.write(`
-      <html><head><title>Plan de Entrenamiento</title>
-      <style> body { font-family: Arial; padding:20px; } .ejercicio-item { margin-bottom:12px; } </style>
-      </head><body>${planGeneradoHTML}</body></html>
+      <html>
+        <head>
+          <title>Plan de Entrenamiento</title>
+          <style>
+            body { font-family: Arial, sans-serif; padding: 30px; }
+            h2 { color: #002244; }
+            .ejercicio-item { margin-bottom: 12px; border: 1px solid #ccc; padding: 8px; }
+          </style>
+        </head>
+        <body>${planGeneradoHTML}</body>
+      </html>
     `);
     ventana.document.close();
-    ventana.print();
+    ventana.print();  // El usuario puede guardar como PDF desde el diálogo
   });
 
   function construirPlan(evaluacion, objetivo) {
@@ -316,11 +325,9 @@ document.addEventListener('DOMContentLoaded', () => {
       let ejerciciosPar = '';
       for (const cuant of parData.cuantificadores) {
         const catActual = seleccionesPar[cuant.id];
-        // CORRECCIÓN: el objetivo es mejor (menor número) que la categoría actual
         if (catActual && catActual > objetivo) {
-          // Recorremos desde la categoría actual hacia la objetivo (descendente)
           for (let cat = catActual; cat > objetivo; cat--) {
-            const transicion = `${cat}_${cat-1}`;  // ej: "7_6", "6_5"
+            const transicion = `${cat}_${cat-1}`;
             const ejercicio = window.EJERCICIOS?.[evaluacion.golpe]?.[parKey]?.[cuant.id]?.[transicion];
             if (ejercicio) {
               ejerciciosPar += `
@@ -341,5 +348,78 @@ document.addEventListener('DOMContentLoaded', () => {
     return html;
   }
 
+  // ============ ALUMNOS (base de datos) ============
+  const alumnosLista = document.getElementById('alumnosLista');
+
+  function cargarAlumnos() {
+    const historial = JSON.parse(localStorage.getItem('padelEvalHistorial')) || [];
+    if (historial.length === 0) {
+      alumnosLista.innerHTML = '<p>No hay alumnos registrados.</p>';
+      return;
+    }
+
+    // Agrupar por nombre de jugador (puede tener varias evaluaciones)
+    const alumnos = {};
+    historial.forEach(eva => {
+      if (!alumnos[eva.jugador]) {
+        alumnos[eva.jugador] = [];
+      }
+      alumnos[eva.jugador].push(eva);
+    });
+
+    let html = '';
+    for (const [nombre, evaluaciones] of Object.entries(alumnos)) {
+      html += `<div class="alumno-card">
+        <h3>${nombre}</h3>
+        <table>
+          <thead><tr><th>Golpe</th><th>Fecha</th><th>Acciones</th></tr></thead>
+          <tbody>`;
+      evaluaciones.forEach(eva => {
+        html += `<tr>
+          <td>${eva.golpe}</td>
+          <td>${eva.fecha}</td>
+          <td>
+            <button class="btn-secondary btn-chico generar-plan-alumno" data-id="${eva.id}">📋 Plan</button>
+            <button class="btn-secondary btn-chico eliminar-eva-alumno" data-id="${eva.id}">🗑️</button>
+          </td>
+        </tr>`;
+      });
+      html += `</tbody></table></div>`;
+    }
+    alumnosLista.innerHTML = html;
+
+    // Eventos para los botones dentro de la vista Alumnos
+    alumnosLista.addEventListener('click', (e) => {
+      if (e.target.classList.contains('generar-plan-alumno')) {
+        const id = Number(e.target.dataset.id);
+        const historial = JSON.parse(localStorage.getItem('padelEvalHistorial')) || [];
+        const eva = historial.find(e => e.id === id);
+        if (eva) {
+          // Nos movemos a la pestaña Entrenamiento y seleccionamos automáticamente
+          document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+          document.querySelector('.tab[data-view="entrenamiento"]').classList.add('active');
+          views.forEach(v => v.classList.remove('active'));
+          document.getElementById('entrenamientoView').classList.add('active');
+          // Cargar el select y seleccionar el alumno correspondiente
+          cargarAlumnosEnSelect();
+          const options = alumnoSelect.options;
+          for (let i = 0; i < options.length; i++) {
+            if (options[i].textContent.includes(eva.jugador) && options[i].textContent.includes(eva.golpe)) {
+              alumnoSelect.selectedIndex = i;
+              break;
+            }
+          }
+        }
+      } else if (e.target.classList.contains('eliminar-eva-alumno')) {
+        const id = Number(e.target.dataset.id);
+        let historial = JSON.parse(localStorage.getItem('padelEvalHistorial')) || [];
+        historial = historial.filter(e => e.id !== id);
+        localStorage.setItem('padelEvalHistorial', JSON.stringify(historial));
+        cargarAlumnos(); // recargar la lista
+      }
+    });
+  }
+
+  // Inicializar
   renderizarGolpe('smash');
 });
