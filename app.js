@@ -1,6 +1,5 @@
 // ==================== APP.JS COMPLETO ====================
 document.addEventListener('DOMContentLoaded', () => {
-  // --- Elementos del DOM ---
   const mainNav = document.getElementById('mainNav');
   const views = document.querySelectorAll('.view');
   const golpesList = document.getElementById('golpesList');
@@ -11,12 +10,10 @@ document.addEventListener('DOMContentLoaded', () => {
   const modoFiscalCheckbox = document.getElementById('modoFiscalCheckbox');
   const body = document.body;
 
-  // Variables de estado
   let golpeActual = 'smash';
   let evaluacionesCache = {};
-  let planGeneradoHTML = '';   // para impresión/guardado
+  let planGeneradoHTML = '';
 
-  // ================== MODO ALUMNO / FISCAL ==================
   function actualizarModo() {
     if (modoFiscalCheckbox.checked) {
       body.classList.remove('modo-alumno');
@@ -29,46 +26,35 @@ document.addEventListener('DOMContentLoaded', () => {
   modoFiscalCheckbox.addEventListener('change', actualizarModo);
   actualizarModo();
 
-  // ================== NAVEGACIÓN PRINCIPAL ==================
   mainNav.addEventListener('click', (e) => {
     if (e.target.classList.contains('tab')) {
       const view = e.target.dataset.view;
-      // Actualizar pestañas activas
       mainNav.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
       e.target.classList.add('active');
-      // Ocultar todas las vistas
       views.forEach(v => v.classList.remove('active'));
-      // Mostrar la vista seleccionada
       document.getElementById(view + 'View').classList.add('active');
-
-      // Acciones según la vista
       if (view === 'historial') cargarHistorial();
       if (view === 'entrenamiento') cargarAlumnosEnSelect();
     }
   });
 
-  // ================== SIDEBAR DE GOLPES ==================
   golpesList.addEventListener('click', (e) => {
     if (e.target.tagName === 'LI') {
       golpesList.querySelectorAll('li').forEach(li => li.classList.remove('active'));
       e.target.classList.add('active');
       golpeActual = e.target.dataset.golpe;
-      evaluacionesCache = {};   // resetear al cambiar de golpe
+      evaluacionesCache = {};
       renderizarGolpe(golpeActual);
     }
   });
 
-  // ================== RENDERIZAR GOLPE (EVALUACIÓN) ==================
   function renderizarGolpe(golpeId) {
     const golpe = DATA.golpes[golpeId];
     if (!golpe) return;
 
     let html = `<h2>${golpe.nombre}</h2>`;
-    if (golpe.subtitulo) {
-      html += `<p class="variantes-golpe">${golpe.subtitulo}</p>`;
-    }
+    if (golpe.subtitulo) html += `<p class="variantes-golpe">${golpe.subtitulo}</p>`;
 
-    // Acordeones para cada par
     const pares = golpe.pares;
     for (const [parKey, parData] of Object.entries(pares)) {
       html += `
@@ -87,7 +73,6 @@ document.addEventListener('DOMContentLoaded', () => {
         </div>
       `;
     }
-    // Botones globales del golpe
     html += `
       <div class="actions" style="margin-top:24px;">
         <button id="btnGuardar" class="btn-primary">💾 Guardar Evaluación</button>
@@ -100,7 +85,6 @@ document.addEventListener('DOMContentLoaded', () => {
     `;
     golpeContent.innerHTML = html;
 
-    // Construir tarjetas de cuantificadores
     for (const [parKey, parData] of Object.entries(pares)) {
       const grid = document.getElementById(`grid-${parKey}`);
       parData.cuantificadores.forEach(cuant => {
@@ -125,7 +109,6 @@ document.addEventListener('DOMContentLoaded', () => {
         grid.appendChild(card);
       });
 
-      // Restaurar selecciones previas si existen
       if (evaluacionesCache[parKey]) {
         for (const [cuantId, cat] of Object.entries(evaluacionesCache[parKey])) {
           const radio = document.querySelector(`input[name="${parKey}_${cuantId}"][value="${cat}"]`);
@@ -134,7 +117,6 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }
 
-    // Eventos de acordeón
     document.querySelectorAll('.par-header').forEach(header => {
       header.addEventListener('click', () => {
         const parKey = header.dataset.par;
@@ -144,17 +126,14 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     });
 
-    // Eventos de diagnóstico por par
     document.querySelectorAll('.diagnosticar-par').forEach(btn => {
       btn.addEventListener('click', () => diagnosticarPar(btn.dataset.par));
     });
 
-    // Eventos de guardado y evaluación global
     document.getElementById('btnGuardar').addEventListener('click', guardarEvaluacion);
     document.getElementById('btnEvaluacionGlobal').addEventListener('click', evaluarGolpeCompleto);
   }
 
-  // ================== DIAGNÓSTICO DE UN PAR ==================
   function diagnosticarPar(parKey) {
     const golpe = DATA.golpes[golpeActual];
     const parData = golpe.pares[parKey];
@@ -166,8 +145,6 @@ document.addEventListener('DOMContentLoaded', () => {
       else completo = false;
     });
     if (!completo) return alert('⚠️ Seleccioná una opción para cada cuantificador.');
-
-    // Guardar en caché
     evaluacionesCache[parKey] = selecciones;
 
     const valores = Object.values(selecciones);
@@ -181,14 +158,9 @@ document.addEventListener('DOMContentLoaded', () => {
       html += `<li><strong>${nombreCuant}:</strong> <span class="cat-badge cat-${cat}">${cat}ª</span></li>`;
     }
     html += '</ul>';
-
-    if (min === max) {
-      html += `<p>✅ Encaja claramente en <strong><span class="cat-badge cat-${moda}">${moda}ª Categoría</span></strong>.</p>`;
-    } else if (max - min === 1) {
-      html += `<p>🔄 Está entre <strong>${min}ª y ${max}ª categoría</strong>.</p>`;
-    } else {
-      html += `<p>⚠️ Dispersión amplia (${min}ª a ${max}ª). Revisá las observaciones.</p>`;
-    }
+    if (min === max) html += `<p>✅ Encaja claramente en <strong><span class="cat-badge cat-${moda}">${moda}ª Categoría</span></strong>.</p>`;
+    else if (max - min === 1) html += `<p>🔄 Está entre <strong>${min}ª y ${max}ª categoría</strong>.</p>`;
+    else html += `<p>⚠️ Dispersión amplia (${min}ª a ${max}ª). Revisá las observaciones.</p>`;
 
     document.getElementById(`result-${parKey}`).innerHTML = html;
     document.getElementById(`result-${parKey}`).style.display = 'block';
@@ -204,7 +176,6 @@ document.addEventListener('DOMContentLoaded', () => {
     return moda;
   }
 
-  // ================== EVALUACIÓN GLOBAL DEL GOLPE ==================
   function evaluarGolpeCompleto() {
     const golpe = DATA.golpes[golpeActual];
     const keys = Object.keys(golpe.pares);
@@ -219,12 +190,10 @@ document.addEventListener('DOMContentLoaded', () => {
     if (min === max) texto = `Rendimiento consistente de <strong>${min}ª categoría</strong>.`;
     else if (max - min === 1) texto = `Rendimiento entre <strong>${min}ª y ${max}ª categoría</strong>.`;
     else texto = `Dispersión amplia (${min}ª a ${max}ª). Revisar pares individuales.`;
-
     document.getElementById('globalGolpeTexto').innerHTML = texto;
     document.getElementById('globalGolpe').style.display = 'block';
   }
 
-  // ================== GUARDAR EVALUACIÓN ==================
   function guardarEvaluacion() {
     const nombre = playerNameInput.value.trim() || 'Sin nombre';
     const evaluacion = {
@@ -240,7 +209,6 @@ document.addEventListener('DOMContentLoaded', () => {
     alert('✅ Evaluación guardada correctamente.');
   }
 
-  // ================== HISTORIAL ==================
   function cargarHistorial() {
     const historial = JSON.parse(localStorage.getItem('padelEvalHistorial')) || [];
     historialLista.innerHTML = '';
@@ -262,14 +230,12 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // Eventos de historial (cargar / eliminar)
   historialLista.addEventListener('click', (e) => {
     if (e.target.classList.contains('cargarEva')) {
       const id = Number(e.target.dataset.id);
       const historial = JSON.parse(localStorage.getItem('padelEvalHistorial')) || [];
       const eva = historial.find(e => e.id === id);
       if (eva) {
-        // Cambiar a vista evaluación
         document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
         document.querySelector('.tab[data-view="evaluacion"]').classList.add('active');
         views.forEach(v => v.classList.remove('active'));
@@ -297,14 +263,13 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // ================== VISTA ENTRENAMIENTO ==================
+  // ============ ENTRENAMIENTO ============
   const alumnoSelect = document.getElementById('alumnoSelect');
   const categoriaObjetivo = document.getElementById('categoriaObjetivo');
   const generarPlanBtn = document.getElementById('generarPlanBtn');
   const imprimirPlanBtn = document.getElementById('imprimirPlanBtn');
   const planEntrenamiento = document.getElementById('planEntrenamiento');
 
-  // Cargar lista de alumnos en el select
   function cargarAlumnosEnSelect() {
     const historial = JSON.parse(localStorage.getItem('padelEvalHistorial')) || [];
     alumnoSelect.innerHTML = '<option value="">-- Seleccionar alumno --</option>';
@@ -316,7 +281,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // Generar plan de entrenamiento
   generarPlanBtn.addEventListener('click', () => {
     const idx = alumnoSelect.value;
     if (idx === '') return alert('⚠️ Seleccioná un alumno.');
@@ -328,34 +292,24 @@ document.addEventListener('DOMContentLoaded', () => {
     imprimirPlanBtn.style.display = 'inline-block';
   });
 
-  // Imprimir plan
   imprimirPlanBtn.addEventListener('click', () => {
     const ventana = window.open('', '_blank');
     ventana.document.write(`
-      <html>
-        <head>
-          <title>Plan de Entrenamiento</title>
-          <style>
-            body { font-family: Arial, sans-serif; padding: 20px; }
-            h2 { color: #003366; }
-            .ejercicio-item { margin-bottom: 12px; }
-          </style>
-        </head>
-        <body>${planGeneradoHTML}</body>
-      </html>
+      <html><head><title>Plan de Entrenamiento</title>
+      <style> body { font-family: Arial; padding:20px; } .ejercicio-item { margin-bottom:12px; } </style>
+      </head><body>${planGeneradoHTML}</body></html>
     `);
     ventana.document.close();
     ventana.print();
   });
 
-  // Construir el plan comparando evaluación con categoría objetivo
   function construirPlan(evaluacion, objetivo) {
     let html = `<h2>Plan de Entrenamiento para ${evaluacion.jugador}</h2>`;
-    html += `<p><strong>Golpe evaluado:</strong> ${evaluacion.golpe} | <strong>Objetivo:</strong> ${objetivo}ª Categoría</p>`;
-    let encontroEjercicios = false;
+    html += `<p><strong>Golpe:</strong> ${evaluacion.golpe} | <strong>Objetivo:</strong> ${objetivo}ª Categoría</p>`;
+    let encontro = false;
 
     const golpeData = DATA.golpes[evaluacion.golpe];
-    if (!golpeData) return html + '<p>No se encontraron datos del golpe.</p>';
+    if (!golpeData) return html + '<p>No hay datos del golpe.</p>';
 
     for (const [parKey, parData] of Object.entries(golpeData.pares)) {
       const seleccionesPar = evaluacion.selecciones[parKey] || {};
@@ -363,10 +317,8 @@ document.addEventListener('DOMContentLoaded', () => {
       for (const cuant of parData.cuantificadores) {
         const catActual = seleccionesPar[cuant.id];
         if (catActual && catActual < objetivo) {
-          // Buscar ejercicios para cada salto de categoría necesario
           for (let cat = catActual; cat < objetivo; cat++) {
             const transicion = `${cat}_${cat+1}`;
-            // Referencia al banco de ejercicios (debe existir EJERCICIOS)
             const ejercicio = window.EJERCICIOS?.[evaluacion.golpe]?.[parKey]?.[cuant.id]?.[transicion];
             if (ejercicio) {
               ejerciciosPar += `
@@ -376,23 +328,16 @@ document.addEventListener('DOMContentLoaded', () => {
                   <em>${ejercicio.descripcion}</em><br>
                   ✅ Criterio: ${ejercicio.criterioExito}
                 </div>`;
-              encontroEjercicios = true;
+              encontro = true;
             }
           }
         }
       }
-      if (ejerciciosPar) {
-        html += `<div class="plan-par"><h4>${parData.nombre}</h4>${ejerciciosPar}</div>`;
-      }
+      if (ejerciciosPar) html += `<div class="plan-par"><h4>${parData.nombre}</h4>${ejerciciosPar}</div>`;
     }
-
-    if (!encontroEjercicios) {
-      html += '<p>✅ El alumno ya alcanza o supera los niveles de la categoría objetivo en todos los cuantificadores evaluados.</p>';
-    }
-
+    if (!encontro) html += '<p>✅ Ya alcanza el nivel en todos los aspectos evaluados.</p>';
     return html;
   }
 
-  // ================== INICIALIZAR ==================
   renderizarGolpe('smash');
 });
