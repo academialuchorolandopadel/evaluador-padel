@@ -1,4 +1,4 @@
-// ==================== APP.JS COMPLETO (con Seguimiento + Veredicto) ====================
+// ==================== APP.JS COMPLETO CORREGIDO ====================
 document.addEventListener('DOMContentLoaded', () => {
   // --- Elementos del DOM ---
   const mainNav = document.getElementById('mainNav');
@@ -242,7 +242,8 @@ document.addEventListener('DOMContentLoaded', () => {
     if (e.target.classList.contains('cargarEva')) {
       const id = Number(e.target.dataset.id);
       const historial = JSON.parse(localStorage.getItem('padelEvalHistorial')) || [];
-      const eva = historial.find(e => e.id === id);
+      // FIX #3: renombrar parámetro de find para evitar shadowing con 'e' del evento
+      const eva = historial.find(item => item.id === id);
       if (eva) {
         document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
         document.querySelector('.tab[data-view="evaluacion"]').classList.add('active');
@@ -258,7 +259,8 @@ document.addEventListener('DOMContentLoaded', () => {
     } else if (e.target.classList.contains('eliminarEva')) {
       const id = Number(e.target.dataset.id);
       let historial = JSON.parse(localStorage.getItem('padelEvalHistorial')) || [];
-      historial = historial.filter(e => e.id !== id);
+      // FIX #3: renombrar parámetro de filter para evitar shadowing con 'e' del evento
+      historial = historial.filter(item => item.id !== id);
       localStorage.setItem('padelEvalHistorial', JSON.stringify(historial));
       cargarHistorial();
     }
@@ -385,37 +387,40 @@ document.addEventListener('DOMContentLoaded', () => {
       html += `</tbody></table></div>`;
     }
     alumnosLista.innerHTML = html;
-
-    alumnosLista.addEventListener('click', (e) => {
-      if (e.target.classList.contains('generar-plan-alumno')) {
-        const id = Number(e.target.dataset.id);
-        const historial = JSON.parse(localStorage.getItem('padelEvalHistorial')) || [];
-        const eva = historial.find(e => e.id === id);
-        if (eva) {
-          document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-          document.querySelector('.tab[data-view="entrenamiento"]').classList.add('active');
-          views.forEach(v => v.classList.remove('active'));
-          document.getElementById('entrenamientoView').classList.add('active');
-          cargarAlumnosEnSelect();
-          const options = alumnoSelect.options;
-          for (let i = 0; i < options.length; i++) {
-            if (options[i].textContent.includes(eva.jugador) && options[i].textContent.includes(eva.golpe)) {
-              alumnoSelect.selectedIndex = i;
-              break;
-            }
-          }
-        }
-      } else if (e.target.classList.contains('eliminar-eva-alumno')) {
-        const id = Number(e.target.dataset.id);
-        let historial = JSON.parse(localStorage.getItem('padelEvalHistorial')) || [];
-        historial = historial.filter(e => e.id !== id);
-        localStorage.setItem('padelEvalHistorial', JSON.stringify(historial));
-        cargarAlumnos();
-      }
-    });
   }
 
-  // ========== SEGUIMIENTO (MEJORADO) ==========
+  // FIX #1: Listener de alumnosLista FUERA de cargarAlumnos() para evitar acumulación
+  alumnosLista.addEventListener('click', (e) => {
+    if (e.target.classList.contains('generar-plan-alumno')) {
+      const id = Number(e.target.dataset.id);
+      const historial = JSON.parse(localStorage.getItem('padelEvalHistorial')) || [];
+      // FIX #3: parámetro 'item' en lugar de 'e' para evitar shadowing
+      const eva = historial.find(item => item.id === id);
+      if (eva) {
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        document.querySelector('.tab[data-view="entrenamiento"]').classList.add('active');
+        views.forEach(v => v.classList.remove('active'));
+        document.getElementById('entrenamientoView').classList.add('active');
+        cargarAlumnosEnSelect();
+        const options = alumnoSelect.options;
+        for (let i = 0; i < options.length; i++) {
+          if (options[i].textContent.includes(eva.jugador) && options[i].textContent.includes(eva.golpe)) {
+            alumnoSelect.selectedIndex = i;
+            break;
+          }
+        }
+      }
+    } else if (e.target.classList.contains('eliminar-eva-alumno')) {
+      const id = Number(e.target.dataset.id);
+      let historial = JSON.parse(localStorage.getItem('padelEvalHistorial')) || [];
+      // FIX #3: parámetro 'item' en lugar de 'e' para evitar shadowing
+      historial = historial.filter(item => item.id !== id);
+      localStorage.setItem('padelEvalHistorial', JSON.stringify(historial));
+      cargarAlumnos();
+    }
+  });
+
+  // ========== SEGUIMIENTO ==========
   const alumnoSelectSeg = document.getElementById('alumnoSelectSeg');
   const categoriaObjetivoSeg = document.getElementById('categoriaObjetivoSeg');
   const cargarPlanSegBtn = document.getElementById('cargarPlanSeg');
@@ -462,7 +467,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 nombreCuant: cuant.nombre,
                 transicion,
                 catInicio: cat,
-                catFin: cat-1,
+                catFin: cat - 1,
                 ejercicio,
                 totalSeries: ejercicio.series,
                 totalRepsPorSerie: parseInt(ejercicio.repeticiones),
@@ -512,11 +517,14 @@ document.addEventListener('DOMContentLoaded', () => {
     guardarSesionBtn.style.display = 'inline-block';
 
     document.querySelectorAll('.finalizar-ejercicio').forEach(btn => {
-      btn.addEventListener('click', (e) => {
-        const idx = parseInt(e.target.dataset.index);
-        finalizarEjercicio(idx);
+      btn.addEventListener('click', (ev) => {
+        const idxEj = parseInt(ev.target.dataset.index);
+        finalizarEjercicio(idxEj);
       });
     });
+
+    // FIX #4: cargar historial previo al mostrar el plan (no solo al guardar)
+    cargarHistorialSesiones();
   });
 
   function extraerMinimoCriterio(criterioTexto, totalPosibles) {
@@ -595,10 +603,22 @@ document.addEventListener('DOMContentLoaded', () => {
     const historial = JSON.parse(localStorage.getItem('padelEvalHistorial')) || [];
     const evaluacion = historial[parseInt(idxEva)];
     const categoriasActuales = {};
+    // Map para guardar también el nombre legible del cuantificador
+    const nombresCuant = {};
+
     if (evaluacion) {
+      const golpeData = DATA.golpes[evaluacion.golpe];
       for (const [parKey, sels] of Object.entries(evaluacion.selecciones)) {
         for (const [cuantId, cat] of Object.entries(sels)) {
           categoriasActuales[cuantId] = cat;
+        }
+      }
+      // FIX #2: poblar nombres legibles desde DATA
+      if (golpeData) {
+        for (const parData of Object.values(golpeData.pares)) {
+          for (const cuant of parData.cuantificadores) {
+            nombresCuant[cuant.id] = cuant.nombre;
+          }
         }
       }
     }
@@ -608,6 +628,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     for (const cuantId of Object.keys(categoriasActuales)) {
       resultadosPorCuant[cuantId] = {
+        // FIX #2: guardar nombre legible en el objeto
+        nombre: nombresCuant[cuantId] || cuantId,
         catActual: categoriasActuales[cuantId] || 7,
         catAlcanzada: categoriasActuales[cuantId] || 7,
         superado: false,
@@ -618,6 +640,8 @@ document.addEventListener('DOMContentLoaded', () => {
     plan.ejercicios.forEach(ej => {
       if (!resultadosPorCuant[ej.cuantId]) {
         resultadosPorCuant[ej.cuantId] = {
+          // FIX #2: usar nombreCuant del ejercicio si no estaba en el map
+          nombre: ej.nombreCuant,
           catActual: categoriasActuales[ej.cuantId] || 7,
           catAlcanzada: categoriasActuales[ej.cuantId] || 7,
           superado: false,
@@ -639,6 +663,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     let globalAscenso = 0, globalRepetir = 0, globalDescenso = 0;
+    // FIX #2: usar datos.nombre en lugar de cuantId en la tabla
     let tablaHTML = '<table class="tabla-veredicto"><tr><th>Cuantificador</th><th>Cat. Actual</th><th>Objetivo</th><th>Cat. Alcanzada</th><th>Veredicto</th></tr>';
 
     for (const [cuantId, datos] of Object.entries(resultadosPorCuant)) {
@@ -658,7 +683,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
 
       tablaHTML += `<tr>
-        <td>${cuantId}</td>
+        <td>${datos.nombre}</td>
         <td>${catActual}ª</td>
         <td>${objetivo}ª</td>
         <td>${catAlcanzada}ª</td>
@@ -704,10 +729,11 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
 
+    containerHistorial.innerHTML = '<h3>📅 Sesiones anteriores</h3>';
     sesionesAlumno.slice(-5).reverse().forEach(ses => {
       const div = document.createElement('div');
       div.className = 'sesion-ejercicio';
-      let innerHTML = `<strong>${ses.fecha}</strong> - Objetivo: ${ses.objetivo}ª<br>`;
+      let innerHTML = `<strong>${ses.fecha}</strong> – Objetivo: ${ses.objetivo}ª<br>`;
       ses.ejercicios.forEach(ej => {
         innerHTML += `${ej.nombreCuant}: ${ej.seriesRealizadas} de ${ej.totalSeries} series, ${ej.repeticionesExitosas} éxitos<br>`;
       });
