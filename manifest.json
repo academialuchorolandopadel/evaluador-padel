@@ -1,0 +1,21 @@
+{
+  "name": "CATEGORIZACIÓN - Academia Lucho Rolando",
+  "short_name": "CATEGORIZACIÓN",
+  "description": "Sistema de categorización de pádel",
+  "start_url": "/evaluador-padel/index.html",
+  "display": "standalone",
+  "background_color": "#003366",
+  "theme_color": "#C8963E",
+  "icons": [
+    {
+      "src": "1000001630.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "1000001630.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
