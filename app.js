@@ -1,21 +1,22 @@
-// ==================== APP.JS COMPLETO CORREGIDO ====================
+// ==================== APP.JS – VERSIÓN FIREBASE ====================
 document.addEventListener('DOMContentLoaded', () => {
-  // --- Elementos del DOM ---
-  const mainNav = document.getElementById('mainNav');
-  const views = document.querySelectorAll('.view');
-  const golpesList = document.getElementById('golpesList');
-  const golpeContent = document.getElementById('golpeContent');
-  const playerNameInput = document.getElementById('playerName');
-  const historialLista = document.getElementById('historialLista');
-  const limpiarHistorialBtn = document.getElementById('limpiarHistorialBtn');
-  const modoFiscalCheckbox = document.getElementById('modoFiscalCheckbox');
-  const body = document.body;
 
-  let golpeActual = 'smash';
-  let evaluacionesCache = {};
+  // --- Elementos del DOM ---
+  const mainNav            = document.getElementById('mainNav');
+  const views              = document.querySelectorAll('.view');
+  const golpesList         = document.getElementById('golpesList');
+  const golpeContent       = document.getElementById('golpeContent');
+  const playerNameInput    = document.getElementById('playerName');
+  const historialLista     = document.getElementById('historialLista');
+  const limpiarHistorialBtn= document.getElementById('limpiarHistorialBtn');
+  const modoFiscalCheckbox = document.getElementById('modoFiscalCheckbox');
+  const body               = document.body;
+
+  let golpeActual      = 'smash';
+  let evaluacionesCache= {}; // selecciones del formulario en curso
   let planGeneradoHTML = '';
 
-  // ========== MODO ALUMNO/FISCAL ==========
+  // ========== MODO ALUMNO / FISCAL ==========
   function actualizarModo() {
     if (modoFiscalCheckbox.checked) {
       body.classList.remove('modo-alumno');
@@ -36,10 +37,10 @@ document.addEventListener('DOMContentLoaded', () => {
       e.target.classList.add('active');
       views.forEach(v => v.classList.remove('active'));
       document.getElementById(view + 'View').classList.add('active');
-      if (view === 'historial') cargarHistorial();
-      if (view === 'entrenamiento') cargarAlumnosEnSelect();
-      if (view === 'alumnos') cargarAlumnos();
-      if (view === 'seguimiento') cargarAlumnosSeguimiento();
+      if (view === 'historial')     cargarHistorial().catch(console.error);
+      if (view === 'entrenamiento') cargarAlumnosEnSelect().catch(console.error);
+      if (view === 'alumnos')       cargarAlumnos().catch(console.error);
+      if (view === 'seguimiento')   cargarAlumnosSeguimiento().catch(console.error);
     }
   });
 
@@ -54,7 +55,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // ========== RENDERIZAR GOLPE (EVALUACIÓN) ==========
+  // ========== RENDERIZAR GOLPE (sin cambios) ==========
   function renderizarGolpe(golpeId) {
     const golpe = DATA.golpes[golpeId];
     if (!golpe) return;
@@ -141,11 +142,13 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('btnEvaluacionGlobal').addEventListener('click', evaluarGolpeCompleto);
   }
 
+  // ========== DIAGNOSTICAR PAR (sin cambios) ==========
   function diagnosticarPar(parKey) {
-    const golpe = DATA.golpes[golpeActual];
+    const golpe   = DATA.golpes[golpeActual];
     const parData = golpe.pares[parKey];
     const selecciones = {};
     let completo = true;
+
     parData.cuantificadores.forEach(cuant => {
       const radio = document.querySelector(`input[name="${parKey}_${cuant.id}"]:checked`);
       if (radio) selecciones[cuant.id] = parseInt(radio.value);
@@ -155,9 +158,9 @@ document.addEventListener('DOMContentLoaded', () => {
     evaluacionesCache[parKey] = selecciones;
 
     const valores = Object.values(selecciones);
-    const moda = calcularModa(valores);
-    const min = Math.min(...valores);
-    const max = Math.max(...valores);
+    const moda    = calcularModa(valores);
+    const min     = Math.min(...valores);
+    const max     = Math.max(...valores);
 
     let html = '<ul>';
     for (const [id, cat] of Object.entries(selecciones)) {
@@ -165,11 +168,11 @@ document.addEventListener('DOMContentLoaded', () => {
       html += `<li><strong>${nombreCuant}:</strong> <span class="cat-badge cat-${cat}">${cat}ª</span></li>`;
     }
     html += '</ul>';
-    if (min === max) html += `<p>✅ Encaja claramente en <strong><span class="cat-badge cat-${moda}">${moda}ª Categoría</span></strong>.</p>`;
+    if (min === max)       html += `<p>✅ Encaja claramente en <strong><span class="cat-badge cat-${moda}">${moda}ª Categoría</span></strong>.</p>`;
     else if (max - min === 1) html += `<p>🔄 Está entre <strong>${min}ª y ${max}ª categoría</strong>.</p>`;
-    else html += `<p>⚠️ Dispersión amplia (${min}ª a ${max}ª). Revisá las observaciones.</p>`;
+    else                   html += `<p>⚠️ Dispersión amplia (${min}ª a ${max}ª). Revisá las observaciones.</p>`;
 
-    document.getElementById(`result-${parKey}`).innerHTML = html;
+    document.getElementById(`result-${parKey}`).innerHTML    = html;
     document.getElementById(`result-${parKey}`).style.display = 'block';
   }
 
@@ -185,71 +188,128 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function evaluarGolpeCompleto() {
     const golpe = DATA.golpes[golpeActual];
-    const keys = Object.keys(golpe.pares);
+    const keys  = Object.keys(golpe.pares);
     const modas = [];
     for (const parKey of keys) {
       if (!evaluacionesCache[parKey]) return alert('⚠️ Diagnosticá todos los pares primero.');
-      const valores = Object.values(evaluacionesCache[parKey]);
-      modas.push(calcularModa(valores));
+      modas.push(calcularModa(Object.values(evaluacionesCache[parKey])));
     }
     const min = Math.min(...modas), max = Math.max(...modas);
     let texto = '';
-    if (min === max) texto = `Rendimiento consistente de <strong>${min}ª categoría</strong>.`;
+    if (min === max)       texto = `Rendimiento consistente de <strong>${min}ª categoría</strong>.`;
     else if (max - min === 1) texto = `Rendimiento entre <strong>${min}ª y ${max}ª categoría</strong>.`;
-    else texto = `Dispersión amplia (${min}ª a ${max}ª). Revisar pares individuales.`;
-    document.getElementById('globalGolpeTexto').innerHTML = texto;
-    document.getElementById('globalGolpe').style.display = 'block';
+    else                   texto = `Dispersión amplia (${min}ª a ${max}ª). Revisar pares individuales.`;
+    document.getElementById('globalGolpeTexto').innerHTML  = texto;
+    document.getElementById('globalGolpe').style.display   = 'block';
   }
 
-  function guardarEvaluacion() {
-    const nombre = playerNameInput.value.trim() || 'Sin nombre';
+  // ==================== FIRESTORE: FUNCIONES DE ALMACENAMIENTO ====================
+
+  // ---- Helper central: cargar evaluaciones con cache ----
+  async function cargarEvaluacionesDesdeFirestore(forzar = false) {
+    if (window.evaluacionesCargadas !== null && !forzar) return window.evaluacionesCargadas;
+    if (!window.currentUser) return [];
+
+    try {
+      let ref;
+      if (window.currentUserData?.rol === 'profesor') {
+        // Profesores ven TODAS las evaluaciones
+        ref = db.collection('evaluaciones').orderBy('fecha', 'desc').limit(200);
+      } else {
+        // Alumnos solo ven las propias
+        ref = db.collection('evaluaciones')
+          .where('uid', '==', window.currentUser.uid)
+          .orderBy('fecha', 'desc')
+          .limit(100);
+      }
+
+      const snapshot = await ref.get();
+      window.evaluacionesCargadas = snapshot.docs.map(doc => ({
+        ...doc.data(),
+        firestoreId: doc.id,
+        id:          doc.id,
+        fecha:       doc.data().fechaLocal || new Date().toLocaleString()
+      }));
+      return window.evaluacionesCargadas;
+
+    } catch (err) {
+      console.error('Error cargando evaluaciones:', err);
+      window.evaluacionesCargadas = [];
+      return [];
+    }
+  }
+
+  // ---- Guardar evaluación → Firestore ----
+  async function guardarEvaluacion() {
+    if (!window.currentUser) return alert('⚠️ Debés iniciar sesión para guardar.');
+    if (Object.keys(evaluacionesCache).length === 0)
+      return alert('⚠️ Diagnosticá al menos un par antes de guardar.');
+
+    const nombre = playerNameInput.value.trim() || window.currentUserData?.nombre || 'Sin nombre';
+
     const evaluacion = {
-      id: Date.now(),
-      fecha: new Date().toLocaleString(),
-      jugador: nombre,
-      golpe: golpeActual,
-      selecciones: evaluacionesCache
+      uid:             window.currentUser.uid,
+      evaluadorUid:    window.currentUser.uid,
+      evaluadorNombre: window.currentUserData?.nombre || '',
+      tipo:            window.currentUserData?.rol === 'profesor' ? 'profesor' : 'autoevaluacion',
+      jugador:         nombre,
+      golpe:           golpeActual,
+      selecciones:     evaluacionesCache,
+      fecha:           firebase.firestore.FieldValue.serverTimestamp(),
+      fechaLocal:      new Date().toLocaleString()
     };
-    let historial = JSON.parse(localStorage.getItem('padelEvalHistorial')) || [];
-    historial.push(evaluacion);
-    localStorage.setItem('padelEvalHistorial', JSON.stringify(historial));
-    alert('✅ Evaluación guardada correctamente.');
+
+    try {
+      await db.collection('evaluaciones').add(evaluacion);
+      window.evaluacionesCargadas = null; // invalidar cache
+      alert('✅ Evaluación guardada correctamente.');
+    } catch (err) {
+      alert('❌ Error al guardar: ' + err.message);
+    }
   }
 
   // ========== HISTORIAL ==========
-  function cargarHistorial() {
-    const historial = JSON.parse(localStorage.getItem('padelEvalHistorial')) || [];
+  async function cargarHistorial() {
+    historialLista.innerHTML = '<p>Cargando evaluaciones...</p>';
+    const historial = await cargarEvaluacionesDesdeFirestore(true);
+
     historialLista.innerHTML = '';
     if (historial.length === 0) {
       historialLista.innerHTML = '<p>No hay evaluaciones guardadas.</p>';
       return;
     }
+
     historial.forEach(eva => {
       const div = document.createElement('div');
       div.className = 'historial-item';
+      const badge = eva.tipo === 'profesor'
+        ? '<span class="badge-tipo profesor">🔍 Profesor</span>'
+        : '<span class="badge-tipo alumno">👤 Alumno</span>';
       div.innerHTML = `
-        <div class="info"><strong>${eva.jugador}</strong> – ${eva.golpe} – ${eva.fecha}</div>
+        <div class="info">
+          ${badge} <strong>${eva.jugador}</strong> – ${eva.golpe} – ${eva.fecha}
+          ${eva.evaluadorNombre ? `<br><small>Por: ${eva.evaluadorNombre}</small>` : ''}
+        </div>
         <div class="btn-group">
-          <button class="btn-secondary cargarEva" data-id="${eva.id}">📂 Cargar</button>
-          <button class="btn-secondary eliminarEva" data-id="${eva.id}">🗑️</button>
+          <button class="btn-secondary cargarEva"   data-id="${eva.firestoreId}">📂 Cargar</button>
+          <button class="btn-secondary eliminarEva" data-id="${eva.firestoreId}">🗑️</button>
         </div>
       `;
       historialLista.appendChild(div);
     });
   }
 
-  historialLista.addEventListener('click', (e) => {
+  historialLista.addEventListener('click', async (e) => {
     if (e.target.classList.contains('cargarEva')) {
-      const id = Number(e.target.dataset.id);
-      const historial = JSON.parse(localStorage.getItem('padelEvalHistorial')) || [];
-      // FIX #3: renombrar parámetro de find para evitar shadowing con 'e' del evento
-      const eva = historial.find(item => item.id === id);
+      const id      = e.target.dataset.id;
+      const historial = window.evaluacionesCargadas || [];
+      const eva     = historial.find(item => item.firestoreId === id);
       if (eva) {
         document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
         document.querySelector('.tab[data-view="evaluacion"]').classList.add('active');
         views.forEach(v => v.classList.remove('active'));
         document.getElementById('evaluacionView').classList.add('active');
-        golpeActual = eva.golpe;
+        golpeActual       = eva.golpe;
         evaluacionesCache = eva.selecciones || {};
         playerNameInput.value = eva.jugador;
         document.querySelectorAll('#golpesList li').forEach(li => li.classList.remove('active'));
@@ -257,36 +317,50 @@ document.addEventListener('DOMContentLoaded', () => {
         renderizarGolpe(eva.golpe);
       }
     } else if (e.target.classList.contains('eliminarEva')) {
-      const id = Number(e.target.dataset.id);
-      let historial = JSON.parse(localStorage.getItem('padelEvalHistorial')) || [];
-      // FIX #3: renombrar parámetro de filter para evitar shadowing con 'e' del evento
-      historial = historial.filter(item => item.id !== id);
-      localStorage.setItem('padelEvalHistorial', JSON.stringify(historial));
-      cargarHistorial();
+      const id = e.target.dataset.id;
+      if (!confirm('¿Eliminar esta evaluación?')) return;
+      try {
+        await db.collection('evaluaciones').doc(id).delete();
+        window.evaluacionesCargadas = null;
+        cargarHistorial();
+      } catch (err) {
+        alert('Error al eliminar: ' + err.message);
+      }
     }
   });
 
-  limpiarHistorialBtn?.addEventListener('click', () => {
-    if (confirm('¿Borrar todo el historial?')) {
-      localStorage.removeItem('padelEvalHistorial');
+  limpiarHistorialBtn?.addEventListener('click', async () => {
+    if (!window.currentUser) return;
+    if (!confirm('¿Borrar TODAS tus evaluaciones propias? No se puede deshacer.')) return;
+    try {
+      const snapshot = await db.collection('evaluaciones')
+        .where('uid', '==', window.currentUser.uid).get();
+      if (snapshot.empty) { alert('No hay evaluaciones para borrar.'); return; }
+      const batch = db.batch();
+      snapshot.docs.forEach(doc => batch.delete(doc.ref));
+      await batch.commit();
+      window.evaluacionesCargadas = null;
       cargarHistorial();
+    } catch (err) {
+      alert('Error al limpiar: ' + err.message);
     }
   });
 
   // ========== ENTRENAMIENTO ==========
-  const alumnoSelect = document.getElementById('alumnoSelect');
+  const alumnoSelect      = document.getElementById('alumnoSelect');
   const categoriaObjetivo = document.getElementById('categoriaObjetivo');
-  const generarPlanBtn = document.getElementById('generarPlanBtn');
-  const descargarPlanBtn = document.getElementById('descargarPlanBtn');
+  const generarPlanBtn    = document.getElementById('generarPlanBtn');
+  const descargarPlanBtn  = document.getElementById('descargarPlanBtn');
   const planEntrenamiento = document.getElementById('planEntrenamiento');
 
-  function cargarAlumnosEnSelect() {
-    const historial = JSON.parse(localStorage.getItem('padelEvalHistorial')) || [];
+  async function cargarAlumnosEnSelect() {
+    const historial = await cargarEvaluacionesDesdeFirestore();
     alumnoSelect.innerHTML = '<option value="">-- Seleccionar alumno --</option>';
     historial.forEach((eva, idx) => {
       const opt = document.createElement('option');
       opt.value = idx;
-      opt.textContent = `${eva.jugador} - ${eva.golpe} (${eva.fecha})`;
+      const tipoBadge = eva.tipo === 'profesor' ? '🔍' : '👤';
+      opt.textContent = `${tipoBadge} ${eva.jugador} – ${eva.golpe} (${eva.fecha})`;
       alumnoSelect.appendChild(opt);
     });
   }
@@ -294,9 +368,10 @@ document.addEventListener('DOMContentLoaded', () => {
   generarPlanBtn.addEventListener('click', () => {
     const idx = alumnoSelect.value;
     if (idx === '') return alert('⚠️ Seleccioná un alumno.');
-    const historial = JSON.parse(localStorage.getItem('padelEvalHistorial')) || [];
+    const historial  = window.evaluacionesCargadas || [];
     const evaluacion = historial[parseInt(idx)];
-    const objetivo = parseInt(categoriaObjetivo.value);
+    if (!evaluacion) return alert('Error: evaluación no encontrada.');
+    const objetivo   = parseInt(categoriaObjetivo.value);
     planGeneradoHTML = construirPlan(evaluacion, objetivo);
     planEntrenamiento.innerHTML = planGeneradoHTML;
     descargarPlanBtn.style.display = 'inline-block';
@@ -306,7 +381,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const ventana = window.open('', '_blank');
     ventana.document.write(`
       <html><head><title>Plan de Entrenamiento</title>
-      <style> body { font-family: Arial; padding:20px; } .ejercicio-item { margin-bottom:12px; } </style>
+      <style>body{font-family:Arial;padding:20px;}.ejercicio-item{margin-bottom:12px;}</style>
       </head><body>${planGeneradoHTML}</body></html>
     `);
     ventana.document.close();
@@ -329,7 +404,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (catActual && catActual > objetivo) {
           for (let cat = catActual; cat > objetivo; cat--) {
             const transicion = `${cat}_${cat-1}`;
-            const ejercicio = window.EJERCICIOS?.[evaluacion.golpe]?.[parKey]?.[cuant.id]?.[transicion];
+            const ejercicio  = window.EJERCICIOS?.[evaluacion.golpe]?.[parKey]?.[cuant.id]?.[transicion];
             if (ejercicio) {
               ejerciciosPar += `
                 <div class="ejercicio-item">
@@ -352,8 +427,10 @@ document.addEventListener('DOMContentLoaded', () => {
   // ========== ALUMNOS ==========
   const alumnosLista = document.getElementById('alumnosLista');
 
-  function cargarAlumnos() {
-    const historial = JSON.parse(localStorage.getItem('padelEvalHistorial')) || [];
+  async function cargarAlumnos() {
+    alumnosLista.innerHTML = '<p>Cargando...</p>';
+    const historial = await cargarEvaluacionesDesdeFirestore();
+
     if (historial.length === 0) {
       alumnosLista.innerHTML = '<p>No hay alumnos registrados.</p>';
       return;
@@ -361,9 +438,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const alumnos = {};
     historial.forEach(eva => {
-      if (!alumnos[eva.jugador]) {
-        alumnos[eva.jugador] = [];
-      }
+      if (!alumnos[eva.jugador]) alumnos[eva.jugador] = [];
       alumnos[eva.jugador].push(eva);
     });
 
@@ -372,15 +447,17 @@ document.addEventListener('DOMContentLoaded', () => {
       html += `<div class="alumno-card">
         <h3>${nombre}</h3>
         <table>
-          <thead><tr><th>Golpe</th><th>Fecha</th><th>Acciones</th></tr></thead>
+          <thead><tr><th>Golpe</th><th>Tipo</th><th>Fecha</th><th>Acciones</th></tr></thead>
           <tbody>`;
       evaluaciones.forEach(eva => {
+        const tipoBadge = eva.tipo === 'profesor' ? '🔍' : '👤';
         html += `<tr>
           <td>${eva.golpe}</td>
+          <td>${tipoBadge}</td>
           <td>${eva.fecha}</td>
           <td>
-            <button class="btn-secondary btn-chico generar-plan-alumno" data-id="${eva.id}">📋 Plan</button>
-            <button class="btn-secondary btn-chico eliminar-eva-alumno" data-id="${eva.id}">🗑️</button>
+            <button class="btn-secondary btn-chico generar-plan-alumno" data-id="${eva.firestoreId}">📋 Plan</button>
+            <button class="btn-secondary btn-chico eliminar-eva-alumno" data-id="${eva.firestoreId}">🗑️</button>
           </td>
         </tr>`;
       });
@@ -389,19 +466,17 @@ document.addEventListener('DOMContentLoaded', () => {
     alumnosLista.innerHTML = html;
   }
 
-  // FIX #1: Listener de alumnosLista FUERA de cargarAlumnos() para evitar acumulación
-  alumnosLista.addEventListener('click', (e) => {
+  alumnosLista.addEventListener('click', async (e) => {
     if (e.target.classList.contains('generar-plan-alumno')) {
-      const id = Number(e.target.dataset.id);
-      const historial = JSON.parse(localStorage.getItem('padelEvalHistorial')) || [];
-      // FIX #3: parámetro 'item' en lugar de 'e' para evitar shadowing
-      const eva = historial.find(item => item.id === id);
+      const id       = e.target.dataset.id;
+      const historial = window.evaluacionesCargadas || [];
+      const eva      = historial.find(item => item.firestoreId === id);
       if (eva) {
         document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
         document.querySelector('.tab[data-view="entrenamiento"]').classList.add('active');
         views.forEach(v => v.classList.remove('active'));
         document.getElementById('entrenamientoView').classList.add('active');
-        cargarAlumnosEnSelect();
+        await cargarAlumnosEnSelect();
         const options = alumnoSelect.options;
         for (let i = 0; i < options.length; i++) {
           if (options[i].textContent.includes(eva.jugador) && options[i].textContent.includes(eva.golpe)) {
@@ -411,32 +486,36 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       }
     } else if (e.target.classList.contains('eliminar-eva-alumno')) {
-      const id = Number(e.target.dataset.id);
-      let historial = JSON.parse(localStorage.getItem('padelEvalHistorial')) || [];
-      // FIX #3: parámetro 'item' en lugar de 'e' para evitar shadowing
-      historial = historial.filter(item => item.id !== id);
-      localStorage.setItem('padelEvalHistorial', JSON.stringify(historial));
-      cargarAlumnos();
+      const id = e.target.dataset.id;
+      if (!confirm('¿Eliminar esta evaluación?')) return;
+      try {
+        await db.collection('evaluaciones').doc(id).delete();
+        window.evaluacionesCargadas = null;
+        cargarAlumnos();
+      } catch (err) {
+        alert('Error al eliminar: ' + err.message);
+      }
     }
   });
 
   // ========== SEGUIMIENTO ==========
-  const alumnoSelectSeg = document.getElementById('alumnoSelectSeg');
+  const alumnoSelectSeg      = document.getElementById('alumnoSelectSeg');
   const categoriaObjetivoSeg = document.getElementById('categoriaObjetivoSeg');
-  const cargarPlanSegBtn = document.getElementById('cargarPlanSeg');
-  const guardarSesionBtn = document.getElementById('guardarSesionBtn');
-  const sesionContent = document.getElementById('sesionContent');
+  const cargarPlanSegBtn     = document.getElementById('cargarPlanSeg');
+  const guardarSesionBtn     = document.getElementById('guardarSesionBtn');
+  const sesionContent        = document.getElementById('sesionContent');
 
-  let planSesion = null;
-  let ejerciciosCompletados = [];
+  let planSesion           = null;
+  let ejerciciosCompletados= [];
 
-  function cargarAlumnosSeguimiento() {
-    const historial = JSON.parse(localStorage.getItem('padelEvalHistorial')) || [];
-    alumnoSelectSeg.innerHTML = '<option value="">-- Seleccionar alumno --</option>';
+  async function cargarAlumnosSeguimiento() {
+    const historial = await cargarEvaluacionesDesdeFirestore();
+    alumnoSelectSeg.innerHTML = '<option value="">-- Seleccionar --</option>';
     historial.forEach((eva, idx) => {
       const opt = document.createElement('option');
       opt.value = idx;
-      opt.textContent = `${eva.jugador} - ${eva.golpe} (${eva.fecha})`;
+      const tipoBadge = eva.tipo === 'profesor' ? '🔍' : '👤';
+      opt.textContent = `${tipoBadge} ${eva.jugador} – ${eva.golpe} (${eva.fecha})`;
       alumnoSelectSeg.appendChild(opt);
     });
   }
@@ -444,12 +523,13 @@ document.addEventListener('DOMContentLoaded', () => {
   cargarPlanSegBtn.addEventListener('click', () => {
     const idx = alumnoSelectSeg.value;
     if (idx === '') return alert('⚠️ Seleccioná un alumno.');
-    const historial = JSON.parse(localStorage.getItem('padelEvalHistorial')) || [];
+    const historial  = window.evaluacionesCargadas || [];
     const evaluacion = historial[parseInt(idx)];
-    const objetivo = parseInt(categoriaObjetivoSeg.value);
+    if (!evaluacion) return alert('Error: evaluación no encontrada.');
+    const objetivo   = parseInt(categoriaObjetivoSeg.value);
 
     const ejercicios = [];
-    const golpeData = DATA.golpes[evaluacion.golpe];
+    const golpeData  = DATA.golpes[evaluacion.golpe];
     if (!golpeData) return alert('No hay datos del golpe.');
 
     for (const [parKey, parData] of Object.entries(golpeData.pares)) {
@@ -459,20 +539,18 @@ document.addEventListener('DOMContentLoaded', () => {
         if (catActual && catActual > objetivo) {
           for (let cat = catActual; cat > objetivo; cat--) {
             const transicion = `${cat}_${cat-1}`;
-            const ejercicio = window.EJERCICIOS?.[evaluacion.golpe]?.[parKey]?.[cuant.id]?.[transicion];
+            const ejercicio  = window.EJERCICIOS?.[evaluacion.golpe]?.[parKey]?.[cuant.id]?.[transicion];
             if (ejercicio) {
               ejercicios.push({
-                parKey,
-                cuantId: cuant.id,
-                nombreCuant: cuant.nombre,
-                transicion,
-                catInicio: cat,
-                catFin: cat - 1,
-                ejercicio,
-                totalSeries: ejercicio.series,
+                parKey, cuantId: cuant.id, nombreCuant: cuant.nombre,
+                transicion, catInicio: cat, catFin: cat - 1, ejercicio,
+                totalSeries:       ejercicio.series,
                 totalRepsPorSerie: parseInt(ejercicio.repeticiones),
-                criterioExigido: ejercicio.criterioExito,
-                minimoExitos: extraerMinimoCriterio(ejercicio.criterioExito, ejercicio.series * parseInt(ejercicio.repeticiones))
+                criterioExigido:   ejercicio.criterioExito,
+                minimoExitos: extraerMinimoCriterio(
+                  ejercicio.criterioExito,
+                  ejercicio.series * parseInt(ejercicio.repeticiones)
+                )
               });
             }
           }
@@ -487,12 +565,7 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
 
-    planSesion = {
-      jugador: evaluacion.jugador,
-      golpe: evaluacion.golpe,
-      objetivo,
-      ejercicios
-    };
+    planSesion           = { jugador: evaluacion.jugador, golpe: evaluacion.golpe, objetivo, ejercicios };
     ejerciciosCompletados = new Array(ejercicios.length).fill(false);
 
     let html = `<h3>Plan para ${evaluacion.jugador} (objetivo: ${objetivo}ª)</h3>`;
@@ -504,11 +577,10 @@ document.addEventListener('DOMContentLoaded', () => {
           <p>${ej.totalSeries} series x ${ej.totalRepsPorSerie} rep. | Criterio: ${ej.criterioExigido}</p>
           <div class="sesion-campos">
             <label>Series completadas:</label>
-            <input type="number" min="0" max="${ej.totalSeries}" value="0" data-index="${index}" data-campo="series" ${ejerciciosCompletados[index] ? 'disabled' : ''}>
+            <input type="number" min="0" max="${ej.totalSeries}" value="0" data-index="${index}" data-campo="series">
             <label>Reps exitosas:</label>
-            <input type="number" min="0" max="${ej.totalSeries * ej.totalRepsPorSerie}" value="0" data-index="${index}" data-campo="exitosas" ${ejerciciosCompletados[index] ? 'disabled' : ''}>
-            <button class="btn-primary btn-chico finalizar-ejercicio" data-index="${index}" ${ejerciciosCompletados[index] ? 'disabled' : ''}>✔ Finalizar</button>
-            ${ejerciciosCompletados[index] ? '<span class="completado-msg">✅ Completado</span>' : ''}
+            <input type="number" min="0" max="${ej.totalSeries * ej.totalRepsPorSerie}" value="0" data-index="${index}" data-campo="exitosas">
+            <button class="btn-primary btn-chico finalizar-ejercicio" data-index="${index}">✔ Finalizar</button>
           </div>
         </div>
       `;
@@ -517,14 +589,10 @@ document.addEventListener('DOMContentLoaded', () => {
     guardarSesionBtn.style.display = 'inline-block';
 
     document.querySelectorAll('.finalizar-ejercicio').forEach(btn => {
-      btn.addEventListener('click', (ev) => {
-        const idxEj = parseInt(ev.target.dataset.index);
-        finalizarEjercicio(idxEj);
-      });
+      btn.addEventListener('click', (ev) => finalizarEjercicio(parseInt(ev.target.dataset.index)));
     });
 
-    // FIX #4: cargar historial previo al mostrar el plan (no solo al guardar)
-    cargarHistorialSesiones();
+    cargarHistorialSesiones().catch(console.error);
   });
 
   function extraerMinimoCriterio(criterioTexto, totalPosibles) {
@@ -540,54 +608,57 @@ document.addEventListener('DOMContentLoaded', () => {
     inputs.forEach(input => input.disabled = true);
     const btn = ejercicioDiv.querySelector('.finalizar-ejercicio');
     if (btn) btn.disabled = true;
-    if (!ejercicioDiv.querySelector('.completado-msg')) {
+    if (!ejercicioDiv.querySelector('.completado-msg'))
       btn.insertAdjacentHTML('afterend', '<span class="completado-msg">✅ Completado</span>');
-    }
     ejerciciosCompletados[idx] = true;
-    const series = parseInt(inputs[0].value) || 0;
-    const exitosas = parseInt(inputs[1].value) || 0;
     if (planSesion) {
-      planSesion.ejercicios[idx].seriesRealizadas = series;
-      planSesion.ejercicios[idx].repeticionesExitosas = exitosas;
+      planSesion.ejercicios[idx].seriesRealizadas       = parseInt(inputs[0].value) || 0;
+      planSesion.ejercicios[idx].repeticionesExitosas   = parseInt(inputs[1].value) || 0;
     }
   }
 
-  guardarSesionBtn.addEventListener('click', () => {
+  guardarSesionBtn.addEventListener('click', async () => {
     if (!planSesion) return alert('No hay plan cargado.');
-    const inputs = sesionContent.querySelectorAll('input');
-    inputs.forEach(input => {
-      const idx = parseInt(input.dataset.index);
+    if (!window.currentUser) return alert('Debés iniciar sesión.');
+
+    // Recoger valores actuales de los inputs
+    sesionContent.querySelectorAll('input').forEach(input => {
+      const idx   = parseInt(input.dataset.index);
       const campo = input.dataset.campo;
       if (!isNaN(idx) && planSesion.ejercicios[idx]) {
-        planSesion.ejercicios[idx][campo] = parseInt(input.value) || 0;
+        if (campo === 'series')   planSesion.ejercicios[idx].seriesRealizadas     = parseInt(input.value) || 0;
+        if (campo === 'exitosas') planSesion.ejercicios[idx].repeticionesExitosas = parseInt(input.value) || 0;
       }
     });
 
     const sesionParaGuardar = {
-      id: Date.now(),
-      fecha: new Date().toLocaleString(),
-      jugador: planSesion.jugador,
-      golpe: planSesion.golpe,
-      objetivo: planSesion.objetivo,
-      ejercicios: planSesion.ejercicios.map(ej => ({
-        nombreCuant: ej.nombreCuant,
-        transicion: ej.transicion,
-        seriesRealizadas: ej.seriesRealizadas || 0,
-        repeticionesExitosas: ej.repeticionesExitosas || 0,
-        totalSeries: ej.totalSeries,
-        totalRepsPorSerie: ej.totalRepsPorSerie,
-        criterioExigido: ej.criterioExigido,
-        minimoExitos: ej.minimoExitos
+      uid:          window.currentUser.uid,
+      evaluadorUid: window.currentUser.uid,
+      fecha:        firebase.firestore.FieldValue.serverTimestamp(),
+      fechaLocal:   new Date().toLocaleString(),
+      jugador:      planSesion.jugador,
+      golpe:        planSesion.golpe,
+      objetivo:     planSesion.objetivo,
+      ejercicios:   planSesion.ejercicios.map(ej => ({
+        nombreCuant:           ej.nombreCuant,
+        transicion:            ej.transicion,
+        seriesRealizadas:      ej.seriesRealizadas      || 0,
+        repeticionesExitosas:  ej.repeticionesExitosas  || 0,
+        totalSeries:           ej.totalSeries,
+        totalRepsPorSerie:     ej.totalRepsPorSerie,
+        criterioExigido:       ej.criterioExigido,
+        minimoExitos:          ej.minimoExitos
       }))
     };
 
-    let sesiones = JSON.parse(localStorage.getItem('padelSesiones')) || [];
-    sesiones.push(sesionParaGuardar);
-    localStorage.setItem('padelSesiones', JSON.stringify(sesiones));
-
-    mostrarResultadoSesion(planSesion);
-    alert('✅ Sesión guardada correctamente.');
-    cargarHistorialSesiones();
+    try {
+      await db.collection('sesiones').add(sesionParaGuardar);
+      mostrarResultadoSesion(planSesion);
+      alert('✅ Sesión guardada correctamente.');
+      cargarHistorialSesiones().catch(console.error);
+    } catch (err) {
+      alert('Error al guardar sesión: ' + err.message);
+    }
   });
 
   function mostrarResultadoSesion(plan) {
@@ -595,92 +666,64 @@ document.addEventListener('DOMContentLoaded', () => {
     if (viejoResultado) viejoResultado.remove();
 
     const resultadoDiv = document.createElement('div');
-    resultadoDiv.id = 'resultadoSesion';
+    resultadoDiv.id        = 'resultadoSesion';
     resultadoDiv.className = 'resultado-sesion';
     resultadoDiv.innerHTML = '<h3>📊 Resultado de la Sesión</h3>';
 
-    const idxEva = alumnoSelectSeg.value;
-    const historial = JSON.parse(localStorage.getItem('padelEvalHistorial')) || [];
-    const evaluacion = historial[parseInt(idxEva)];
+    const historial    = window.evaluacionesCargadas || [];
+    const evaluacion   = historial[parseInt(alumnoSelectSeg.value)];
     const categoriasActuales = {};
-    // Map para guardar también el nombre legible del cuantificador
-    const nombresCuant = {};
+    const nombresCuant       = {};
 
     if (evaluacion) {
       const golpeData = DATA.golpes[evaluacion.golpe];
-      for (const [parKey, sels] of Object.entries(evaluacion.selecciones)) {
-        for (const [cuantId, cat] of Object.entries(sels)) {
-          categoriasActuales[cuantId] = cat;
-        }
+      for (const [, sels] of Object.entries(evaluacion.selecciones)) {
+        for (const [cuantId, cat] of Object.entries(sels)) categoriasActuales[cuantId] = cat;
       }
-      // FIX #2: poblar nombres legibles desde DATA
       if (golpeData) {
         for (const parData of Object.values(golpeData.pares)) {
-          for (const cuant of parData.cuantificadores) {
-            nombresCuant[cuant.id] = cuant.nombre;
-          }
+          for (const cuant of parData.cuantificadores) nombresCuant[cuant.id] = cuant.nombre;
         }
       }
     }
 
-    const objetivo = plan.objetivo;
+    const objetivo           = plan.objetivo;
     const resultadosPorCuant = {};
 
     for (const cuantId of Object.keys(categoriasActuales)) {
       resultadosPorCuant[cuantId] = {
-        // FIX #2: guardar nombre legible en el objeto
-        nombre: nombresCuant[cuantId] || cuantId,
-        catActual: categoriasActuales[cuantId] || 7,
-        catAlcanzada: categoriasActuales[cuantId] || 7,
-        superado: false,
-        ejercicios: []
+        nombre:      nombresCuant[cuantId] || cuantId,
+        catActual:   categoriasActuales[cuantId] || 7,
+        catAlcanzada:categoriasActuales[cuantId] || 7,
+        ejercicios:  []
       };
     }
 
     plan.ejercicios.forEach(ej => {
       if (!resultadosPorCuant[ej.cuantId]) {
         resultadosPorCuant[ej.cuantId] = {
-          // FIX #2: usar nombreCuant del ejercicio si no estaba en el map
-          nombre: ej.nombreCuant,
-          catActual: categoriasActuales[ej.cuantId] || 7,
+          nombre:       ej.nombreCuant,
+          catActual:    categoriasActuales[ej.cuantId] || 7,
           catAlcanzada: categoriasActuales[ej.cuantId] || 7,
-          superado: false,
-          ejercicios: []
+          ejercicios:   []
         };
       }
       const exito = ej.repeticionesExitosas >= ej.minimoExitos;
-      resultadosPorCuant[ej.cuantId].ejercicios.push({
-        transicion: ej.transicion,
-        catInicio: ej.catInicio,
-        catFin: ej.catFin,
-        exito,
-        repeticionesExitosas: ej.repeticionesExitosas,
-        minimoExitos: ej.minimoExitos
-      });
-      if (exito && ej.catFin < resultadosPorCuant[ej.cuantId].catAlcanzada) {
+      resultadosPorCuant[ej.cuantId].ejercicios.push({ ...ej, exito });
+      if (exito && ej.catFin < resultadosPorCuant[ej.cuantId].catAlcanzada)
         resultadosPorCuant[ej.cuantId].catAlcanzada = ej.catFin;
-      }
     });
 
     let globalAscenso = 0, globalRepetir = 0, globalDescenso = 0;
-    // FIX #2: usar datos.nombre en lugar de cuantId en la tabla
-    let tablaHTML = '<table class="tabla-veredicto"><tr><th>Cuantificador</th><th>Cat. Actual</th><th>Objetivo</th><th>Cat. Alcanzada</th><th>Veredicto</th></tr>';
+    let tablaHTML = `<table class="tabla-veredicto">
+      <tr><th>Cuantificador</th><th>Cat. Actual</th><th>Objetivo</th><th>Alcanzada</th><th>Veredicto</th></tr>`;
 
-    for (const [cuantId, datos] of Object.entries(resultadosPorCuant)) {
-      const catActual = datos.catActual;
-      const catAlcanzada = datos.catAlcanzada;
+    for (const [, datos] of Object.entries(resultadosPorCuant)) {
+      const { catActual, catAlcanzada } = datos;
       let veredicto = '';
-
-      if (catAlcanzada <= objetivo) {
-        veredicto = '⬆ Ascender';
-        globalAscenso++;
-      } else if (catAlcanzada > catActual) {
-        veredicto = '⬇ Descender';
-        globalDescenso++;
-      } else {
-        veredicto = '↻ Repetir';
-        globalRepetir++;
-      }
+      if (catAlcanzada <= objetivo)      { veredicto = '⬆ Ascender';  globalAscenso++; }
+      else if (catAlcanzada > catActual) { veredicto = '⬇ Descender'; globalDescenso++; }
+      else                               { veredicto = '↻ Repetir';   globalRepetir++; }
 
       tablaHTML += `<tr>
         <td>${datos.nombre}</td>
@@ -693,53 +736,66 @@ document.addEventListener('DOMContentLoaded', () => {
     tablaHTML += '</table>';
 
     let veredictoGlobal = '';
-    if (globalDescenso > 0) {
+    if (globalDescenso > 0)
       veredictoGlobal = '<span class="veredicto descenso">⬇ DESCENDER</span> (al menos un aspecto retrocedió)';
-    } else if (globalRepetir > 0) {
+    else if (globalRepetir > 0)
       veredictoGlobal = '<span class="veredicto repetir">↻ REPETIR</span> (aún no alcanza el objetivo)';
-    } else {
+    else
       veredictoGlobal = '<span class="veredicto ascenso">⬆ ASCENDER</span> (todos los aspectos logrados)';
-    }
 
     resultadoDiv.innerHTML += tablaHTML + `<p class="veredicto-global">${veredictoGlobal}</p>`;
     sesionContent.appendChild(resultadoDiv);
   }
 
-  function cargarHistorialSesiones() {
+  async function cargarHistorialSesiones() {
     const idx = alumnoSelectSeg.value;
     if (idx === '') return;
-    const historial = JSON.parse(localStorage.getItem('padelEvalHistorial')) || [];
-    const eva = historial[parseInt(idx)];
+    const historial = window.evaluacionesCargadas || [];
+    const eva       = historial[parseInt(idx)];
     if (!eva) return;
 
-    const sesiones = JSON.parse(localStorage.getItem('padelSesiones')) || [];
-    const sesionesAlumno = sesiones.filter(s => s.jugador === eva.jugador && s.golpe === eva.golpe);
-
-    let containerHistorial = document.getElementById('historialSesiones');
-    if (!containerHistorial) {
-      containerHistorial = document.createElement('div');
-      containerHistorial.className = 'historial-sesiones';
-      containerHistorial.id = 'historialSesiones';
-      sesionContent.appendChild(containerHistorial);
+    let container = document.getElementById('historialSesiones');
+    if (!container) {
+      container = document.createElement('div');
+      container.className = 'historial-sesiones';
+      container.id        = 'historialSesiones';
+      sesionContent.appendChild(container);
     }
-    containerHistorial.innerHTML = '';
+    container.innerHTML = '<p>Cargando sesiones anteriores...</p>';
 
-    if (sesionesAlumno.length === 0) {
-      containerHistorial.innerHTML = '<p>No hay sesiones anteriores para este alumno.</p>';
-      return;
-    }
+    try {
+      // Consulta simple por uid + ordenar por fecha (evita índice compuesto)
+      const snapshot = await db.collection('sesiones')
+        .where('uid', '==', window.currentUser.uid)
+        .orderBy('fecha', 'desc')
+        .limit(30)
+        .get();
 
-    containerHistorial.innerHTML = '<h3>📅 Sesiones anteriores</h3>';
-    sesionesAlumno.slice(-5).reverse().forEach(ses => {
-      const div = document.createElement('div');
-      div.className = 'sesion-ejercicio';
-      let innerHTML = `<strong>${ses.fecha}</strong> – Objetivo: ${ses.objetivo}ª<br>`;
-      ses.ejercicios.forEach(ej => {
-        innerHTML += `${ej.nombreCuant}: ${ej.seriesRealizadas} de ${ej.totalSeries} series, ${ej.repeticionesExitosas} éxitos<br>`;
+      const sesionesAlumno = snapshot.docs
+        .map(doc => ({ ...doc.data(), fecha: doc.data().fechaLocal || 'Sin fecha' }))
+        .filter(s => s.jugador === eva.jugador && s.golpe === eva.golpe)
+        .slice(0, 5);
+
+      container.innerHTML = '';
+      if (sesionesAlumno.length === 0) {
+        container.innerHTML = '<p>No hay sesiones anteriores para este alumno.</p>';
+        return;
+      }
+
+      container.innerHTML = '<h3>📅 Sesiones anteriores</h3>';
+      sesionesAlumno.forEach(ses => {
+        const div = document.createElement('div');
+        div.className = 'sesion-ejercicio';
+        let inner = `<strong>${ses.fecha}</strong> – Objetivo: ${ses.objetivo}ª<br>`;
+        ses.ejercicios.forEach(ej => {
+          inner += `${ej.nombreCuant}: ${ej.seriesRealizadas} de ${ej.totalSeries} series, ${ej.repeticionesExitosas} éxitos<br>`;
+        });
+        div.innerHTML = inner;
+        container.appendChild(div);
       });
-      div.innerHTML = innerHTML;
-      containerHistorial.appendChild(div);
-    });
+    } catch (err) {
+      container.innerHTML = `<p>Error cargando sesiones: ${err.message}</p>`;
+    }
   }
 
   // ========== INICIALIZAR ==========
