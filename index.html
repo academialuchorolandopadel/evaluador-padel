@@ -9,6 +9,12 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700&family=Oswald:wght@500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
 
+    <!-- Firebase SDKs (DEBEN ir antes que firebase-config.js) -->
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+    <script src="firebase-config.js"></script>
+
     <!-- PWA -->
     <link rel="manifest" href="manifest.json">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -17,6 +23,44 @@
     <link rel="apple-touch-icon" href="1000001630.png">
 </head>
 <body class="modo-alumno">
+
+    <!-- ===== OVERLAY DE AUTENTICACIÓN ===== -->
+    <div id="authOverlay" class="auth-overlay">
+        <div class="auth-card">
+            <div class="auth-header">
+                <img src="1000001630.png" alt="Logo" class="auth-logo">
+                <h2>CATEGORIZACIÓN</h2>
+                <p class="auth-subtitle">Sistema Academia Lucho Rolando</p>
+            </div>
+
+            <!-- Formulario Login -->
+            <div id="loginForm" class="auth-form">
+                <h3>Iniciar Sesión</h3>
+                <input type="email"    id="loginEmail"    class="auth-input" placeholder="Email" autocomplete="email">
+                <input type="password" id="loginPassword" class="auth-input" placeholder="Contraseña" autocomplete="current-password">
+                <button class="btn-primary auth-btn" onclick="loginUser()">Ingresar</button>
+                <p class="auth-link">¿No tenés cuenta? <span onclick="showRegister()">Registrarse</span></p>
+            </div>
+
+            <!-- Formulario Registro -->
+            <div id="registerForm" class="auth-form" style="display:none">
+                <h3>Crear Cuenta</h3>
+                <input type="text"     id="regNombre"   class="auth-input" placeholder="Nombre completo">
+                <input type="email"    id="regEmail"    class="auth-input" placeholder="Email" autocomplete="email">
+                <input type="password" id="regPassword" class="auth-input" placeholder="Contraseña (mín. 6 caracteres)">
+                <select id="regRol" class="auth-input">
+                    <option value="alumno">👤 Alumno</option>
+                    <option value="profesor">🔍 Profesor / Fiscal</option>
+                </select>
+                <button class="btn-primary auth-btn" onclick="registerUser()">Crear cuenta</button>
+                <p class="auth-link">¿Ya tenés cuenta? <span onclick="showLogin()">Ingresar</span></p>
+            </div>
+
+            <div id="authError" class="auth-error"></div>
+        </div>
+    </div>
+
+    <!-- ===== HEADER ===== -->
     <header class="app-header">
         <div class="header-brand">
             <img src="1000001630.png" alt="Logo Academia Lucho Rolando" class="logo-img">
@@ -26,6 +70,12 @@
             </div>
         </div>
         <div class="header-actions">
+            <!-- Barra de usuario logueado -->
+            <div class="user-info-bar" id="userInfoBar">
+                <span id="userNameDisplay" class="user-nombre"></span>
+                <span id="userRolDisplay"  class="user-rol-badge"></span>
+                <button onclick="logoutUser()" class="btn-logout">Salir →</button>
+            </div>
             <div class="mode-toggle">
                 <span>👤 Alumno</span>
                 <input type="checkbox" id="modoFiscalCheckbox">
@@ -43,6 +93,7 @@
     </header>
 
     <main class="container" id="appContainer">
+
         <!-- Vista Evaluación -->
         <div id="evaluacionView" class="view active">
             <div class="evaluacion-layout">
@@ -129,13 +180,13 @@
         <div id="historialView" class="view">
             <h2>Evaluaciones Guardadas</h2>
             <div id="historialLista" class="historial-lista"></div>
-            <button id="limpiarHistorialBtn" class="btn-secondary">🗑️ Limpiar todo</button>
+            <button id="limpiarHistorialBtn" class="btn-secondary">🗑️ Limpiar mis evaluaciones</button>
         </div>
 
         <!-- Vista Manual -->
         <div id="manualView" class="view">
             <h2>Manual de Referencia</h2>
-            <p>Consulta el <strong>Método Sistemático de Categorización</strong> del Colegio de Fiscales F.A.P. (2010) para más detalles.</p>
+            <p>Consultá el <strong>Método Sistemático de Categorización</strong> del Colegio de Fiscales F.A.P. (2010) para más detalles.</p>
             <div style="background:white;padding:16px;border-radius:8px;margin-top:16px;">
                 <h3>Capítulo Séptimo</h3>
                 <p>Descripciones completas de cada categoría para los cuatro golpes.</p>
@@ -145,27 +196,26 @@
                 <p>Fundamentos de los golpes, devolución, posicionamiento y pares.</p>
             </div>
         </div>
+
     </main>
 
     <footer class="app-footer">
         <p>Sistema de Categorización – Academia Lucho Rolando</p>
     </footer>
 
+    <!-- Scripts de la app (orden importante) -->
     <script src="data.js"></script>
     <script src="ejercicios.js"></script>
+    <script src="auth-ui.js"></script>
     <script src="app.js"></script>
 
-    <!-- Registro del Service Worker -->
+    <!-- Service Worker -->
     <script>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('sw.js')
-                    .then(registration => {
-                        console.log('Service Worker registrado con éxito:', registration.scope);
-                    })
-                    .catch(error => {
-                        console.log('Error al registrar Service Worker:', error);
-                    });
+                    .then(r => console.log('SW registrado:', r.scope))
+                    .catch(e => console.log('SW error:', e));
             });
         }
     </script>
