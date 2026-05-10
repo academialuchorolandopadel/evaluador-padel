@@ -1,8 +1,6 @@
-/* ===== BLOQUEO DE CONTENIDO SIN SESIÓN ===== */
-/* Esta clase la agrega auth-ui.js automáticamente */
 body.sin-sesion #appContainer,
 body.sin-sesion .app-footer,
-body.sin-sesion .app-header .header-actions {
+body.sin-sesion .app-header {
   display: none !important;
 }
 
