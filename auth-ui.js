@@ -47,15 +47,23 @@ auth.onAuthStateChanged(async (user) => {
     // Ajustar interfaz según rol
     ajustarUIporRol(window.currentUserData.rol);
 
-    // Ocultar overlay
+    // Ocultar overlay y mostrar app
     if (overlay) overlay.style.display = 'none';
+    const appContainer = document.getElementById('appContainer');
+    const appFooter    = document.querySelector('.app-footer');
+    if (appContainer) appContainer.style.display = 'block';
+    if (appFooter)    appFooter.style.display    = 'block';
 
   } else {
-    // Sin sesión
+    // Sin sesión: ocultar app y mostrar overlay
     window.currentUser          = null;
     window.currentUserData      = null;
     window.evaluacionesCargadas = null;
     if (overlay) overlay.style.display = 'flex';
+    const appContainer2 = document.getElementById('appContainer');
+    const appFooter2    = document.querySelector('.app-footer');
+    if (appContainer2) appContainer2.style.display = 'none';
+    if (appFooter2)    appFooter2.style.display    = 'none';
   }
 });
 
