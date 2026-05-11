@@ -9,7 +9,113 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700&family=Oswald:wght@500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
 
-    <!-- Firebase SDKs (DEBEN ir antes que firebase-config.js) -->
+    <!-- CSS CRÍTICO: bloquea contenido hasta que haya sesión -->
+    <style>
+      /* Ocultar toda la app hasta que Firebase confirme sesión */
+      body.sin-sesion .app-header,
+      body.sin-sesion #appContainer,
+      body.sin-sesion .app-footer {
+        display: none !important;
+        visibility: hidden !important;
+      }
+
+      /* Overlay de autenticación */
+      #authOverlay {
+        position: fixed;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background: rgba(0, 33, 64, 0.97);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 99999;
+      }
+      #authOverlay.oculto {
+        display: none !important;
+      }
+      .auth-card {
+        background: #ffffff;
+        border-radius: 16px;
+        padding: 32px;
+        width: 90%;
+        max-width: 380px;
+        box-shadow: 0 24px 64px rgba(0,0,0,0.5);
+        border-top: 4px solid #C8963E;
+      }
+      .auth-header { text-align: center; margin-bottom: 24px; }
+      .auth-logo { height: 64px; margin-bottom: 12px; }
+      .auth-header h2 {
+        font-family: 'Oswald', sans-serif;
+        color: #003366; font-size: 1.8rem; margin: 0;
+      }
+      .auth-subtitle { color: #5C5547; font-size: 0.85rem; margin: 4px 0 0; }
+      .auth-form {
+        display: flex; flex-direction: column; gap: 12px;
+      }
+      .auth-form h3 { color: #003366; font-size: 1rem; margin: 0; }
+      .auth-input {
+        width: 100%; padding: 10px 12px;
+        border: 2px solid #D9D0BD; border-radius: 8px;
+        font-size: 0.95rem; font-family: 'Inter', sans-serif;
+        background: #FFFDF9; box-sizing: border-box;
+      }
+      .auth-input:focus { border-color: #003366; outline: none; }
+      .auth-btn {
+        background: #003366; color: white; border: none;
+        padding: 12px; border-radius: 8px; font-weight: 600;
+        cursor: pointer; font-size: 1rem; width: 100%;
+        font-family: 'Inter', sans-serif;
+      }
+      .auth-btn:hover { background: #002244; }
+      .auth-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+      .auth-error {
+        color: #E30613; font-size: 0.85rem;
+        text-align: center; min-height: 20px; margin-top: 4px;
+      }
+      .auth-link {
+        text-align: center; font-size: 0.85rem; color: #5C5547; margin: 0;
+      }
+      .auth-link span {
+        color: #003366; cursor: pointer;
+        font-weight: 600; text-decoration: underline;
+      }
+
+      /* Barra de usuario logueado */
+      .user-info-bar {
+        display: flex; align-items: center; gap: 10px;
+        background: rgba(255,255,255,0.1);
+        padding: 6px 14px; border-radius: 30px;
+      }
+      .user-nombre { font-weight: 600; color: white; font-size: 0.9rem; }
+      .user-rol-badge {
+        font-size: 0.75rem; color: #E0C78A;
+        background: rgba(0,0,0,0.2); padding: 2px 8px; border-radius: 10px;
+      }
+      .btn-logout {
+        background: transparent;
+        border: 1px solid rgba(255,255,255,0.3);
+        color: rgba(255,255,255,0.7); padding: 4px 10px;
+        border-radius: 6px; cursor: pointer;
+        font-size: 0.8rem; transition: all 0.2s;
+        font-family: 'Inter', sans-serif;
+      }
+      .btn-logout:hover { background: #E30613; border-color: #E30613; color: white; }
+
+      /* Badges tipo evaluación */
+      .badge-tipo {
+        display: inline-block; padding: 2px 8px; border-radius: 10px;
+        font-size: 0.75rem; font-weight: 600; margin-right: 4px;
+      }
+      .badge-tipo.profesor { background: #E8F0FE; color: #003366; }
+      .badge-tipo.alumno   { background: #F5ECD7; color: #8a6420; }
+
+      @media (max-width: 767px) {
+        .auth-card { padding: 24px; }
+        .user-info-bar { gap: 6px; padding: 4px 8px; }
+        .user-nombre { font-size: 0.8rem; }
+      }
+    </style>
+
+    <!-- Firebase SDKs -->
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
@@ -22,10 +128,10 @@
     <meta name="apple-mobile-web-app-title" content="CATEGORIZACIÓN">
     <link rel="apple-touch-icon" href="1000001630.png">
 </head>
-<body class="modo-alumno">
+<body class="modo-alumno sin-sesion">
 
     <!-- ===== OVERLAY DE AUTENTICACIÓN ===== -->
-    <div id="authOverlay" class="auth-overlay">
+    <div id="authOverlay">
         <div class="auth-card">
             <div class="auth-header">
                 <img src="1000001630.png" alt="Logo" class="auth-logo">
@@ -38,12 +144,12 @@
                 <h3>Iniciar Sesión</h3>
                 <input type="email"    id="loginEmail"    class="auth-input" placeholder="Email" autocomplete="email">
                 <input type="password" id="loginPassword" class="auth-input" placeholder="Contraseña" autocomplete="current-password">
-                <button class="btn-primary auth-btn" onclick="loginUser()">Ingresar</button>
+                <button class="auth-btn" onclick="loginUser()">Ingresar</button>
                 <p class="auth-link">¿No tenés cuenta? <span onclick="showRegister()">Registrarse</span></p>
             </div>
 
             <!-- Formulario Registro -->
-            <div id="registerForm" class="auth-form" style="display:none">
+            <div id="registerForm" class="auth-form" style="display:none;">
                 <h3>Crear Cuenta</h3>
                 <input type="text"     id="regNombre"   class="auth-input" placeholder="Nombre completo">
                 <input type="email"    id="regEmail"    class="auth-input" placeholder="Email" autocomplete="email">
@@ -52,7 +158,7 @@
                     <option value="alumno">👤 Alumno</option>
                     <option value="profesor">🔍 Profesor / Fiscal</option>
                 </select>
-                <button class="btn-primary auth-btn" onclick="registerUser()">Crear cuenta</button>
+                <button class="auth-btn" onclick="registerUser()">Crear cuenta</button>
                 <p class="auth-link">¿Ya tenés cuenta? <span onclick="showLogin()">Ingresar</span></p>
             </div>
 
@@ -70,8 +176,7 @@
             </div>
         </div>
         <div class="header-actions">
-            <!-- Barra de usuario logueado -->
-            <div class="user-info-bar" id="userInfoBar">
+            <div class="user-info-bar">
                 <span id="userNameDisplay" class="user-nombre"></span>
                 <span id="userRolDisplay"  class="user-rol-badge"></span>
                 <button onclick="logoutUser()" class="btn-logout">Salir →</button>
@@ -203,7 +308,7 @@
         <p>Sistema de Categorización – Academia Lucho Rolando</p>
     </footer>
 
-    <!-- Scripts de la app (orden importante) -->
+    <!-- Scripts -->
     <script src="data.js"></script>
     <script src="ejercicios.js"></script>
     <script src="auth-ui.js"></script>
