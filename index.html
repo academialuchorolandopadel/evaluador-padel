@@ -9,77 +9,128 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700&family=Oswald:wght@500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
 
+    <!-- CSS CRÍTICO: bloquea contenido hasta que haya sesión -->
     <style>
+      /* Ocultar toda la app hasta que Firebase confirme sesión */
       body.sin-sesion .app-header,
       body.sin-sesion #appContainer,
-      body.sin-sesion .app-footer { display: none !important; }
-      #authOverlay { position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,33,64,0.97);display:flex;justify-content:center;align-items:center;z-index:99999; }
-      #authOverlay.oculto { display:none !important; }
-      .auth-card { background:#fff;border-radius:16px;padding:32px;width:90%;max-width:380px;box-shadow:0 24px 64px rgba(0,0,0,0.5);border-top:4px solid #C8963E; }
-      .auth-header { text-align:center;margin-bottom:24px; }
-      .auth-logo { height:64px;margin-bottom:12px; }
-      .auth-header h2 { font-family:'Oswald',sans-serif;color:#003366;font-size:1.8rem;margin:0; }
-      .auth-subtitle { color:#5C5547;font-size:0.85rem;margin:4px 0 0; }
-      .auth-form { display:flex;flex-direction:column;gap:12px; }
-      .auth-form h3 { color:#003366;font-size:1rem;margin:0; }
-      .auth-input { width:100%;padding:10px 12px;border:2px solid #D9D0BD;border-radius:8px;font-size:0.95rem;font-family:'Inter',sans-serif;background:#FFFDF9;box-sizing:border-box; }
-      .auth-input:focus { border-color:#003366;outline:none; }
-      .auth-btn { background:#003366;color:white;border:none;padding:12px;border-radius:8px;font-weight:600;cursor:pointer;font-size:1rem;width:100%;font-family:'Inter',sans-serif; }
-      .auth-btn:hover { background:#002244; }
-      .auth-btn:disabled { opacity:0.6;cursor:not-allowed; }
-      .auth-error { color:#E30613;font-size:0.85rem;text-align:center;min-height:20px;margin-top:4px; }
-      .auth-link { text-align:center;font-size:0.85rem;color:#5C5547;margin:0; }
-      .auth-link span { color:#003366;cursor:pointer;font-weight:600;text-decoration:underline; }
-      .user-info-bar { display:flex;align-items:center;gap:10px;background:rgba(255,255,255,0.1);padding:6px 14px;border-radius:30px; }
-      .user-nombre { font-weight:600;color:white;font-size:0.9rem; }
-      .user-rol-badge { font-size:0.75rem;color:#E0C78A;background:rgba(0,0,0,0.2);padding:2px 8px;border-radius:10px; }
-      .btn-logout { background:transparent;border:1px solid rgba(255,255,255,0.3);color:rgba(255,255,255,0.7);padding:4px 10px;border-radius:6px;cursor:pointer;font-size:0.8rem;font-family:'Inter',sans-serif; }
-      .btn-logout:hover { background:#E30613;border-color:#E30613;color:white; }
-      .badge-tipo { display:inline-block;padding:2px 8px;border-radius:10px;font-size:0.75rem;font-weight:600;margin-right:4px; }
-      .badge-tipo.profesor { background:#E8F0FE;color:#003366; }
-      .badge-tipo.alumno   { background:#F5ECD7;color:#8a6420; }
+      body.sin-sesion .app-footer {
+        display: none !important;
+        visibility: hidden !important;
+      }
 
-      /* MODALES */
-      .modal-overlay { position:fixed;inset:0;background:rgba(0,0,0,0.7);display:flex;justify-content:center;align-items:flex-start;z-index:9000;padding:20px;overflow-y:auto; }
-      .modal-card { background:white;border-radius:16px;padding:24px;width:100%;max-width:800px;margin:auto;position:relative;box-shadow:0 24px 64px rgba(0,0,0,0.4); }
-      .modal-close { position:absolute;top:16px;right:16px;background:none;border:none;font-size:1.5rem;cursor:pointer;color:#666; }
-      .tabla-comparativa { width:100%;border-collapse:collapse;margin-top:16px;font-size:0.85rem; }
-      .tabla-comparativa th { background:#003366;color:white;padding:8px;text-align:left; }
-      .tabla-comparativa td { padding:8px;border-bottom:1px solid #eee; }
-      .fila-par td { background:#E8F0FE;font-weight:600; }
-      .fila-sobre { background:#FFF3CD; }
-      .fila-sub   { background:#E8F5E9; }
-      .fila-ok    { background:#F9F9F9; }
-      .dif-positiva { color:#E30613;font-weight:600; }
-      .dif-negativa { color:#2d6a4f;font-weight:600; }
-      .dif-igual    { color:#666; }
-      .alumno-card-header { display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:12px; }
-      .alumno-card-header h3 { margin:0;flex:1; }
-      .alumno-email { color:#888;font-size:0.85rem; }
-      .sin-dato { color:#aaa;font-size:0.8rem; }
-      .sin-evas { color:#aaa;font-style:italic;margin:8px 0; }
-      .plan-alumno-card { background:#F4F2EC;border-radius:10px;padding:16px;margin-bottom:16px;border-left:4px solid #003366; }
-      .plan-alumno-card h4 { color:#003366;margin:0 0 4px; }
-      .plan-fecha { color:#888;font-size:0.8rem;margin-bottom:12px; }
-      .plan-preview { background:#F4F2EC;border-radius:8px;padding:12px;margin-top:12px; }
-      .plan-existente { background:#E8F5E9;border-radius:8px;padding:10px;margin-bottom:12px;border-left:4px solid #2d6a4f; }
-      .sin-plan { text-align:center;padding:40px;color:#888; }
-      .sin-plan p { margin:8px 0; }
+      /* Overlay de autenticación */
+      #authOverlay {
+        position: fixed;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background: rgba(0, 33, 64, 0.97);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 99999;
+      }
+      #authOverlay.oculto {
+        display: none !important;
+      }
+      .auth-card {
+        background: #ffffff;
+        border-radius: 16px;
+        padding: 32px;
+        width: 90%;
+        max-width: 380px;
+        box-shadow: 0 24px 64px rgba(0,0,0,0.5);
+        border-top: 4px solid #C8963E;
+      }
+      .auth-header { text-align: center; margin-bottom: 24px; }
+      .auth-logo { height: 64px; margin-bottom: 12px; }
+      .auth-header h2 {
+        font-family: 'Oswald', sans-serif;
+        color: #003366; font-size: 1.8rem; margin: 0;
+      }
+      .auth-subtitle { color: #5C5547; font-size: 0.85rem; margin: 4px 0 0; }
+      .auth-form {
+        display: flex; flex-direction: column; gap: 12px;
+      }
+      .auth-form h3 { color: #003366; font-size: 1rem; margin: 0; }
+      .auth-input {
+        width: 100%; padding: 10px 12px;
+        border: 2px solid #D9D0BD; border-radius: 8px;
+        font-size: 0.95rem; font-family: 'Inter', sans-serif;
+        background: #FFFDF9; box-sizing: border-box;
+      }
+      .auth-input:focus { border-color: #003366; outline: none; }
+      .auth-btn {
+        background: #003366; color: white; border: none;
+        padding: 12px; border-radius: 8px; font-weight: 600;
+        cursor: pointer; font-size: 1rem; width: 100%;
+        font-family: 'Inter', sans-serif;
+      }
+      .auth-btn:hover { background: #002244; }
+      .auth-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+      .auth-error {
+        color: #E30613; font-size: 0.85rem;
+        text-align: center; min-height: 20px; margin-top: 4px;
+      }
+      .auth-link {
+        text-align: center; font-size: 0.85rem; color: #5C5547; margin: 0;
+      }
+      .auth-link span {
+        color: #003366; cursor: pointer;
+        font-weight: 600; text-decoration: underline;
+      }
+
+      /* Barra de usuario logueado */
+      .user-info-bar {
+        display: flex; align-items: center; gap: 10px;
+        background: rgba(255,255,255,0.1);
+        padding: 6px 14px; border-radius: 30px;
+      }
+      .user-nombre { font-weight: 600; color: white; font-size: 0.9rem; }
+      .user-rol-badge {
+        font-size: 0.75rem; color: #E0C78A;
+        background: rgba(0,0,0,0.2); padding: 2px 8px; border-radius: 10px;
+      }
+      .btn-logout {
+        background: transparent;
+        border: 1px solid rgba(255,255,255,0.3);
+        color: rgba(255,255,255,0.7); padding: 4px 10px;
+        border-radius: 6px; cursor: pointer;
+        font-size: 0.8rem; transition: all 0.2s;
+        font-family: 'Inter', sans-serif;
+      }
+      .btn-logout:hover { background: #E30613; border-color: #E30613; color: white; }
+
+      /* Badges tipo evaluación */
+      .badge-tipo {
+        display: inline-block; padding: 2px 8px; border-radius: 10px;
+        font-size: 0.75rem; font-weight: 600; margin-right: 4px;
+      }
+      .badge-tipo.profesor { background: #E8F0FE; color: #003366; }
+      .badge-tipo.alumno   { background: #F5ECD7; color: #8a6420; }
+
+      @media (max-width: 767px) {
+        .auth-card { padding: 24px; }
+        .user-info-bar { gap: 6px; padding: 4px 8px; }
+        .user-nombre { font-size: 0.8rem; }
+      }
     </style>
 
+    <!-- Firebase SDKs -->
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
     <script src="firebase-config.js"></script>
 
+    <!-- PWA -->
     <link rel="manifest" href="manifest.json">
     <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="CATEGORIZACIÓN">
     <link rel="apple-touch-icon" href="1000001630.png">
 </head>
 <body class="modo-alumno sin-sesion">
 
-    <!-- OVERLAY AUTH -->
+    <!-- ===== OVERLAY DE AUTENTICACIÓN ===== -->
     <div id="authOverlay">
         <div class="auth-card">
             <div class="auth-header">
@@ -87,6 +138,8 @@
                 <h2>CATEGORIZACIÓN</h2>
                 <p class="auth-subtitle">Sistema Academia Lucho Rolando</p>
             </div>
+
+            <!-- Formulario Login -->
             <div id="loginForm" class="auth-form">
                 <h3>Iniciar Sesión</h3>
                 <input type="email"    id="loginEmail"    class="auth-input" placeholder="Email" autocomplete="email">
@@ -94,6 +147,8 @@
                 <button class="auth-btn" onclick="loginUser()">Ingresar</button>
                 <p class="auth-link">¿No tenés cuenta? <span onclick="showRegister()">Registrarse</span></p>
             </div>
+
+            <!-- Formulario Registro -->
             <div id="registerForm" class="auth-form" style="display:none;">
                 <h3>Crear Cuenta</h3>
                 <input type="text"     id="regNombre"   class="auth-input" placeholder="Nombre completo">
@@ -106,30 +161,15 @@
                 <button class="auth-btn" onclick="registerUser()">Crear cuenta</button>
                 <p class="auth-link">¿Ya tenés cuenta? <span onclick="showLogin()">Ingresar</span></p>
             </div>
+
             <div id="authError" class="auth-error"></div>
         </div>
     </div>
 
-    <!-- MODAL COMPARATIVA -->
-    <div id="comparativaModal" class="modal-overlay" style="display:none;">
-        <div class="modal-card">
-            <button id="cerrarComparativa" class="modal-close">✕</button>
-            <div id="comparativaBody"></div>
-        </div>
-    </div>
-
-    <!-- MODAL PLAN -->
-    <div id="planModal" class="modal-overlay" style="display:none;">
-        <div class="modal-card">
-            <button id="cerrarPlanModal" class="modal-close">✕</button>
-            <div id="planModalBody"></div>
-        </div>
-    </div>
-
-    <!-- HEADER -->
+    <!-- ===== HEADER ===== -->
     <header class="app-header">
         <div class="header-brand">
-            <img src="1000001630.png" alt="Logo" class="logo-img">
+            <img src="1000001630.png" alt="Logo Academia Lucho Rolando" class="logo-img">
             <div class="header-titles">
                 <h1>CATEGORIZACIÓN</h1>
                 <div class="subtitle">Sistema Academia Lucho Rolando</div>
@@ -148,7 +188,6 @@
             </div>
             <nav class="nav-tabs" id="mainNav">
                 <span class="tab active" data-view="evaluacion">Evaluación</span>
-                <span class="tab" data-view="miplan">Mi Plan</span>
                 <span class="tab" data-view="entrenamiento">Entrenamiento</span>
                 <span class="tab" data-view="seguimiento">Seguimiento</span>
                 <span class="tab" data-view="alumnos">Alumnos</span>
@@ -160,7 +199,7 @@
 
     <main class="container" id="appContainer">
 
-        <!-- EVALUACIÓN -->
+        <!-- Vista Evaluación -->
         <div id="evaluacionView" class="view active">
             <div class="evaluacion-layout">
                 <aside class="golpes-sidebar">
@@ -180,13 +219,7 @@
             </div>
         </div>
 
-        <!-- MI PLAN (ALUMNO) -->
-        <div id="miplanView" class="view">
-            <h2>Mi Plan de Entrenamiento</h2>
-            <div id="miPlanContent"></div>
-        </div>
-
-        <!-- ENTRENAMIENTO -->
+        <!-- Vista Entrenamiento -->
         <div id="entrenamientoView" class="view">
             <div class="entrenamiento-layout">
                 <aside class="panel-control">
@@ -198,9 +231,13 @@
                     <div class="form-group">
                         <label for="categoriaObjetivo">Categoría objetivo</label>
                         <select id="categoriaObjetivo">
-                            <option value="6">6ª</option><option value="5">5ª</option>
-                            <option value="4">4ª</option><option value="3">3ª</option>
-                            <option value="2">2ª</option><option value="1">1ª</option>
+                            <option value="7">7ª</option>
+                            <option value="6">6ª</option>
+                            <option value="5">5ª</option>
+                            <option value="4">4ª</option>
+                            <option value="3">3ª</option>
+                            <option value="2">2ª</option>
+                            <option value="1">1ª</option>
                         </select>
                     </div>
                     <button id="generarPlanBtn" class="btn-primary">📋 Generar Plan</button>
@@ -210,7 +247,7 @@
             </div>
         </div>
 
-        <!-- SEGUIMIENTO -->
+        <!-- Vista Seguimiento -->
         <div id="seguimientoView" class="view">
             <div class="seguimiento-layout">
                 <aside class="panel-control">
@@ -222,9 +259,13 @@
                     <div class="form-group">
                         <label for="categoriaObjetivoSeg">Categoría objetivo</label>
                         <select id="categoriaObjetivoSeg">
-                            <option value="6">6ª</option><option value="5">5ª</option>
-                            <option value="4">4ª</option><option value="3">3ª</option>
-                            <option value="2">2ª</option><option value="1">1ª</option>
+                            <option value="7">7ª</option>
+                            <option value="6">6ª</option>
+                            <option value="5">5ª</option>
+                            <option value="4">4ª</option>
+                            <option value="3">3ª</option>
+                            <option value="2">2ª</option>
+                            <option value="1">1ª</option>
                         </select>
                     </div>
                     <button id="cargarPlanSeg" class="btn-primary">📋 Cargar Plan</button>
@@ -234,23 +275,31 @@
             </div>
         </div>
 
-        <!-- ALUMNOS -->
+        <!-- Vista Alumnos -->
         <div id="alumnosView" class="view">
             <h2>Alumnos Registrados</h2>
             <div id="alumnosLista" class="alumnos-lista"></div>
         </div>
 
-        <!-- HISTORIAL -->
+        <!-- Vista Historial -->
         <div id="historialView" class="view">
             <h2>Evaluaciones Guardadas</h2>
             <div id="historialLista" class="historial-lista"></div>
             <button id="limpiarHistorialBtn" class="btn-secondary">🗑️ Limpiar mis evaluaciones</button>
         </div>
 
-        <!-- MANUAL -->
+        <!-- Vista Manual -->
         <div id="manualView" class="view">
             <h2>Manual de Referencia</h2>
-            <p>Consultá el <strong>Método Sistemático de Categorización</strong> del Colegio de Fiscales F.A.P. (2010).</p>
+            <p>Consultá el <strong>Método Sistemático de Categorización</strong> del Colegio de Fiscales F.A.P. (2010) para más detalles.</p>
+            <div style="background:white;padding:16px;border-radius:8px;margin-top:16px;">
+                <h3>Capítulo Séptimo</h3>
+                <p>Descripciones completas de cada categoría para los cuatro golpes.</p>
+            </div>
+            <div style="background:white;padding:16px;border-radius:8px;margin-top:16px;">
+                <h3>Capítulos Primero a Sexto</h3>
+                <p>Fundamentos de los golpes, devolución, posicionamiento y pares.</p>
+            </div>
         </div>
 
     </main>
@@ -259,17 +308,20 @@
         <p>Sistema de Categorización – Academia Lucho Rolando</p>
     </footer>
 
+    <!-- Scripts -->
     <script src="data.js"></script>
     <script src="ejercicios.js"></script>
     <script src="auth-ui.js"></script>
     <script src="app.js"></script>
+
+    <!-- Service Worker -->
     <script>
-        // Desregistrar cualquier service worker existente y limpiar caché
         if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.getRegistrations().then(regs => {
-                regs.forEach(r => r.unregister());
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js')
+                    .then(r => console.log('SW registrado:', r.scope))
+                    .catch(e => console.log('SW error:', e));
             });
-            caches.keys().then(keys => keys.forEach(k => caches.delete(k)));
         }
     </script>
 </body>
