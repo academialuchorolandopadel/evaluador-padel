@@ -1,7 +1,7 @@
 /* ============================================================
    CATEGORIZACIÓN - Academia Lucho Rolando
    Paleta: Azul marino + Dorado
-   Incluye autenticación + responsive
+   Incluye: autenticación + responsive + visibilidad por sesión
    ============================================================ */
 :root {
   --azul: #003366;
@@ -36,35 +36,52 @@ body {
   overflow-x: hidden;
 }
 
-/* ========== AUTENTICACIÓN ========== */
+/* ============================================================
+   VISIBILIDAD POR SESIÓN
+   ============================================================ */
+body.sin-sesion .app-header,
 body.sin-sesion #appContainer,
-body.sin-sesion .app-footer,
-body.sin-sesion .app-header {
+body.sin-sesion .app-footer {
   display: none !important;
+}
+
+body:not(.sin-sesion) .app-header {
+  display: flex !important;
+}
+
+body:not(.sin-sesion) #appContainer {
+  display: block !important;
+}
+
+body:not(.sin-sesion) .app-footer {
+  display: block !important;
+  text-align: center;
 }
 
 body:not(.sin-sesion) #authOverlay {
   display: none !important;
 }
 
-.auth-overlay {
+/* ============================================================
+   OVERLAY DE AUTENTICACIÓN
+   ============================================================ */
+#authOverlay {
   position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,0.85);
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0, 33, 64, 0.97);
   display: flex;
   justify-content: center;
   align-items: center;
-  z-index: 9999;
-  backdrop-filter: blur(4px);
+  z-index: 99999;
 }
 
 .auth-card {
-  background: white;
+  background: #ffffff;
   border-radius: 16px;
   padding: 32px;
-  width: 100%;
+  width: 90%;
   max-width: 380px;
-  box-shadow: 0 24px 64px rgba(0,0,0,0.4);
+  box-shadow: 0 24px 64px rgba(0,0,0,0.5);
   border-top: 4px solid var(--dorado);
 }
 
@@ -74,11 +91,12 @@ body:not(.sin-sesion) #authOverlay {
   font-family: 'Oswald', sans-serif;
   color: var(--azul);
   font-size: 1.8rem;
+  margin: 0;
 }
-.auth-subtitle { color: var(--texto-secundario); font-size: 0.85rem; }
+.auth-subtitle { color: var(--texto-secundario); font-size: 0.85rem; margin: 4px 0 0; }
 
 .auth-form { display: flex; flex-direction: column; gap: 12px; }
-.auth-form h3 { color: var(--azul); font-size: 1rem; }
+.auth-form h3 { color: var(--azul); font-size: 1rem; margin: 0; }
 
 .auth-input {
   width: 100%;
@@ -86,29 +104,44 @@ body:not(.sin-sesion) #authOverlay {
   border: 2px solid var(--borde);
   border-radius: 8px;
   font-size: 0.95rem;
+  font-family: 'Inter', sans-serif;
   background: #FFFDF9;
-  transition: border-color 0.2s;
+  box-sizing: border-box;
 }
+
 .auth-input:focus { border-color: var(--azul); outline: none; }
 
 .auth-btn {
-  width: 100%;
-  justify-content: center;
+  background: var(--azul);
+  color: white;
+  border: none;
   padding: 12px;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
   font-size: 1rem;
+  width: 100%;
+  font-family: 'Inter', sans-serif;
 }
+
+.auth-btn:hover { background: var(--azul-oscuro); }
+.auth-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
 .auth-error {
   color: var(--rojo);
   font-size: 0.85rem;
   text-align: center;
   min-height: 20px;
-  margin-top: 8px;
+  margin-top: 4px;
 }
+
 .auth-link {
   text-align: center;
   font-size: 0.85rem;
   color: var(--texto-secundario);
+  margin: 0;
 }
+
 .auth-link span {
   color: var(--azul);
   cursor: pointer;
@@ -116,7 +149,9 @@ body:not(.sin-sesion) #authOverlay {
   text-decoration: underline;
 }
 
-/* Barra de usuario */
+/* ============================================================
+   BARRA DE USUARIO LOGUEADO
+   ============================================================ */
 .user-info-bar {
   display: flex;
   align-items: center;
@@ -125,7 +160,9 @@ body:not(.sin-sesion) #authOverlay {
   padding: 6px 14px;
   border-radius: 30px;
 }
+
 .user-nombre { font-weight: 600; color: white; font-size: 0.9rem; }
+
 .user-rol-badge {
   font-size: 0.75rem;
   color: var(--dorado-claro);
@@ -133,6 +170,7 @@ body:not(.sin-sesion) #authOverlay {
   padding: 2px 8px;
   border-radius: 10px;
 }
+
 .btn-logout {
   background: transparent;
   border: 1px solid rgba(255,255,255,0.3);
@@ -142,14 +180,18 @@ body:not(.sin-sesion) #authOverlay {
   cursor: pointer;
   font-size: 0.8rem;
   transition: all 0.2s;
+  font-family: 'Inter', sans-serif;
 }
+
 .btn-logout:hover {
   background: var(--rojo);
   border-color: var(--rojo);
   color: white;
 }
 
-/* Badges tipo evaluación */
+/* ============================================================
+   BADGES TIPO EVALUACIÓN
+   ============================================================ */
 .badge-tipo {
   display: inline-block;
   padding: 2px 8px;
@@ -158,10 +200,13 @@ body:not(.sin-sesion) #authOverlay {
   font-weight: 600;
   margin-right: 4px;
 }
+
 .badge-tipo.profesor { background: var(--azul-claro); color: var(--azul); }
 .badge-tipo.alumno   { background: var(--dorado-palido); color: #8a6420; }
 
-/* ========== HEADER ========== */
+/* ============================================================
+   HEADER
+   ============================================================ */
 .app-header {
   background: linear-gradient(135deg, var(--azul) 0%, var(--azul-oscuro) 100%);
   color: var(--texto-claro);
@@ -173,8 +218,10 @@ body:not(.sin-sesion) #authOverlay {
   box-shadow: 0 4px 16px rgba(0,0,0,0.2);
   border-bottom: 3px solid var(--dorado);
 }
+
 .header-brand { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
 .logo-img { height: 50px; width: auto; filter: drop-shadow(0 2px 6px rgba(0,0,0,0.3)); }
+
 .header-titles h1 {
   font-family: 'Oswald', sans-serif;
   font-weight: 700;
@@ -183,15 +230,19 @@ body:not(.sin-sesion) #authOverlay {
   color: var(--dorado);
   line-height: 1.2;
 }
+
 .header-titles .subtitle {
   font-size: 0.8rem;
   font-weight: 400;
   color: #C0B9A8;
   letter-spacing: 0.5px;
 }
+
 .header-actions { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
 
-/* Toggle modo */
+/* ============================================================
+   TOGGLE MODO
+   ============================================================ */
 .mode-toggle {
   display: flex;
   align-items: center;
@@ -201,7 +252,9 @@ body:not(.sin-sesion) #authOverlay {
   border-radius: 30px;
   font-size: 0.85rem;
 }
+
 .mode-toggle span { color: #C0B9A8; }
+
 .mode-toggle input[type="checkbox"] {
   width: 40px; height: 20px;
   -webkit-appearance: none;
@@ -211,6 +264,7 @@ body:not(.sin-sesion) #authOverlay {
   cursor: pointer;
   transition: background 0.3s;
 }
+
 .mode-toggle input[type="checkbox"]::before {
   content: '';
   position: absolute;
@@ -220,11 +274,15 @@ body:not(.sin-sesion) #authOverlay {
   background: white;
   transition: 0.3s;
 }
+
 .mode-toggle input[type="checkbox"]:checked { background: var(--rojo); }
 .mode-toggle input[type="checkbox"]:checked::before { left: 22px; }
 
-/* Navegación */
+/* ============================================================
+   NAVEGACIÓN
+   ============================================================ */
 .nav-tabs { display: flex; gap: 12px; flex-wrap: wrap; }
+
 .tab {
   color: rgba(255,255,255,0.7);
   text-decoration: none;
@@ -235,18 +293,24 @@ body:not(.sin-sesion) #authOverlay {
   cursor: pointer;
   font-size: 0.9rem;
 }
+
 .tab.active, .tab:hover {
   color: var(--dorado);
   border-bottom-color: var(--dorado);
 }
 
-/* ========== CONTENEDOR PRINCIPAL ========== */
+/* ============================================================
+   CONTENEDOR PRINCIPAL
+   ============================================================ */
 .container { max-width: 100%; margin: 20px auto; padding: 0 16px; }
 .view { display: none; }
 .view.active { display: block; }
 
-/* ========== LAYOUT EVALUACIÓN ========== */
+/* ============================================================
+   LAYOUT EVALUACIÓN
+   ============================================================ */
 .evaluacion-layout { display: flex; gap: 20px; }
+
 .golpes-sidebar {
   width: 220px;
   flex-shrink: 0;
@@ -255,13 +319,16 @@ body:not(.sin-sesion) #authOverlay {
   padding: 16px;
   box-shadow: var(--sombra);
 }
+
 .golpes-sidebar h3 {
   font-family: 'Oswald', sans-serif;
   color: var(--azul);
   margin-bottom: 12px;
   font-size: 1.2rem;
 }
+
 .golpes-sidebar ul { list-style: none; }
+
 .golpes-sidebar li {
   padding: 8px 10px;
   border-radius: 8px;
@@ -272,15 +339,19 @@ body:not(.sin-sesion) #authOverlay {
   color: var(--texto);
   font-size: 0.9rem;
 }
+
 .golpes-sidebar li:hover { background: var(--dorado-palido); }
+
 .golpes-sidebar li.active {
   background: var(--azul);
   color: white;
   font-weight: 600;
   box-shadow: 0 2px 8px rgba(0,0,0,0.2);
 }
+
 .jugador-info { margin-top: 16px; }
 .jugador-info label { font-size: 0.85rem; color: var(--texto-secundario); }
+
 .jugador-info input {
   width: 100%;
   padding: 8px;
@@ -289,9 +360,12 @@ body:not(.sin-sesion) #authOverlay {
   margin-top: 4px;
   background: #FFFDF9;
 }
+
 .golpe-content { flex: 1; min-width: 0; }
 
-/* ========== ACORDEÓN DE PARES ========== */
+/* ============================================================
+   ACORDEÓN DE PARES
+   ============================================================ */
 .par-acordeon {
   background: var(--fondo-tarjeta);
   border-radius: var(--radio);
@@ -299,6 +373,7 @@ body:not(.sin-sesion) #authOverlay {
   box-shadow: var(--sombra);
   border: 1px solid var(--borde);
 }
+
 .par-header {
   padding: 12px 16px;
   display: flex;
@@ -309,27 +384,35 @@ body:not(.sin-sesion) #authOverlay {
   border-radius: var(--radio) var(--radio) 0 0;
   border-bottom: 1px solid var(--borde);
 }
+
 .par-header h3 { font-size: 1rem; color: var(--azul); }
+
 .par-header .toggle-icon {
   font-size: 1.1rem;
   transition: transform 0.3s;
   color: var(--dorado);
 }
+
 .par-header.collapsed .toggle-icon { transform: rotate(-90deg); }
 .par-body { padding: 16px; display: block; }
 .par-body.collapsed { display: none; }
 
-/* ========== TARJETAS CUANTIFICADOR ========== */
+/* ============================================================
+   TARJETAS CUANTIFICADOR
+   ============================================================ */
 .evaluador-grid { display: flex; flex-direction: column; gap: 12px; }
+
 .cuantificador-card {
   background: #FFFFFF;
   border-radius: 8px;
   padding: 12px;
   border: 1px solid var(--borde);
 }
+
 .card-header { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
 .card-header h3 { color: var(--azul); font-size: 0.95rem; font-weight: 600; }
 .info-icon { color: var(--rojo); cursor: help; }
+
 .card-desc {
   color: var(--texto-secundario);
   font-size: 0.8rem;
@@ -337,7 +420,9 @@ body:not(.sin-sesion) #authOverlay {
   padding-left: 8px;
   border-left: 3px solid var(--dorado);
 }
+
 .opciones-grid { display: flex; flex-direction: column; gap: 4px; }
+
 .opcion-card {
   display: flex;
   align-items: center;
@@ -349,12 +434,15 @@ body:not(.sin-sesion) #authOverlay {
   transition: all 0.2s;
   background: #FFFFFF;
 }
+
 .opcion-card:hover { border-color: var(--dorado); background: var(--dorado-palido); }
+
 .opcion-card:has(input:checked) {
   border-color: var(--azul);
   background: #E8F0FE;
   box-shadow: 0 0 0 3px rgba(0,51,102,0.1);
 }
+
 .cat-badge {
   display: inline-block;
   min-width: 32px;
@@ -366,18 +454,24 @@ body:not(.sin-sesion) #authOverlay {
   color: white;
   flex-shrink: 0;
 }
+
 .cat-7 { background: #8C8279; }
 .cat-6 { background: #5E8C5E; }
 .cat-5 { background: #6A9FB5; }
 .cat-4 { background: var(--dorado); }
 .cat-3 { background: var(--rojo); }
 .cat-2 { background: #7C5CBF; }
+
 .opcion-texto { color: var(--texto); font-size: 0.85rem; }
+
 .modo-alumno .cat-badge { display: none; }
 .modo-alumno .opcion-card { padding-left: 14px; }
 
-/* ========== BOTONES ========== */
+/* ============================================================
+   BOTONES
+   ============================================================ */
 .actions { display: flex; gap: 10px; margin-top: 12px; flex-wrap: wrap; }
+
 .btn-primary {
   background: var(--azul);
   color: white;
@@ -386,13 +480,15 @@ body:not(.sin-sesion) #authOverlay {
   border-radius: 8px;
   font-weight: 600;
   cursor: pointer;
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 6px;
   transition: background 0.2s;
   font-size: 0.9rem;
 }
+
 .btn-primary:hover { background: var(--azul-oscuro); }
+
 .btn-secondary {
   background: transparent;
   color: var(--azul);
@@ -404,9 +500,12 @@ body:not(.sin-sesion) #authOverlay {
   transition: all 0.2s;
   font-size: 0.9rem;
 }
+
 .btn-secondary:hover { background: var(--azul-claro); }
 
-/* ========== RESULTADO Y DIAGNÓSTICO ========== */
+/* ============================================================
+   RESULTADO Y DIAGNÓSTICO
+   ============================================================ */
 .resultado-par {
   margin-top: 12px;
   padding: 12px;
@@ -414,6 +513,7 @@ body:not(.sin-sesion) #authOverlay {
   border-radius: 8px;
   border-left: 4px solid var(--dorado);
 }
+
 .diagnostico-golpe {
   margin-top: 20px;
   padding: 16px;
@@ -421,6 +521,7 @@ body:not(.sin-sesion) #authOverlay {
   border-radius: var(--radio);
   border: 1px solid var(--azul-claro);
 }
+
 .variantes-golpe {
   font-size: 0.8rem;
   color: var(--texto-secundario);
@@ -429,8 +530,11 @@ body:not(.sin-sesion) #authOverlay {
   font-style: italic;
 }
 
-/* ========== HISTORIAL ========== */
+/* ============================================================
+   HISTORIAL
+   ============================================================ */
 .historial-lista { margin-top: 16px; }
+
 .historial-item {
   background: var(--fondo-tarjeta);
   padding: 12px;
@@ -444,7 +548,9 @@ body:not(.sin-sesion) #authOverlay {
   gap: 8px;
 }
 
-/* ========== FOOTER ========== */
+/* ============================================================
+   FOOTER
+   ============================================================ */
 .app-footer {
   text-align: center;
   padding: 16px;
@@ -454,8 +560,11 @@ body:not(.sin-sesion) #authOverlay {
   font-size: 0.85rem;
 }
 
-/* ========== VISTA ENTRENAMIENTO ========== */
+/* ============================================================
+   VISTA ENTRENAMIENTO
+   ============================================================ */
 .entrenamiento-layout { display: flex; gap: 20px; }
+
 .panel-control {
   width: 260px;
   flex-shrink: 0;
@@ -464,14 +573,17 @@ body:not(.sin-sesion) #authOverlay {
   border-radius: var(--radio);
   box-shadow: var(--sombra);
 }
+
 .panel-control h3 {
   font-family: 'Oswald', sans-serif;
   color: var(--azul);
   margin-bottom: 12px;
   font-size: 1.2rem;
 }
+
 .form-group { margin-bottom: 12px; }
 .form-group label { display: block; font-weight: 600; margin-bottom: 4px; font-size: 0.9rem; }
+
 .form-group select {
   width: 100%;
   padding: 8px;
@@ -479,7 +591,9 @@ body:not(.sin-sesion) #authOverlay {
   border-radius: 6px;
   background: white;
 }
+
 .plan-content { flex: 1; min-width: 0; }
+
 .plan-golpe {
   background: var(--fondo-tarjeta);
   border-radius: var(--radio);
@@ -487,14 +601,17 @@ body:not(.sin-sesion) #authOverlay {
   margin-bottom: 12px;
   box-shadow: var(--sombra);
 }
+
 .plan-golpe h3 {
   color: var(--azul);
   border-bottom: 2px solid var(--dorado);
   padding-bottom: 4px;
   font-size: 1rem;
 }
+
 .plan-par { margin-top: 10px; }
 .plan-par h4 { color: var(--dorado); font-size: 0.95rem; }
+
 .ejercicio-item {
   background: #F4F2EC;
   padding: 10px;
@@ -503,16 +620,21 @@ body:not(.sin-sesion) #authOverlay {
   border-left: 4px solid var(--azul);
   font-size: 0.85rem;
 }
+
 .ejercicio-item .series { font-weight: 600; color: var(--azul); }
 
-/* ========== VISTA ALUMNOS ========== */
+/* ============================================================
+   VISTA ALUMNOS
+   ============================================================ */
 .alumnos-lista { display: flex; flex-direction: column; gap: 16px; }
+
 .alumno-card {
   background: var(--fondo-tarjeta);
   border-radius: var(--radio);
   padding: 16px;
   box-shadow: var(--sombra);
 }
+
 .alumno-card h3 {
   color: var(--azul);
   margin-bottom: 8px;
@@ -520,13 +642,18 @@ body:not(.sin-sesion) #authOverlay {
   padding-bottom: 4px;
   font-size: 1.1rem;
 }
+
 .alumno-card table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
 .alumno-card th { text-align: left; background: var(--azul-claro); padding: 6px; }
 .alumno-card td { padding: 6px; border-bottom: 1px solid var(--borde); }
+
 .btn-chico { font-size: 0.8rem; padding: 3px 10px; margin-right: 4px; }
 
-/* ========== VISTA SEGUIMIENTO ========== */
+/* ============================================================
+   VISTA SEGUIMIENTO
+   ============================================================ */
 .seguimiento-layout { display: flex; gap: 20px; }
+
 .sesion-ejercicio {
   background: var(--fondo-tarjeta);
   border-radius: var(--radio);
@@ -534,7 +661,9 @@ body:not(.sin-sesion) #authOverlay {
   margin-bottom: 12px;
   box-shadow: var(--sombra);
 }
+
 .sesion-ejercicio h4 { color: var(--azul); margin-bottom: 6px; font-size: 0.95rem; }
+
 .sesion-campos {
   display: flex;
   gap: 10px;
@@ -542,18 +671,23 @@ body:not(.sin-sesion) #authOverlay {
   margin-top: 8px;
   flex-wrap: wrap;
 }
+
 .sesion-campos label { font-weight: 600; margin-right: 2px; font-size: 0.85rem; }
+
 .sesion-campos input {
   width: 60px;
   padding: 5px;
   border: 1px solid var(--borde);
   border-radius: 6px;
 }
+
 .completado-msg { font-weight: 600; color: #2d6a4f; font-size: 0.85rem; }
 .historial-sesiones { margin-top: 24px; }
 .historial-sesiones h3 { color: var(--azul); margin-bottom: 10px; font-family: 'Oswald', sans-serif; }
 
-/* ========== RESULTADO DE SESIÓN Y VEREDICTO ========== */
+/* ============================================================
+   RESULTADO DE SESIÓN Y VEREDICTO
+   ============================================================ */
 .resultado-sesion {
   margin-top: 24px;
   padding: 16px;
@@ -562,10 +696,13 @@ body:not(.sin-sesion) #authOverlay {
   box-shadow: var(--sombra);
   border: 1px solid var(--borde);
 }
+
 .resultado-sesion h3 { color: var(--azul); margin-bottom: 12px; font-size: 1.1rem; }
+
 .tabla-veredicto { width: 100%; border-collapse: collapse; margin-bottom: 12px; font-size: 0.85rem; }
 .tabla-veredicto th { background: var(--azul-claro); padding: 8px; text-align: left; }
 .tabla-veredicto td, .tabla-veredicto th { border-bottom: 1px solid var(--borde); padding: 8px; }
+
 .veredicto-global { font-size: 1.1rem; font-weight: 700; margin-top: 12px; }
 .veredicto.ascenso { color: #2d6a4f; }
 .veredicto.repetir { color: var(--dorado); }
@@ -580,11 +717,13 @@ body:not(.sin-sesion) #authOverlay {
     flex-direction: column;
     align-items: flex-start;
   }
+
   .header-actions {
     width: 100%;
     justify-content: space-between;
     margin-top: 10px;
   }
+
   .header-titles h1 { font-size: 1.5rem; }
   .tab { font-size: 0.8rem; }
 
@@ -593,6 +732,7 @@ body:not(.sin-sesion) #authOverlay {
   .seguimiento-layout {
     flex-direction: column;
   }
+
   .golpes-sidebar,
   .panel-control {
     width: 100%;
@@ -610,12 +750,14 @@ body:not(.sin-sesion) #authOverlay {
     flex-direction: column;
     align-items: flex-start;
   }
+
   .sesion-campos input {
     width: 100%;
     max-width: 120px;
   }
 
   .actions { flex-direction: column; }
+
   .btn-primary,
   .btn-secondary {
     width: 100%;
