@@ -3,7 +3,7 @@
 
 window.currentUser     = null;
 window.currentUserData = null;
-window.evaluacionesCargadas = null;
+window.evaluacionesCargadas = null; // cache global de evaluaciones
 
 // ========== ESCUCHAR CAMBIOS DE SESIÓN ==========
 auth.onAuthStateChanged(async (user) => {
@@ -17,6 +17,7 @@ auth.onAuthStateChanged(async (user) => {
       if (doc.exists) {
         window.currentUserData = doc.data();
       } else {
+        // Primera vez: crear perfil básico
         const perfil = {
           nombre: user.displayName || user.email.split('@')[0],
           email:  user.email,
@@ -46,18 +47,15 @@ auth.onAuthStateChanged(async (user) => {
     // Ajustar interfaz según rol
     ajustarUIporRol(window.currentUserData.rol);
 
-    // MOSTRAR APP / OCULTAR OVERLAY
+    // Ocultar overlay
     if (overlay) overlay.style.display = 'none';
-    document.body.classList.remove('sin-sesion');
 
   } else {
+    // Sin sesión
     window.currentUser          = null;
     window.currentUserData      = null;
     window.evaluacionesCargadas = null;
-
-    // OCULTAR APP / MOSTRAR OVERLAY
     if (overlay) overlay.style.display = 'flex';
-    document.body.classList.add('sin-sesion');
   }
 });
 
@@ -106,9 +104,12 @@ async function registerUser() {
     if (btn) btn.disabled = true;
     const cred = await auth.createUserWithEmailAndPassword(email, password);
     await db.collection('usuarios').doc(cred.user.uid).set({
-      nombre, email, rol,
+      nombre,
+      email,
+      rol,
       fechaCreacion: firebase.firestore.FieldValue.serverTimestamp()
     });
+    // onAuthStateChanged se dispara automáticamente y completa el flujo
   } catch (err) {
     errorDiv.textContent = traducirError(err.code);
     if (btn) btn.disabled = false;
@@ -140,11 +141,13 @@ function showLogin() {
 function ajustarUIporRol(rol) {
   const checkbox = document.getElementById('modoFiscalCheckbox');
   if (rol === 'profesor') {
+    // Profesores arrancan en modo fiscal automáticamente
     if (checkbox) {
       checkbox.checked = true;
       checkbox.dispatchEvent(new Event('change'));
     }
   } else {
+    // Alumnos no ven la tab de Alumnos (es para el profe)
     const tabAlumnos = document.querySelector('.tab[data-view="alumnos"]');
     if (tabAlumnos) tabAlumnos.style.display = 'none';
   }
@@ -165,6 +168,7 @@ function traducirError(code) {
   return errores[code] || 'Error inesperado. Intentá de nuevo.';
 }
 
+// Exponer funciones al HTML
 window.loginUser    = loginUser;
 window.registerUser = registerUser;
 window.logoutUser   = logoutUser;
