@@ -80,11 +80,12 @@
                 <span id="userRolDisplay" class="user-rol-badge"></span>
                 <button onclick="logoutUser()" class="btn-logout">Salir →</button>
             </div>
-            <div class="mode-toggle">
-                <span>👤 Alumno</span>
-                <input type="checkbox" id="modoFiscalCheckbox">
-                <span>🔍 Fiscal</span>
-            </div>
+            <div class="user-info-bar">
+    <span id="userNameDisplay" class="user-nombre"></span>
+    <span id="userRolDisplay" class="user-rol-badge"></span>
+    <span id="modoBadge" class="user-rol-badge" style="background:rgba(200,150,62,0.3); color:#E0C78A;"></span>
+    <button onclick="logoutUser()" class="btn-logout">Salir →</button>
+</div>
             <nav class="nav-tabs" id="mainNav">
                 <span class="tab active" data-view="evaluacion">Evaluación</span>
                 <span class="tab" data-view="entrenamiento">Entrenamiento</span>
