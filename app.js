@@ -1,4 +1,4 @@
-// ==================== APP.JS – VERSIÓN FIREBASE ====================
+// ==================== APP.JS – VERSIÓN FIREBASE COMPLETA ====================
 document.addEventListener('DOMContentLoaded', () => {
 
   // --- Elementos del DOM ---
@@ -9,33 +9,48 @@ document.addEventListener('DOMContentLoaded', () => {
   const playerNameInput    = document.getElementById('playerName');
   const historialLista     = document.getElementById('historialLista');
   const limpiarHistorialBtn= document.getElementById('limpiarHistorialBtn');
-  const modoFiscalCheckbox = document.getElementById('modoFiscalCheckbox');
   const body               = document.body;
 
   let golpeActual      = 'smash';
-  let evaluacionesCache= {}; // selecciones del formulario en curso
+  let evaluacionesCache= {};
   let planGeneradoHTML = '';
 
   // ========== MODO ALUMNO/PROFESOR (basado en Firebase) ==========
-function aplicarModoSegunRol() {
+  function aplicarModoSegunRol() {
     const userData = JSON.parse(localStorage.getItem('userData') || '{}');
-    const rol = userData.rol; // 'profesor' o 'alumno'
-    const body = document.body;
+    const rol = userData.rol || 'alumno';
     const modoBadge = document.getElementById('modoBadge');
     
     if (rol === 'profesor') {
-        body.classList.remove('modo-alumno');
-        body.classList.add('modo-fiscal');
-        if (modoBadge) modoBadge.textContent = 'Modo Profesor';
+      body.classList.remove('modo-alumno');
+      body.classList.add('modo-fiscal');
+      if (modoBadge) modoBadge.textContent = 'Modo Profesor';
     } else {
-        body.classList.remove('modo-fiscal');
-        body.classList.add('modo-alumno');
-        if (modoBadge) modoBadge.textContent = 'Modo Alumno';
+      body.classList.remove('modo-fiscal');
+      body.classList.add('modo-alumno');
+      if (modoBadge) modoBadge.textContent = 'Modo Alumno';
     }
-}
+  }
+  aplicarModoSegunRol();
 
-// Ejecutar al cargar la página
-aplicarModoSegunRol();
+  // ========== CONTROL DE VISIBILIDAD DE PESTAÑAS SEGÚN ROL ==========
+  function configurarInterfazSegunRol() {
+    const userData = JSON.parse(localStorage.getItem('userData') || '{}');
+    const rol = userData.rol || 'alumno';
+    
+    const tabsProfesor = document.querySelectorAll('.solo-profesor');
+    const tabsAlumno = document.querySelectorAll('.solo-alumno');
+    
+    if (rol === 'profesor') {
+      tabsProfesor.forEach(tab => tab.style.display = '');
+      tabsAlumno.forEach(tab => tab.style.display = 'none');
+    } else {
+      tabsProfesor.forEach(tab => tab.style.display = 'none');
+      tabsAlumno.forEach(tab => tab.style.display = '');
+    }
+  }
+  configurarInterfazSegunRol();
+
   // ========== NAVEGACIÓN PRINCIPAL ==========
   mainNav.addEventListener('click', (e) => {
     if (e.target.classList.contains('tab')) {
@@ -44,10 +59,11 @@ aplicarModoSegunRol();
       e.target.classList.add('active');
       views.forEach(v => v.classList.remove('active'));
       document.getElementById(view + 'View').classList.add('active');
-      if (view === 'historial')     cargarHistorial().catch(console.error);
-      if (view === 'entrenamiento') cargarAlumnosEnSelect().catch(console.error);
-      if (view === 'alumnos')       cargarAlumnos().catch(console.error);
-      if (view === 'seguimiento')   cargarAlumnosSeguimiento().catch(console.error);
+      if (view === 'historial')        cargarHistorial().catch(console.error);
+      if (view === 'entrenamiento')    cargarAlumnosEnSelect().catch(console.error);
+      if (view === 'alumnos')          cargarAlumnos().catch(console.error);
+      if (view === 'seguimiento')      cargarAlumnosSeguimiento().catch(console.error);
+      if (view === 'planificaciones')  cargarPlanificacionesAlumno().catch(console.error);
     }
   });
 
@@ -62,7 +78,7 @@ aplicarModoSegunRol();
     }
   });
 
-  // ========== RENDERIZAR GOLPE (sin cambios) ==========
+  // ========== RENDERIZAR GOLPE ==========
   function renderizarGolpe(golpeId) {
     const golpe = DATA.golpes[golpeId];
     if (!golpe) return;
@@ -149,7 +165,7 @@ aplicarModoSegunRol();
     document.getElementById('btnEvaluacionGlobal').addEventListener('click', evaluarGolpeCompleto);
   }
 
-  // ========== DIAGNOSTICAR PAR (sin cambios) ==========
+  // ========== DIAGNOSTICAR PAR ==========
   function diagnosticarPar(parKey) {
     const golpe   = DATA.golpes[golpeActual];
     const parData = golpe.pares[parKey];
@@ -209,10 +225,8 @@ aplicarModoSegunRol();
     document.getElementById('globalGolpeTexto').innerHTML  = texto;
     document.getElementById('globalGolpe').style.display   = 'block';
   }
-
   // ==================== FIRESTORE: FUNCIONES DE ALMACENAMIENTO ====================
 
-  // ---- Helper central: cargar evaluaciones con cache ----
   async function cargarEvaluacionesDesdeFirestore(forzar = false) {
     if (window.evaluacionesCargadas !== null && !forzar) return window.evaluacionesCargadas;
     if (!window.currentUser) return [];
@@ -220,16 +234,13 @@ aplicarModoSegunRol();
     try {
       let ref;
       if (window.currentUserData?.rol === 'profesor') {
-        // Profesores ven TODAS las evaluaciones
         ref = db.collection('evaluaciones').orderBy('fecha', 'desc').limit(200);
       } else {
-        // Alumnos solo ven las propias
         ref = db.collection('evaluaciones')
           .where('uid', '==', window.currentUser.uid)
           .orderBy('fecha', 'desc')
           .limit(100);
       }
-
       const snapshot = await ref.get();
       window.evaluacionesCargadas = snapshot.docs.map(doc => ({
         ...doc.data(),
@@ -238,7 +249,6 @@ aplicarModoSegunRol();
         fecha:       doc.data().fechaLocal || new Date().toLocaleString()
       }));
       return window.evaluacionesCargadas;
-
     } catch (err) {
       console.error('Error cargando evaluaciones:', err);
       window.evaluacionesCargadas = [];
@@ -246,14 +256,12 @@ aplicarModoSegunRol();
     }
   }
 
-  // ---- Guardar evaluación → Firestore ----
   async function guardarEvaluacion() {
     if (!window.currentUser) return alert('⚠️ Debés iniciar sesión para guardar.');
     if (Object.keys(evaluacionesCache).length === 0)
       return alert('⚠️ Diagnosticá al menos un par antes de guardar.');
 
     const nombre = playerNameInput.value.trim() || window.currentUserData?.nombre || 'Sin nombre';
-
     const evaluacion = {
       uid:             window.currentUser.uid,
       evaluadorUid:    window.currentUser.uid,
@@ -268,7 +276,7 @@ aplicarModoSegunRol();
 
     try {
       await db.collection('evaluaciones').add(evaluacion);
-      window.evaluacionesCargadas = null; // invalidar cache
+      window.evaluacionesCargadas = null;
       alert('✅ Evaluación guardada correctamente.');
     } catch (err) {
       alert('❌ Error al guardar: ' + err.message);
@@ -279,13 +287,11 @@ aplicarModoSegunRol();
   async function cargarHistorial() {
     historialLista.innerHTML = '<p>Cargando evaluaciones...</p>';
     const historial = await cargarEvaluacionesDesdeFirestore(true);
-
     historialLista.innerHTML = '';
     if (historial.length === 0) {
       historialLista.innerHTML = '<p>No hay evaluaciones guardadas.</p>';
       return;
     }
-
     historial.forEach(eva => {
       const div = document.createElement('div');
       div.className = 'historial-item';
@@ -338,7 +344,7 @@ aplicarModoSegunRol();
 
   limpiarHistorialBtn?.addEventListener('click', async () => {
     if (!window.currentUser) return;
-    if (!confirm('¿Borrar TODAS tus evaluaciones propias? No se puede deshacer.')) return;
+    if (!confirm('¿Borrar TODAS tus evaluaciones propias?')) return;
     try {
       const snapshot = await db.collection('evaluaciones')
         .where('uid', '==', window.currentUser.uid).get();
@@ -366,8 +372,7 @@ aplicarModoSegunRol();
     historial.forEach((eva, idx) => {
       const opt = document.createElement('option');
       opt.value = idx;
-      const tipoBadge = eva.tipo === 'profesor' ? '🔍' : '👤';
-      opt.textContent = `${tipoBadge} ${eva.jugador} – ${eva.golpe} (${eva.fecha})`;
+      opt.textContent = `${eva.jugador} – ${eva.golpe} (${eva.fecha})`;
       alumnoSelect.appendChild(opt);
     });
   }
@@ -399,7 +404,6 @@ aplicarModoSegunRol();
     let html = `<h2>Plan de Entrenamiento para ${evaluacion.jugador}</h2>`;
     html += `<p><strong>Golpe:</strong> ${evaluacion.golpe} | <strong>Objetivo:</strong> ${objetivo}ª Categoría</p>`;
     let encontro = false;
-
     const golpeData = DATA.golpes[evaluacion.golpe];
     if (!golpeData) return html + '<p>No hay datos del golpe.</p>';
 
@@ -437,36 +441,26 @@ aplicarModoSegunRol();
   async function cargarAlumnos() {
     alumnosLista.innerHTML = '<p>Cargando...</p>';
     const historial = await cargarEvaluacionesDesdeFirestore();
-
     if (historial.length === 0) {
       alumnosLista.innerHTML = '<p>No hay alumnos registrados.</p>';
       return;
     }
-
     const alumnos = {};
     historial.forEach(eva => {
       if (!alumnos[eva.jugador]) alumnos[eva.jugador] = [];
       alumnos[eva.jugador].push(eva);
     });
-
     let html = '';
     for (const [nombre, evaluaciones] of Object.entries(alumnos)) {
-      html += `<div class="alumno-card">
-        <h3>${nombre}</h3>
-        <table>
-          <thead><tr><th>Golpe</th><th>Tipo</th><th>Fecha</th><th>Acciones</th></tr></thead>
-          <tbody>`;
+      html += `<div class="alumno-card"><h3>${nombre}</h3><table>
+        <thead><tr><th>Golpe</th><th>Tipo</th><th>Fecha</th><th>Acciones</th></tr></thead><tbody>`;
       evaluaciones.forEach(eva => {
         const tipoBadge = eva.tipo === 'profesor' ? '🔍' : '👤';
-        html += `<tr>
-          <td>${eva.golpe}</td>
-          <td>${tipoBadge}</td>
-          <td>${eva.fecha}</td>
+        html += `<tr><td>${eva.golpe}</td><td>${tipoBadge}</td><td>${eva.fecha}</td>
           <td>
             <button class="btn-secondary btn-chico generar-plan-alumno" data-id="${eva.firestoreId}">📋 Plan</button>
             <button class="btn-secondary btn-chico eliminar-eva-alumno" data-id="${eva.firestoreId}">🗑️</button>
-          </td>
-        </tr>`;
+          </td></tr>`;
       });
       html += `</tbody></table></div>`;
     }
@@ -475,9 +469,9 @@ aplicarModoSegunRol();
 
   alumnosLista.addEventListener('click', async (e) => {
     if (e.target.classList.contains('generar-plan-alumno')) {
-      const id       = e.target.dataset.id;
+      const id = e.target.dataset.id;
       const historial = window.evaluacionesCargadas || [];
-      const eva      = historial.find(item => item.firestoreId === id);
+      const eva = historial.find(item => item.firestoreId === id);
       if (eva) {
         document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
         document.querySelector('.tab[data-view="entrenamiento"]').classList.add('active');
@@ -499,9 +493,7 @@ aplicarModoSegunRol();
         await db.collection('evaluaciones').doc(id).delete();
         window.evaluacionesCargadas = null;
         cargarAlumnos();
-      } catch (err) {
-        alert('Error al eliminar: ' + err.message);
-      }
+      } catch (err) { alert('Error al eliminar: ' + err.message); }
     }
   });
 
@@ -521,8 +513,7 @@ aplicarModoSegunRol();
     historial.forEach((eva, idx) => {
       const opt = document.createElement('option');
       opt.value = idx;
-      const tipoBadge = eva.tipo === 'profesor' ? '🔍' : '👤';
-      opt.textContent = `${tipoBadge} ${eva.jugador} – ${eva.golpe} (${eva.fecha})`;
+      opt.textContent = `${eva.jugador} – ${eva.golpe} (${eva.fecha})`;
       alumnoSelectSeg.appendChild(opt);
     });
   }
@@ -534,7 +525,6 @@ aplicarModoSegunRol();
     const evaluacion = historial[parseInt(idx)];
     if (!evaluacion) return alert('Error: evaluación no encontrada.');
     const objetivo   = parseInt(categoriaObjetivoSeg.value);
-
     const ejercicios = [];
     const golpeData  = DATA.golpes[evaluacion.golpe];
     if (!golpeData) return alert('No hay datos del golpe.');
@@ -551,13 +541,10 @@ aplicarModoSegunRol();
               ejercicios.push({
                 parKey, cuantId: cuant.id, nombreCuant: cuant.nombre,
                 transicion, catInicio: cat, catFin: cat - 1, ejercicio,
-                totalSeries:       ejercicio.series,
+                totalSeries: ejercicio.series,
                 totalRepsPorSerie: parseInt(ejercicio.repeticiones),
-                criterioExigido:   ejercicio.criterioExito,
-                minimoExitos: extraerMinimoCriterio(
-                  ejercicio.criterioExito,
-                  ejercicio.series * parseInt(ejercicio.repeticiones)
-                )
+                criterioExigido: ejercicio.criterioExito,
+                minimoExitos: extraerMinimoCriterio(ejercicio.criterioExito, ejercicio.series * parseInt(ejercicio.repeticiones))
               });
             }
           }
@@ -566,13 +553,13 @@ aplicarModoSegunRol();
     }
 
     if (ejercicios.length === 0) {
-      sesionContent.innerHTML = '<p>✅ Ya alcanza la categoría objetivo en todos los aspectos.</p>';
+      sesionContent.innerHTML = '<p>✅ Ya alcanza la categoría objetivo.</p>';
       planSesion = null;
       guardarSesionBtn.style.display = 'none';
       return;
     }
 
-    planSesion           = { jugador: evaluacion.jugador, golpe: evaluacion.golpe, objetivo, ejercicios };
+    planSesion = { jugador: evaluacion.jugador, golpe: evaluacion.golpe, objetivo, ejercicios };
     ejerciciosCompletados = new Array(ejercicios.length).fill(false);
 
     let html = `<h3>Plan para ${evaluacion.jugador} (objetivo: ${objetivo}ª)</h3>`;
@@ -583,9 +570,9 @@ aplicarModoSegunRol();
           <p><em>${ej.ejercicio.nombre}</em></p>
           <p>${ej.totalSeries} series x ${ej.totalRepsPorSerie} rep. | Criterio: ${ej.criterioExigido}</p>
           <div class="sesion-campos">
-            <label>Series completadas:</label>
+            <label>Series:</label>
             <input type="number" min="0" max="${ej.totalSeries}" value="0" data-index="${index}" data-campo="series">
-            <label>Reps exitosas:</label>
+            <label>Éxitos:</label>
             <input type="number" min="0" max="${ej.totalSeries * ej.totalRepsPorSerie}" value="0" data-index="${index}" data-campo="exitosas">
             <button class="btn-primary btn-chico finalizar-ejercicio" data-index="${index}">✔ Finalizar</button>
           </div>
@@ -594,11 +581,9 @@ aplicarModoSegunRol();
     });
     sesionContent.innerHTML = html;
     guardarSesionBtn.style.display = 'inline-block';
-
     document.querySelectorAll('.finalizar-ejercicio').forEach(btn => {
       btn.addEventListener('click', (ev) => finalizarEjercicio(parseInt(ev.target.dataset.index)));
     });
-
     cargarHistorialSesiones().catch(console.error);
   });
 
@@ -619,190 +604,145 @@ aplicarModoSegunRol();
       btn.insertAdjacentHTML('afterend', '<span class="completado-msg">✅ Completado</span>');
     ejerciciosCompletados[idx] = true;
     if (planSesion) {
-      planSesion.ejercicios[idx].seriesRealizadas       = parseInt(inputs[0].value) || 0;
-      planSesion.ejercicios[idx].repeticionesExitosas   = parseInt(inputs[1].value) || 0;
+      planSesion.ejercicios[idx].seriesRealizadas     = parseInt(inputs[0].value) || 0;
+      planSesion.ejercicios[idx].repeticionesExitosas = parseInt(inputs[1].value) || 0;
     }
   }
 
   guardarSesionBtn.addEventListener('click', async () => {
     if (!planSesion) return alert('No hay plan cargado.');
     if (!window.currentUser) return alert('Debés iniciar sesión.');
-
-    // Recoger valores actuales de los inputs
     sesionContent.querySelectorAll('input').forEach(input => {
-      const idx   = parseInt(input.dataset.index);
+      const idx = parseInt(input.dataset.index);
       const campo = input.dataset.campo;
       if (!isNaN(idx) && planSesion.ejercicios[idx]) {
         if (campo === 'series')   planSesion.ejercicios[idx].seriesRealizadas     = parseInt(input.value) || 0;
         if (campo === 'exitosas') planSesion.ejercicios[idx].repeticionesExitosas = parseInt(input.value) || 0;
       }
     });
-
     const sesionParaGuardar = {
-      uid:          window.currentUser.uid,
-      evaluadorUid: window.currentUser.uid,
-      fecha:        firebase.firestore.FieldValue.serverTimestamp(),
-      fechaLocal:   new Date().toLocaleString(),
-      jugador:      planSesion.jugador,
-      golpe:        planSesion.golpe,
-      objetivo:     planSesion.objetivo,
-      ejercicios:   planSesion.ejercicios.map(ej => ({
-        nombreCuant:           ej.nombreCuant,
-        transicion:            ej.transicion,
-        seriesRealizadas:      ej.seriesRealizadas      || 0,
-        repeticionesExitosas:  ej.repeticionesExitosas  || 0,
-        totalSeries:           ej.totalSeries,
-        totalRepsPorSerie:     ej.totalRepsPorSerie,
-        criterioExigido:       ej.criterioExigido,
-        minimoExitos:          ej.minimoExitos
+      uid: window.currentUser.uid,
+      fecha: firebase.firestore.FieldValue.serverTimestamp(),
+      fechaLocal: new Date().toLocaleString(),
+      jugador: planSesion.jugador,
+      golpe: planSesion.golpe,
+      objetivo: planSesion.objetivo,
+      ejercicios: planSesion.ejercicios.map(ej => ({
+        nombreCuant: ej.nombreCuant, transicion: ej.transicion,
+        seriesRealizadas: ej.seriesRealizadas || 0,
+        repeticionesExitosas: ej.repeticionesExitosas || 0,
+        totalSeries: ej.totalSeries, totalRepsPorSerie: ej.totalRepsPorSerie,
+        criterioExigido: ej.criterioExigido, minimoExitos: ej.minimoExitos
       }))
     };
-
     try {
       await db.collection('sesiones').add(sesionParaGuardar);
       mostrarResultadoSesion(planSesion);
       alert('✅ Sesión guardada correctamente.');
       cargarHistorialSesiones().catch(console.error);
-    } catch (err) {
-      alert('Error al guardar sesión: ' + err.message);
-    }
+    } catch (err) { alert('Error al guardar: ' + err.message); }
   });
 
   function mostrarResultadoSesion(plan) {
-    const viejoResultado = document.getElementById('resultadoSesion');
-    if (viejoResultado) viejoResultado.remove();
-
-    const resultadoDiv = document.createElement('div');
-    resultadoDiv.id        = 'resultadoSesion';
-    resultadoDiv.className = 'resultado-sesion';
-    resultadoDiv.innerHTML = '<h3>📊 Resultado de la Sesión</h3>';
-
-    const historial    = window.evaluacionesCargadas || [];
-    const evaluacion   = historial[parseInt(alumnoSelectSeg.value)];
-    const categoriasActuales = {};
-    const nombresCuant       = {};
-
+    const viejo = document.getElementById('resultadoSesion');
+    if (viejo) viejo.remove();
+    const div = document.createElement('div');
+    div.id = 'resultadoSesion';
+    div.className = 'resultado-sesion';
+    div.innerHTML = '<h3>📊 Resultado</h3>';
+    const historial = window.evaluacionesCargadas || [];
+    const evaluacion = historial[parseInt(alumnoSelectSeg.value)];
+    const cats = {};
+    const nombres = {};
     if (evaluacion) {
+      for (const [, sels] of Object.entries(evaluacion.selecciones))
+        for (const [id, cat] of Object.entries(sels)) cats[id] = cat;
       const golpeData = DATA.golpes[evaluacion.golpe];
-      for (const [, sels] of Object.entries(evaluacion.selecciones)) {
-        for (const [cuantId, cat] of Object.entries(sels)) categoriasActuales[cuantId] = cat;
-      }
-      if (golpeData) {
-        for (const parData of Object.values(golpeData.pares)) {
-          for (const cuant of parData.cuantificadores) nombresCuant[cuant.id] = cuant.nombre;
-        }
-      }
+      if (golpeData) for (const parData of Object.values(golpeData.pares))
+        for (const cuant of parData.cuantificadores) nombres[cuant.id] = cuant.nombre;
     }
-
-    const objetivo           = plan.objetivo;
-    const resultadosPorCuant = {};
-
-    for (const cuantId of Object.keys(categoriasActuales)) {
-      resultadosPorCuant[cuantId] = {
-        nombre:      nombresCuant[cuantId] || cuantId,
-        catActual:   categoriasActuales[cuantId] || 7,
-        catAlcanzada:categoriasActuales[cuantId] || 7,
-        ejercicios:  []
-      };
-    }
-
+    const obj = plan.objetivo;
+    const res = {};
+    for (const id of Object.keys(cats)) res[id] = { nombre: nombres[id]||id, catActual: cats[id]||7, catAlc: cats[id]||7, ejs:[] };
     plan.ejercicios.forEach(ej => {
-      if (!resultadosPorCuant[ej.cuantId]) {
-        resultadosPorCuant[ej.cuantId] = {
-          nombre:       ej.nombreCuant,
-          catActual:    categoriasActuales[ej.cuantId] || 7,
-          catAlcanzada: categoriasActuales[ej.cuantId] || 7,
-          ejercicios:   []
-        };
-      }
-      const exito = ej.repeticionesExitosas >= ej.minimoExitos;
-      resultadosPorCuant[ej.cuantId].ejercicios.push({ ...ej, exito });
-      if (exito && ej.catFin < resultadosPorCuant[ej.cuantId].catAlcanzada)
-        resultadosPorCuant[ej.cuantId].catAlcanzada = ej.catFin;
+      if (!res[ej.cuantId]) res[ej.cuantId] = { nombre: ej.nombreCuant, catActual: cats[ej.cuantId]||7, catAlc: cats[ej.cuantId]||7, ejs:[] };
+      const ok = ej.repeticionesExitosas >= ej.minimoExitos;
+      res[ej.cuantId].ejs.push({...ej, ok});
+      if (ok && ej.catFin < res[ej.cuantId].catAlc) res[ej.cuantId].catAlc = ej.catFin;
     });
-
-    let globalAscenso = 0, globalRepetir = 0, globalDescenso = 0;
-    let tablaHTML = `<table class="tabla-veredicto">
-      <tr><th>Cuantificador</th><th>Cat. Actual</th><th>Objetivo</th><th>Alcanzada</th><th>Veredicto</th></tr>`;
-
-    for (const [, datos] of Object.entries(resultadosPorCuant)) {
-      const { catActual, catAlcanzada } = datos;
-      let veredicto = '';
-      if (catAlcanzada <= objetivo)      { veredicto = '⬆ Ascender';  globalAscenso++; }
-      else if (catAlcanzada > catActual) { veredicto = '⬇ Descender'; globalDescenso++; }
-      else                               { veredicto = '↻ Repetir';   globalRepetir++; }
-
-      tablaHTML += `<tr>
-        <td>${datos.nombre}</td>
-        <td>${catActual}ª</td>
-        <td>${objetivo}ª</td>
-        <td>${catAlcanzada}ª</td>
-        <td>${veredicto}</td>
-      </tr>`;
+    let asc = 0, rep = 0, desc = 0;
+    let tabla = '<table class="tabla-veredicto"><tr><th>Cuantificador</th><th>Actual</th><th>Obj</th><th>Alc</th><th>Veredicto</th></tr>';
+    for (const [, d] of Object.entries(res)) {
+      let v = '';
+      if (d.catAlc <= obj)      { v = '⬆ Ascender';  asc++; }
+      else if (d.catAlc > d.catActual) { v = '⬇ Descender'; desc++; }
+      else                      { v = '↻ Repetir';   rep++; }
+      tabla += `<tr><td>${d.nombre}</td><td>${d.catActual}ª</td><td>${obj}ª</td><td>${d.catAlc}ª</td><td>${v}</td></tr>`;
     }
-    tablaHTML += '</table>';
-
-    let veredictoGlobal = '';
-    if (globalDescenso > 0)
-      veredictoGlobal = '<span class="veredicto descenso">⬇ DESCENDER</span> (al menos un aspecto retrocedió)';
-    else if (globalRepetir > 0)
-      veredictoGlobal = '<span class="veredicto repetir">↻ REPETIR</span> (aún no alcanza el objetivo)';
-    else
-      veredictoGlobal = '<span class="veredicto ascenso">⬆ ASCENDER</span> (todos los aspectos logrados)';
-
-    resultadoDiv.innerHTML += tablaHTML + `<p class="veredicto-global">${veredictoGlobal}</p>`;
-    sesionContent.appendChild(resultadoDiv);
+    tabla += '</table>';
+    let vg = '';
+    if (desc > 0) vg = '<span class="veredicto descenso">⬇ DESCENDER</span>';
+    else if (rep > 0) vg = '<span class="veredicto repetir">↻ REPETIR</span>';
+    else vg = '<span class="veredicto ascenso">⬆ ASCENDER</span>';
+    div.innerHTML += tabla + `<p class="veredicto-global">${vg}</p>`;
+    sesionContent.appendChild(div);
   }
 
   async function cargarHistorialSesiones() {
     const idx = alumnoSelectSeg.value;
     if (idx === '') return;
     const historial = window.evaluacionesCargadas || [];
-    const eva       = historial[parseInt(idx)];
+    const eva = historial[parseInt(idx)];
     if (!eva) return;
-
     let container = document.getElementById('historialSesiones');
     if (!container) {
       container = document.createElement('div');
       container.className = 'historial-sesiones';
-      container.id        = 'historialSesiones';
+      container.id = 'historialSesiones';
       sesionContent.appendChild(container);
     }
-    container.innerHTML = '<p>Cargando sesiones anteriores...</p>';
-
+    container.innerHTML = '<p>Cargando sesiones...</p>';
     try {
-      // Consulta simple por uid + ordenar por fecha (evita índice compuesto)
       const snapshot = await db.collection('sesiones')
         .where('uid', '==', window.currentUser.uid)
-        .orderBy('fecha', 'desc')
-        .limit(30)
-        .get();
-
-      const sesionesAlumno = snapshot.docs
-        .map(doc => ({ ...doc.data(), fecha: doc.data().fechaLocal || 'Sin fecha' }))
-        .filter(s => s.jugador === eva.jugador && s.golpe === eva.golpe)
-        .slice(0, 5);
-
+        .orderBy('fecha', 'desc').limit(30).get();
+      const sesiones = snapshot.docs
+        .map(doc => ({...doc.data(), fecha: doc.data().fechaLocal || 'Sin fecha'}))
+        .filter(s => s.jugador === eva.jugador && s.golpe === eva.golpe).slice(0,5);
       container.innerHTML = '';
-      if (sesionesAlumno.length === 0) {
-        container.innerHTML = '<p>No hay sesiones anteriores para este alumno.</p>';
-        return;
-      }
-
-      container.innerHTML = '<h3>📅 Sesiones anteriores</h3>';
-      sesionesAlumno.forEach(ses => {
-        const div = document.createElement('div');
-        div.className = 'sesion-ejercicio';
+      if (sesiones.length === 0) { container.innerHTML = '<p>No hay sesiones anteriores.</p>'; return; }
+      container.innerHTML = '<h3>📅 Últimas sesiones</h3>';
+      sesiones.forEach(ses => {
+        const d = document.createElement('div');
+        d.className = 'sesion-ejercicio';
         let inner = `<strong>${ses.fecha}</strong> – Objetivo: ${ses.objetivo}ª<br>`;
-        ses.ejercicios.forEach(ej => {
-          inner += `${ej.nombreCuant}: ${ej.seriesRealizadas} de ${ej.totalSeries} series, ${ej.repeticionesExitosas} éxitos<br>`;
-        });
-        div.innerHTML = inner;
-        container.appendChild(div);
+        ses.ejercicios.forEach(ej => inner += `${ej.nombreCuant}: ${ej.seriesRealizadas}/${ej.totalSeries} series, ${ej.repeticionesExitosas} éxitos<br>`);
+        d.innerHTML = inner;
+        container.appendChild(d);
       });
-    } catch (err) {
-      container.innerHTML = `<p>Error cargando sesiones: ${err.message}</p>`;
-    }
+    } catch (err) { container.innerHTML = `<p>Error: ${err.message}</p>`; }
+  }
+
+  // ========== PLANIFICACIONES DEL ALUMNO ==========
+  async function cargarPlanificacionesAlumno() {
+    const container = document.getElementById('planificacionesAlumno');
+    if (!container) return;
+    container.innerHTML = '<p>Cargando planificaciones...</p>';
+    // Placeholder hasta implementar Firestore
+    setTimeout(() => {
+      container.innerHTML = `
+        <div class="planificacion-card">
+          <h3>🏐 Smash - Plan Básico</h3>
+          <p>Ejercicios para mejorar la aptitud del golpe-impacto.</p>
+          <span class="estado pendiente">⏳ Pendiente</span>
+        </div>
+        <div class="planificacion-card">
+          <h3>🏸 Volea - Plan Intermedio</h3>
+          <p>Trabajo de profundidad y cambios de velocidad.</p>
+          <span class="estado completada">✅ Completada</span>
+        </div>
+      `;
+    }, 500);
   }
 
   // ========== INICIALIZAR ==========
