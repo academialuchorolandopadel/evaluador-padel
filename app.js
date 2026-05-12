@@ -504,34 +504,87 @@ alumnosLista.addEventListener('click', async (e) => {
   async function cargarHistorialSesiones() { /* ... misma lógica de historial ... */ }
 
   // ========== PLANIFICACIONES ALUMNO ==========
-  async function cargarPlanificacionesAlumno() {
+async function cargarPlanificacionesAlumno() {
     const container = document.getElementById('planificacionesAlumno');
     if (!container) return;
     container.innerHTML = '<p>Cargando planificaciones...</p>';
-    if (!window.currentUser) { container.innerHTML = '<p>Debés iniciar sesión.</p>'; return; }
+    
+    if (!window.currentUser) {
+        container.innerHTML = '<p>Debés iniciar sesión.</p>';
+        return;
+    }
+    
     try {
-      const snapshot = await db.collection('planificaciones').where('alumnoUid', '==', window.currentUser.uid).orderBy('fecha', 'desc').limit(50).get();
-      if (snapshot.empty) { container.innerHTML = '<p>No tenés planificaciones asignadas todavía.</p>'; return; }
-      let html = '';
-      snapshot.docs.forEach(doc => {
-        const plan = doc.data();
-        const estadoClase = plan.estado === 'completada' ? 'completada' : plan.estado === 'repetir' ? 'repetir' : 'pendiente';
-        const estadoTexto = plan.estado === 'completada' ? '✅ Completada' : plan.estado === 'repetir' ? '🔄 Repetir' : '⏳ Pendiente';
-        html += `<div class="planificacion-card"><h3>${obtenerNombreGolpe(plan.golpe)} - Objetivo: ${plan.objetivo}ª</h3><p>Asignado: ${plan.fechaLocal||''}</p><span class="estado ${estadoClase}">${estadoTexto}</span><div style="margin-top:12px;"><button class="btn-secondary btn-chico ver-plan-btn" data-planid="${doc.id}">📋 Ver ejercicios</button></div><div id="plan-content-${doc.id}" style="margin-top:12px;display:none;">${plan.contenidoHTML||'<p>Sin contenido.</p>'}</div></div>`;
-      });
-      container.innerHTML = html;
-      document.querySelectorAll('.ver-plan-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-          const planId = btn.dataset.planid;
-          const content = document.getElementById(`plan-content-${planId}`);
-          if (content.style.display === 'none') { content.style.display = 'block'; btn.textContent = '🔼 Ocultar'; }
-          else { content.style.display = 'none'; btn.textContent = '📋 Ver ejercicios'; }
+        const userData = JSON.parse(localStorage.getItem('userData') || '{}');
+        const rol = userData.rol || 'alumno';
+        
+        let snapshot;
+        if (rol === 'profesor') {
+            // El profesor ve las planificaciones que él creó
+            snapshot = await db.collection('planificaciones')
+                .where('profesorUid', '==', window.currentUser.uid)
+                .orderBy('fecha', 'desc')
+                .limit(50)
+                .get();
+        } else {
+            // El alumno ve las planificaciones que le asignaron
+            snapshot = await db.collection('planificaciones')
+                .where('alumnoUid', '==', window.currentUser.uid)
+                .orderBy('fecha', 'desc')
+                .limit(50)
+                .get();
+        }
+        
+        if (snapshot.empty) {
+            container.innerHTML = rol === 'profesor' 
+                ? '<p>No has creado ninguna planificación todavía.</p>' 
+                : '<p>No tenés planificaciones asignadas todavía.</p>';
+            return;
+        }
+        
+        let html = '';
+        snapshot.docs.forEach(doc => {
+            const plan = doc.data();
+            const estadoClase = plan.estado === 'completada' ? 'completada' : 
+                               plan.estado === 'repetir' ? 'repetir' : 'pendiente';
+            const estadoTexto = plan.estado === 'completada' ? '✅ Completada' :
+                               plan.estado === 'repetir' ? '🔄 Repetir' : '⏳ Pendiente';
+            
+            html += `
+                <div class="planificacion-card">
+                    <h3>${obtenerNombreGolpe(plan.golpe)} - Objetivo: ${plan.objetivo}ª</h3>
+                    <p>Alumno: <strong>${plan.alumnoNombre || 'Sin nombre'}</strong></p>
+                    <p>Asignado: ${plan.fechaLocal || ''}</p>
+                    <span class="estado ${estadoClase}">${estadoTexto}</span>
+                    <div style="margin-top:12px;">
+                        <button class="btn-secondary btn-chico ver-plan-btn" data-planid="${doc.id}">📋 Ver ejercicios</button>
+                    </div>
+                    <div id="plan-content-${doc.id}" style="margin-top:12px; display:none;">
+                        ${plan.contenidoHTML || '<p>Sin contenido.</p>'}
+                    </div>
+                </div>
+            `;
         });
-      });
-    } catch (err) { container.innerHTML = `<p>Error: ${err.message}</p>`; }
-  }
-
-  function obtenerNombreGolpe(golpeId) {
+        container.innerHTML = html;
+        
+        document.querySelectorAll('.ver-plan-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const planId = btn.dataset.planid;
+                const content = document.getElementById(`plan-content-${planId}`);
+                if (content.style.display === 'none') {
+                    content.style.display = 'block';
+                    btn.textContent = '🔼 Ocultar';
+                } else {
+                    content.style.display = 'none';
+                    btn.textContent = '📋 Ver ejercicios';
+                }
+            });
+        });
+        
+    } catch (err) {
+        container.innerHTML = `<p>Error al cargar: ${err.message}</p>`;
+    }
+}  function obtenerNombreGolpe(golpeId) {
     const nombres = { smash: '🏐 Sobre Cabeza', volea: '🏸 Volea', pegadaFondo: '🎯 Pegada de Fondo', salidaPared: '🧱 Salida de Pared' };
     return nombres[golpeId] || golpeId;
   }
