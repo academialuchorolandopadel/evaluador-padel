@@ -16,19 +16,26 @@ document.addEventListener('DOMContentLoaded', () => {
   let evaluacionesCache= {}; // selecciones del formulario en curso
   let planGeneradoHTML = '';
 
-  // ========== MODO ALUMNO / FISCAL ==========
-  function actualizarModo() {
-    if (modoFiscalCheckbox.checked) {
-      body.classList.remove('modo-alumno');
-      body.classList.add('modo-fiscal');
+  // ========== MODO ALUMNO/PROFESOR (basado en Firebase) ==========
+function aplicarModoSegunRol() {
+    const userData = JSON.parse(localStorage.getItem('userData') || '{}');
+    const rol = userData.rol; // 'profesor' o 'alumno'
+    const body = document.body;
+    const modoBadge = document.getElementById('modoBadge');
+    
+    if (rol === 'profesor') {
+        body.classList.remove('modo-alumno');
+        body.classList.add('modo-fiscal');
+        if (modoBadge) modoBadge.textContent = 'Modo Profesor';
     } else {
-      body.classList.remove('modo-fiscal');
-      body.classList.add('modo-alumno');
+        body.classList.remove('modo-fiscal');
+        body.classList.add('modo-alumno');
+        if (modoBadge) modoBadge.textContent = 'Modo Alumno';
     }
-  }
-  modoFiscalCheckbox.addEventListener('change', actualizarModo);
-  actualizarModo();
+}
 
+// Ejecutar al cargar la página
+aplicarModoSegunRol();
   // ========== NAVEGACIÓN PRINCIPAL ==========
   mainNav.addEventListener('click', (e) => {
     if (e.target.classList.contains('tab')) {
