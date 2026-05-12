@@ -4,13 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CATEGORIZACIÓN | Academia Lucho Rolando</title>
-
-    <!-- Fuentes -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700&family=Oswald:wght@500;700&display=swap" rel="stylesheet">
-
-    <!-- Estilos principales (incluye autenticación) -->
     <link rel="stylesheet" href="styles.css">
 
     <!-- Firebase SDKs -->
@@ -29,7 +25,7 @@
 </head>
 <body class="modo-alumno sin-sesion">
 
-    <!-- ===== OVERLAY DE AUTENTICACIÓN ===== -->
+    <!-- OVERLAY DE AUTENTICACIÓN -->
     <div id="authOverlay">
         <div class="auth-card">
             <div class="auth-header">
@@ -43,8 +39,8 @@
                 <h3>Iniciar Sesión</h3>
                 <input type="email" id="loginEmail" class="auth-input" placeholder="Email" autocomplete="email">
                 <input type="password" id="loginPassword" class="auth-input" placeholder="Contraseña" autocomplete="current-password">
-                <button class="auth-btn" onclick="loginUser()">Ingresar</button>
-                <p class="auth-link">¿No tenés cuenta? <span onclick="showRegister()">Registrarse</span></p>
+                <button id="btnLogin" class="auth-btn">Ingresar</button>
+                <p class="auth-link">¿No tenés cuenta? <span id="btnShowRegister">Registrarse</span></p>
             </div>
 
             <!-- Formulario Registro -->
@@ -57,15 +53,15 @@
                     <option value="alumno">👤 Alumno</option>
                     <option value="profesor">🔍 Profesor / Fiscal</option>
                 </select>
-                <button class="auth-btn" onclick="registerUser()">Crear cuenta</button>
-                <p class="auth-link">¿Ya tenés cuenta? <span onclick="showLogin()">Ingresar</span></p>
+                <button id="btnRegister" class="auth-btn">Crear cuenta</button>
+                <p class="auth-link">¿Ya tenés cuenta? <span id="btnShowLogin">Ingresar</span></p>
             </div>
 
             <div id="authError" class="auth-error"></div>
         </div>
     </div>
 
-    <!-- ===== HEADER ===== -->
+    <!-- HEADER -->
     <header class="app-header">
         <div class="header-brand">
             <img src="1000001630.png" alt="Logo Academia Lucho Rolando" class="logo-img">
@@ -75,12 +71,11 @@
             </div>
         </div>
         <div class="header-actions">
-            <!-- Barra de usuario UNIFICADA (sin duplicados) -->
             <div class="user-info-bar">
                 <span id="userNameDisplay" class="user-nombre"></span>
                 <span id="userRolDisplay" class="user-rol-badge"></span>
                 <span id="modoBadge" class="user-rol-badge" style="background:rgba(200,150,62,0.3); color:#E0C78A;"></span>
-                <button onclick="logoutUser()" class="btn-logout">Salir →</button>
+                <button id="btnLogout" class="btn-logout">Salir →</button>
             </div>
             <nav class="nav-tabs" id="mainNav">
                 <span class="tab active" data-view="evaluacion">Evaluación</span>
@@ -93,10 +88,9 @@
         </div>
     </header>
 
-    <!-- ===== CONTENEDOR PRINCIPAL ===== -->
+    <!-- CONTENEDOR PRINCIPAL -->
     <main class="container" id="appContainer">
 
-        <!-- Vista Evaluación -->
         <div id="evaluacionView" class="view active">
             <div class="evaluacion-layout">
                 <aside class="golpes-sidebar">
@@ -116,7 +110,6 @@
             </div>
         </div>
 
-        <!-- Vista Entrenamiento -->
         <div id="entrenamientoView" class="view">
             <div class="entrenamiento-layout">
                 <aside class="panel-control">
@@ -128,13 +121,8 @@
                     <div class="form-group">
                         <label for="categoriaObjetivo">Categoría objetivo</label>
                         <select id="categoriaObjetivo">
-                            <option value="7">7ª</option>
-                            <option value="6">6ª</option>
-                            <option value="5">5ª</option>
-                            <option value="4">4ª</option>
-                            <option value="3">3ª</option>
-                            <option value="2">2ª</option>
-                            <option value="1">1ª</option>
+                            <option value="7">7ª</option><option value="6">6ª</option><option value="5">5ª</option>
+                            <option value="4">4ª</option><option value="3">3ª</option><option value="2">2ª</option><option value="1">1ª</option>
                         </select>
                     </div>
                     <button id="generarPlanBtn" class="btn-primary">📋 Generar Plan</button>
@@ -144,7 +132,6 @@
             </div>
         </div>
 
-        <!-- Vista Seguimiento -->
         <div id="seguimientoView" class="view">
             <div class="seguimiento-layout">
                 <aside class="panel-control">
@@ -156,13 +143,8 @@
                     <div class="form-group">
                         <label for="categoriaObjetivoSeg">Categoría objetivo</label>
                         <select id="categoriaObjetivoSeg">
-                            <option value="7">7ª</option>
-                            <option value="6">6ª</option>
-                            <option value="5">5ª</option>
-                            <option value="4">4ª</option>
-                            <option value="3">3ª</option>
-                            <option value="2">2ª</option>
-                            <option value="1">1ª</option>
+                            <option value="7">7ª</option><option value="6">6ª</option><option value="5">5ª</option>
+                            <option value="4">4ª</option><option value="3">3ª</option><option value="2">2ª</option><option value="1">1ª</option>
                         </select>
                     </div>
                     <button id="cargarPlanSeg" class="btn-primary">📋 Cargar Plan</button>
@@ -172,20 +154,17 @@
             </div>
         </div>
 
-        <!-- Vista Alumnos -->
         <div id="alumnosView" class="view">
             <h2>Alumnos Registrados</h2>
             <div id="alumnosLista" class="alumnos-lista"></div>
         </div>
 
-        <!-- Vista Historial -->
         <div id="historialView" class="view">
             <h2>Evaluaciones Guardadas</h2>
             <div id="historialLista" class="historial-lista"></div>
             <button id="limpiarHistorialBtn" class="btn-secondary">🗑️ Limpiar mis evaluaciones</button>
         </div>
 
-        <!-- Vista Manual -->
         <div id="manualView" class="view">
             <h2>Manual de Referencia</h2>
             <p>Consultá el <strong>Método Sistemático de Categorización</strong> del Colegio de Fiscales F.A.P. (2010) para más detalles.</p>
@@ -201,18 +180,17 @@
 
     </main>
 
-    <!-- ===== FOOTER ===== -->
     <footer class="app-footer">
         <p>Sistema de Categorización – Academia Lucho Rolando</p>
     </footer>
 
-    <!-- Scripts de la aplicación -->
+    <!-- Scripts -->
     <script src="data.js"></script>
     <script src="ejercicios.js"></script>
     <script src="auth-ui.js"></script>
     <script src="app.js"></script>
 
-    <!-- Service Worker (solo en producción) -->
+    <!-- Service Worker -->
     <script>
         if ('serviceWorker' in navigator && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
             window.addEventListener('load', () => {
