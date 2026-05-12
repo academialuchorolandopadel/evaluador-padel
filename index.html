@@ -78,10 +78,18 @@
                 <button id="btnLogout" class="btn-logout">Salir →</button>
             </div>
             <nav class="nav-tabs" id="mainNav">
+                <!-- Pestañas visibles para todos -->
                 <span class="tab active" data-view="evaluacion">Evaluación</span>
-                <span class="tab" data-view="entrenamiento">Entrenamiento</span>
-                <span class="tab" data-view="seguimiento">Seguimiento</span>
-                <span class="tab" data-view="alumnos">Alumnos</span>
+                
+                <!-- Pestaña solo para alumnos -->
+                <span class="tab solo-alumno" data-view="planificaciones" style="display:none;">📋 Planificaciones</span>
+                
+                <!-- Pestañas solo para profesores -->
+                <span class="tab solo-profesor" data-view="entrenamiento" style="display:none;">Entrenamiento</span>
+                <span class="tab solo-profesor" data-view="seguimiento" style="display:none;">Seguimiento</span>
+                <span class="tab solo-profesor" data-view="alumnos" style="display:none;">Alumnos</span>
+                
+                <!-- Pestañas visibles para todos -->
                 <span class="tab" data-view="historial">Historial</span>
                 <span class="tab" data-view="manual">Manual</span>
             </nav>
@@ -91,6 +99,7 @@
     <!-- CONTENEDOR PRINCIPAL -->
     <main class="container" id="appContainer">
 
+        <!-- Vista Evaluación -->
         <div id="evaluacionView" class="view active">
             <div class="evaluacion-layout">
                 <aside class="golpes-sidebar">
@@ -110,6 +119,16 @@
             </div>
         </div>
 
+        <!-- Vista Planificaciones (solo para alumnos) -->
+        <div id="planificacionesView" class="view">
+            <h2>📋 Mis Planificaciones</h2>
+            <p>Acá verás las planificaciones que tu profesor comparta con vos.</p>
+            <div id="planificacionesAlumno" class="planificaciones-lista">
+                <p style="color: var(--texto-secundario);">No tenés planificaciones asignadas todavía.</p>
+            </div>
+        </div>
+
+        <!-- Vista Entrenamiento -->
         <div id="entrenamientoView" class="view">
             <div class="entrenamiento-layout">
                 <aside class="panel-control">
@@ -132,6 +151,7 @@
             </div>
         </div>
 
+        <!-- Vista Seguimiento -->
         <div id="seguimientoView" class="view">
             <div class="seguimiento-layout">
                 <aside class="panel-control">
@@ -154,17 +174,20 @@
             </div>
         </div>
 
+        <!-- Vista Alumnos -->
         <div id="alumnosView" class="view">
             <h2>Alumnos Registrados</h2>
             <div id="alumnosLista" class="alumnos-lista"></div>
         </div>
 
+        <!-- Vista Historial -->
         <div id="historialView" class="view">
             <h2>Evaluaciones Guardadas</h2>
             <div id="historialLista" class="historial-lista"></div>
             <button id="limpiarHistorialBtn" class="btn-secondary">🗑️ Limpiar mis evaluaciones</button>
         </div>
 
+        <!-- Vista Manual -->
         <div id="manualView" class="view">
             <h2>Manual de Referencia</h2>
             <p>Consultá el <strong>Método Sistemático de Categorización</strong> del Colegio de Fiscales F.A.P. (2010) para más detalles.</p>
