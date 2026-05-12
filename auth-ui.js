@@ -68,6 +68,15 @@ document.addEventListener('DOMContentLoaded', () => {
                         body.classList.remove('modo-fiscal');
                     }
                     actualizarBadgeModo(usuarioLocal.rol);
+
+                    // ⚡ NUEVO: Hacer disponible el usuario globalmente
+                    window.currentUser = user;
+                    window.currentUserData = usuarioLocal;
+
+                    // ⚡ NUEVO: Configurar visibilidad de pestañas según rol
+                    if (typeof configurarInterfazSegunRol === 'function') {
+                        configurarInterfazSegunRol();
+                    }
                 }
             } catch (error) {
                 console.error('Error al obtener datos:', error);
@@ -84,10 +93,21 @@ document.addEventListener('DOMContentLoaded', () => {
                 body.classList.remove('sin-sesion');
                 body.classList.add('modo-alumno');
                 actualizarBadgeModo('alumno');
+
+                // ⚡ NUEVO: Hacer disponible el usuario globalmente
+                window.currentUser = user;
+                window.currentUserData = usuarioBasico;
+
+                // ⚡ NUEVO: Configurar visibilidad de pestañas
+                if (typeof configurarInterfazSegunRol === 'function') {
+                    configurarInterfazSegunRol();
+                }
             }
         } else {
             currentUser = null;
             localStorage.removeItem('userData');
+            window.currentUser = null;
+            window.currentUserData = null;
             body.classList.add('sin-sesion');
             showLogin();
         }
@@ -159,6 +179,8 @@ document.addEventListener('DOMContentLoaded', () => {
             await auth.signOut();
             localStorage.removeItem('userData');
             currentUser = null;
+            window.currentUser = null;
+            window.currentUserData = null;
             window.location.reload();
         } catch (error) {
             console.error('Error al cerrar sesión:', error);
