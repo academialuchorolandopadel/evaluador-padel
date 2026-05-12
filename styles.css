@@ -768,3 +768,28 @@ body:not(.sin-sesion) #authOverlay {
   .user-info-bar { gap: 6px; padding: 4px 8px; }
   .user-nombre { font-size: 0.8rem; }
 }
+/* ===== VISTA PLANIFICACIONES (ALUMNO) ===== */
+.planificaciones-lista {
+    margin-top: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+.planificacion-card {
+    background: var(--fondo-tarjeta);
+    border-radius: var(--radio);
+    padding: 16px;
+    box-shadow: var(--sombra);
+    border-left: 4px solid var(--dorado);
+}
+.planificacion-card h3 {
+    color: var(--azul);
+    margin-bottom: 8px;
+}
+.planificacion-card .estado {
+    font-weight: 600;
+    font-size: 0.85rem;
+}
+.estado.pendiente { color: var(--dorado); }
+.estado.completada { color: #2d6a4f; }
+.estado.repetir { color: var(--rojo); }
