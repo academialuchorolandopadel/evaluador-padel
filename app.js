@@ -755,7 +755,15 @@ async function cargarPlanificacionesAlumno() {
     }
     return ejercicios;
   }
-
+function obtenerNombreGolpe(golpeId) {
+    const nombres = {
+        smash: '🏐 Sobre Cabeza',
+        volea: '🏸 Volea',
+        pegadaFondo: '🎯 Pegada de Fondo',
+        salidaPared: '🧱 Salida de Pared'
+    };
+    return nombres[golpeId] || golpeId;
+}
   // ========== INICIALIZAR ==========
   renderizarGolpe('smash');
 });
