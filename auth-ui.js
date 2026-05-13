@@ -1,11 +1,9 @@
 // ==================== AUTH-UI.JS (Eventos automáticos) ====================
 document.addEventListener('DOMContentLoaded', () => {
 
-    // --- Referencias a Firebase ---
     const auth = firebase.auth();
     const db = firebase.firestore();
 
-    // --- Elementos del DOM ---
     const authOverlay = document.getElementById('authOverlay');
     const loginForm = document.getElementById('loginForm');
     const registerForm = document.getElementById('registerForm');
@@ -14,14 +12,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const userRolDisplay = document.getElementById('userRolDisplay');
     const modoBadge = document.getElementById('modoBadge');
 
-    // --- Botones ---
     const btnLogin = document.getElementById('btnLogin');
     const btnRegister = document.getElementById('btnRegister');
     const btnLogout = document.getElementById('btnLogout');
     const btnShowRegister = document.getElementById('btnShowRegister');
     const btnShowLogin = document.getElementById('btnShowLogin');
 
-    // --- Estado ---
     let currentUser = null;
 
     // ============================================================
@@ -55,12 +51,12 @@ document.addEventListener('DOMContentLoaded', () => {
                     localStorage.setItem('userData', JSON.stringify(usuarioLocal));
 
                     if (userNameDisplay) userNameDisplay.textContent = usuarioLocal.nombre;
-                    if (userRolDisplay) userRolDisplay.textContent = usuarioLocal.rol === 'profesor' ? 'Profesor' : 'Alumno';
+                    if (userRolDisplay) userRolDisplay.textContent = usuarioLocal.rol === 'profesor' ? 'Profesor' : usuarioLocal.rol === 'fiscal' ? 'Fiscal' : 'Alumno';
 
                     aplicarModoSegunRol(usuarioLocal.rol);
                     body.classList.remove('sin-sesion');
 
-                    if (usuarioLocal.rol === 'profesor') {
+                    if (usuarioLocal.rol === 'profesor' || usuarioLocal.rol === 'fiscal') {
                         body.classList.add('modo-fiscal');
                         body.classList.remove('modo-alumno');
                     } else {
@@ -69,11 +65,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                     actualizarBadgeModo(usuarioLocal.rol);
 
-                    // ⚡ NUEVO: Hacer disponible el usuario globalmente
                     window.currentUser = user;
                     window.currentUserData = usuarioLocal;
 
-                    // ⚡ NUEVO: Configurar visibilidad de pestañas según rol
                     if (typeof configurarInterfazSegunRol === 'function') {
                         configurarInterfazSegunRol();
                     }
@@ -94,11 +88,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 body.classList.add('modo-alumno');
                 actualizarBadgeModo('alumno');
 
-                // ⚡ NUEVO: Hacer disponible el usuario globalmente
                 window.currentUser = user;
                 window.currentUserData = usuarioBasico;
 
-                // ⚡ NUEVO: Configurar visibilidad de pestañas
                 if (typeof configurarInterfazSegunRol === 'function') {
                     configurarInterfazSegunRol();
                 }
@@ -143,7 +135,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const nombre = document.getElementById('regNombre').value.trim();
         const email = document.getElementById('regEmail').value.trim();
         const password = document.getElementById('regPassword').value;
-        const rol = document.getElementById('regRol').value;
+        const rol = 'alumno'; // Todos se registran como alumnos
 
         if (!nombre || !email || !password) {
             mostrarError('Por favor, completá todos los campos.');
@@ -211,11 +203,11 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // ============================================================
-    // 5. MODO ALUMNO/PROFESOR
+    // 5. MODO ALUMNO/PROFESOR/FISCAL
     // ============================================================
     function aplicarModoSegunRol(rol) {
         const body = document.body;
-        if (rol === 'profesor') {
+        if (rol === 'profesor' || rol === 'fiscal') {
             body.classList.remove('modo-alumno');
             body.classList.add('modo-fiscal');
         } else {
@@ -226,18 +218,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function actualizarBadgeModo(rol) {
         if (modoBadge) {
-            modoBadge.textContent = rol === 'profesor' ? 'Modo Profesor' : 'Modo Alumno';
+            modoBadge.textContent = rol === 'profesor' ? 'Modo Profesor' : rol === 'fiscal' ? 'Modo Fiscal' : 'Modo Alumno';
         }
     }
 
-    // Exportar funciones útiles globalmente
     window.getUserData = () => {
         const data = localStorage.getItem('userData');
         return data ? JSON.parse(data) : null;
     };
     window.isProfesor = () => {
         const userData = window.getUserData();
-        return userData && userData.rol === 'profesor';
+        return userData && (userData.rol === 'profesor' || userData.rol === 'fiscal');
     };
     window.isAlumno = () => {
         const userData = window.getUserData();
