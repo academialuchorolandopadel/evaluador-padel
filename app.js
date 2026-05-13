@@ -379,7 +379,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // ========== SEGUIMIENTO ==========
+  // ========== SEGUIMIENTO (con botón corregir) ==========
   const alumnoSelectSeg = document.getElementById('alumnoSelectSeg');
   const categoriaObjetivoSeg = document.getElementById('categoriaObjetivoSeg');
   const cargarPlanSegBtn = document.getElementById('cargarPlanSeg');
@@ -440,12 +440,28 @@ document.addEventListener('DOMContentLoaded', () => {
     ejerciciosCompletados = new Array(ejercicios.length).fill(false);
     let html = `<h3>Plan para ${evaluacion.jugador} (objetivo: ${objetivo}ª)</h3>`;
     ejercicios.forEach((ej, index) => {
-      html += `<div class="sesion-ejercicio" id="ejercicio-${index}"><h4>${ej.nombreCuant} – ${ej.transicion.replace('_', 'ª → ')}ª</h4><p><em>${ej.ejercicio.nombre}</em></p><p>${ej.totalSeries} series x ${ej.totalRepsPorSerie} rep. | Criterio: ${ej.criterioExigido}</p><div class="sesion-campos"><label>Series:</label><input type="number" min="0" max="${ej.totalSeries}" value="0" data-index="${index}" data-campo="series"><label>Éxitos:</label><input type="number" min="0" max="${ej.totalSeries * ej.totalRepsPorSerie}" value="0" data-index="${index}" data-campo="exitosas"><button class="btn-primary btn-chico finalizar-ejercicio" data-index="${index}">✔ Finalizar</button></div></div>`;
+      html += `<div class="sesion-ejercicio" id="ejercicio-${index}">
+        <h4>${ej.nombreCuant} – ${ej.transicion.replace('_', 'ª → ')}ª</h4>
+        <p><em>${ej.ejercicio.nombre}</em></p>
+        <p>${ej.totalSeries} series x ${ej.totalRepsPorSerie} rep. | Criterio: ${ej.criterioExigido}</p>
+        <div class="sesion-campos">
+          <label>Series:</label>
+          <input type="number" min="0" max="${ej.totalSeries}" value="0" data-index="${index}" data-campo="series">
+          <label>Éxitos:</label>
+          <input type="number" min="0" max="${ej.totalSeries * ej.totalRepsPorSerie}" value="0" data-index="${index}" data-campo="exitosas">
+          <button class="btn-primary btn-chico finalizar-ejercicio" data-index="${index}">✔ Finalizar</button>
+          <button class="btn-secondary btn-chico corregir-ejercicio" data-index="${index}" style="display:none;">✏️ Corregir</button>
+          <span class="completado-msg" style="display:none;">✅ Completado</span>
+        </div>
+      </div>`;
     });
     sesionContent.innerHTML = html;
     guardarSesionBtn.style.display = 'inline-block';
     document.querySelectorAll('.finalizar-ejercicio').forEach(btn => {
       btn.addEventListener('click', (ev) => finalizarEjercicio(parseInt(ev.target.dataset.index)));
+    });
+    document.querySelectorAll('.corregir-ejercicio').forEach(btn => {
+      btn.addEventListener('click', (ev) => corregirEjercicio(parseInt(ev.target.dataset.index)));
     });
     cargarHistorialSesiones().catch(console.error);
   });
@@ -461,15 +477,31 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!ejercicioDiv) return;
     const inputs = ejercicioDiv.querySelectorAll('input');
     inputs.forEach(input => input.disabled = true);
-    const btn = ejercicioDiv.querySelector('.finalizar-ejercicio');
-    if (btn) btn.disabled = true;
-    if (!ejercicioDiv.querySelector('.completado-msg'))
-      btn.insertAdjacentHTML('afterend', '<span class="completado-msg">✅ Completado</span>');
+    const btnFinalizar = ejercicioDiv.querySelector('.finalizar-ejercicio');
+    const btnCorregir = ejercicioDiv.querySelector('.corregir-ejercicio');
+    const msg = ejercicioDiv.querySelector('.completado-msg');
+    if (btnFinalizar) btnFinalizar.style.display = 'none';
+    if (btnCorregir) btnCorregir.style.display = 'inline-block';
+    if (msg) msg.style.display = 'inline';
     ejerciciosCompletados[idx] = true;
     if (planSesion) {
       planSesion.ejercicios[idx].seriesRealizadas = parseInt(inputs[0].value) || 0;
       planSesion.ejercicios[idx].repeticionesExitosas = parseInt(inputs[1].value) || 0;
     }
+  }
+
+  function corregirEjercicio(idx) {
+    const ejercicioDiv = document.getElementById(`ejercicio-${idx}`);
+    if (!ejercicioDiv) return;
+    const inputs = ejercicioDiv.querySelectorAll('input');
+    inputs.forEach(input => input.disabled = false);
+    const btnFinalizar = ejercicioDiv.querySelector('.finalizar-ejercicio');
+    const btnCorregir = ejercicioDiv.querySelector('.corregir-ejercicio');
+    const msg = ejercicioDiv.querySelector('.completado-msg');
+    if (btnFinalizar) btnFinalizar.style.display = 'inline-block';
+    if (btnCorregir) btnCorregir.style.display = 'none';
+    if (msg) msg.style.display = 'none';
+    ejerciciosCompletados[idx] = false;
   }
 
   guardarSesionBtn.addEventListener('click', async () => {
@@ -765,7 +797,7 @@ document.addEventListener('DOMContentLoaded', () => {
     return nombres[golpeId] || golpeId;
   }
 
-  // ========== NUEVA PLANIFICACIÓN ==========
+  // ========== NUEVA PLANIFICACIÓN (con uid de alumno correcto) ==========
   const alumnoPlanSelect = document.getElementById('alumnoPlanSelect');
   const golpePlanSelect = document.getElementById('golpePlanSelect');
   const categoriaObjetivoPlan = document.getElementById('categoriaObjetivoPlan');
@@ -798,17 +830,39 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
     const evaluacion = evaluacionesAlumno[0];
+
+    // Buscar el uid real del alumno en la colección usuarios
+    let alumnoUid = '';
+    try {
+      const usuarioSnapshot = await db.collection('usuarios')
+        .where('nombre', '==', alumnoNombre)
+        .limit(1)
+        .get();
+      if (!usuarioSnapshot.empty) {
+        alumnoUid = usuarioSnapshot.docs[0].id;
+      } else {
+        alumnoUid = evaluacion.uid || '';
+      }
+    } catch (err) {
+      alumnoUid = evaluacion.uid || '';
+    }
+
     planificacionGenerada = construirPlan(evaluacion, objetivo);
     planGeneradoPreview.innerHTML = `<h3>Vista previa</h3>${planificacionGenerada}<button id="confirmarGuardarPlanBtn" class="btn-primary" style="margin-top:16px;">💾 Confirmar y Asignar a ${alumnoNombre}</button>`;
     document.getElementById('confirmarGuardarPlanBtn').addEventListener('click', async () => {
       try {
         await db.collection('planificaciones').add({
-          profesorUid: window.currentUser.uid, alumnoNombre: alumnoNombre,
-          alumnoUid: evaluacion.uid || '', golpe: golpe, objetivo: objetivo,
+          profesorUid: window.currentUser.uid,
+          alumnoNombre: alumnoNombre,
+          alumnoUid: alumnoUid,
+          golpe: golpe,
+          objetivo: objetivo,
           contenidoHTML: planificacionGenerada,
           ejercicios: extraerEjerciciosDePlan(evaluacion, objetivo),
           fecha: firebase.firestore.FieldValue.serverTimestamp(),
-          fechaLocal: new Date().toLocaleString(), estado: 'pendiente', progreso: 0
+          fechaLocal: new Date().toLocaleString(),
+          estado: 'pendiente',
+          progreso: 0
         });
         alert('✅ Planificación asignada correctamente.');
         planGeneradoPreview.innerHTML = '';
