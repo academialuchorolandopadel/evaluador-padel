@@ -520,14 +520,12 @@ async function cargarPlanificacionesAlumno() {
         
         let snapshot;
         if (rol === 'profesor') {
-            // El profesor ve las planificaciones que él creó
             snapshot = await db.collection('planificaciones')
                 .where('profesorUid', '==', window.currentUser.uid)
                 .orderBy('fecha', 'desc')
                 .limit(50)
                 .get();
         } else {
-            // El alumno ve las planificaciones que le asignaron
             snapshot = await db.collection('planificaciones')
                 .where('alumnoUid', '==', window.currentUser.uid)
                 .orderBy('fecha', 'desc')
@@ -545,28 +543,43 @@ async function cargarPlanificacionesAlumno() {
         let html = '';
         snapshot.docs.forEach(doc => {
             const plan = doc.data();
+            const planId = doc.id;
             const estadoClase = plan.estado === 'completada' ? 'completada' : 
                                plan.estado === 'repetir' ? 'repetir' : 'pendiente';
             const estadoTexto = plan.estado === 'completada' ? '✅ Completada' :
                                plan.estado === 'repetir' ? '🔄 Repetir' : '⏳ Pendiente';
             
             html += `
-                <div class="planificacion-card">
+                <div class="planificacion-card" id="plan-card-${planId}">
                     <h3>${obtenerNombreGolpe(plan.golpe)} - Objetivo: ${plan.objetivo}ª</h3>
                     <p>Alumno: <strong>${plan.alumnoNombre || 'Sin nombre'}</strong></p>
                     <p>Asignado: ${plan.fechaLocal || ''}</p>
-                    <span class="estado ${estadoClase}">${estadoTexto}</span>
+                    <span class="estado ${estadoClase}" id="estado-plan-${planId}">${estadoTexto}</span>
+                    <span id="progreso-plan-${planId}" style="margin-left:10px;font-weight:600;">
+                        ${plan.progreso ? `(${plan.progreso}%)` : ''}
+                    </span>
                     <div style="margin-top:12px;">
-                        <button class="btn-secondary btn-chico ver-plan-btn" data-planid="${doc.id}">📋 Ver ejercicios</button>
+                        <button class="btn-secondary btn-chico ver-plan-btn" data-planid="${planId}">📋 Ver ejercicios</button>
+                        ${rol === 'profesor' && plan.estado !== 'completada' ? 
+                            `<button class="btn-primary btn-chico calificar-plan-btn" data-planid="${planId}">⭐ Calificar</button>` : ''}
                     </div>
-                    <div id="plan-content-${doc.id}" style="margin-top:12px; display:none;">
+                    <div id="plan-content-${planId}" style="margin-top:12px; display:none;">
                         ${plan.contenidoHTML || '<p>Sin contenido.</p>'}
                     </div>
+                    <!-- Sección de calificación (solo profesor) -->
+                    ${rol === 'profesor' ? `
+                        <div id="calificacion-${planId}" style="display:none; margin-top:16px; padding:16px; background:#f9f9f9; border-radius:8px;">
+                            <h4>⭐ Calificar Ejercicios</h4>
+                            <div id="ejercicios-calificar-${planId}"></div>
+                            <button class="btn-primary guardar-calificacion-btn" data-planid="${planId}" style="margin-top:12px;">💾 Guardar Calificación</button>
+                        </div>
+                    ` : ''}
                 </div>
             `;
         });
         container.innerHTML = html;
         
+        // Eventos para mostrar/ocultar ejercicios
         document.querySelectorAll('.ver-plan-btn').forEach(btn => {
             btn.addEventListener('click', () => {
                 const planId = btn.dataset.planid;
@@ -581,14 +594,90 @@ async function cargarPlanificacionesAlumno() {
             });
         });
         
+        // Eventos para calificar (solo profesor)
+        document.querySelectorAll('.calificar-plan-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const planId = btn.dataset.planid;
+                const calificacionDiv = document.getElementById(`calificacion-${planId}`);
+                const ejerciciosDiv = document.getElementById(`ejercicios-calificar-${planId}`);
+                
+                // Mostrar/ocultar sección de calificación
+                if (calificacionDiv.style.display === 'none') {
+                    calificacionDiv.style.display = 'block';
+                    btn.textContent = '🔽 Ocultar calificación';
+                    
+                    // Cargar ejercicios de esta planificación
+                    const plan = snapshot.docs.find(d => d.id === planId);
+                    if (plan && plan.data().ejercicios) {
+                        let ejerciciosHTML = '';
+                        plan.data().ejercicios.forEach((ej, idx) => {
+                            ejerciciosHTML += `
+                                <div style="margin-bottom:12px; padding:8px; background:white; border-radius:6px; border:1px solid #ddd;">
+                                    <strong>${ej.nombreCuant} - ${ej.transicion.replace('_', 'ª → ')}ª</strong>
+                                    <p style="margin:4px 0; font-size:0.85rem; color:#666;">${ej.ejercicio.nombre}</p>
+                                    <label>Porcentaje alcanzado:</label>
+                                    <input type="number" min="0" max="100" value="${ej.calificacion || 0}" 
+                                           class="calificacion-input" data-ejercicio="${idx}" data-planid="${planId}"
+                                           style="width:80px; padding:4px; margin-left:8px;"> %
+                                </div>
+                            `;
+                        });
+                        ejerciciosDiv.innerHTML = ejerciciosHTML;
+                    }
+                } else {
+                    calificacionDiv.style.display = 'none';
+                    btn.textContent = '⭐ Calificar';
+                }
+            });
+        });
+        
+        // Eventos para guardar calificación
+        document.querySelectorAll('.guardar-calificacion-btn').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const planId = btn.dataset.planid;
+                const inputs = document.querySelectorAll(`.calificacion-input[data-planid="${planId}"]`);
+                
+                let suma = 0;
+                let cantidad = 0;
+                
+                inputs.forEach(input => {
+                    suma += parseInt(input.value) || 0;
+                    cantidad++;
+                });
+                
+                const promedio = cantidad > 0 ? Math.round(suma / cantidad) : 0;
+                const nuevoEstado = promedio >= 80 ? 'completada' : 'repetir';
+                
+                try {
+                    await db.collection('planificaciones').doc(planId).update({
+                        estado: nuevoEstado,
+                        progreso: promedio
+                    });
+                    
+                    // Actualizar visualmente
+                    const estadoSpan = document.getElementById(`estado-plan-${planId}`);
+                    const progresoSpan = document.getElementById(`progreso-plan-${planId}`);
+                    
+                    if (estadoSpan) {
+                        estadoSpan.textContent = nuevoEstado === 'completada' ? '✅ Completada' : '🔄 Repetir';
+                        estadoSpan.className = `estado ${nuevoEstado}`;
+                    }
+                    if (progresoSpan) {
+                        progresoSpan.textContent = `(${promedio}%)`;
+                    }
+                    
+                    alert(`✅ Calificación guardada. Promedio: ${promedio}%. Estado: ${nuevoEstado}`);
+                    
+                } catch (err) {
+                    alert('❌ Error al guardar: ' + err.message);
+                }
+            });
+        });
+        
     } catch (err) {
         container.innerHTML = `<p>Error al cargar: ${err.message}</p>`;
     }
-}  function obtenerNombreGolpe(golpeId) {
-    const nombres = { smash: '🏐 Sobre Cabeza', volea: '🏸 Volea', pegadaFondo: '🎯 Pegada de Fondo', salidaPared: '🧱 Salida de Pared' };
-    return nombres[golpeId] || golpeId;
-  }
-
+}
   // ========== NUEVA PLANIFICACIÓN (PROFESOR) ==========
   const alumnoPlanSelect = document.getElementById('alumnoPlanSelect');
   const golpePlanSelect = document.getElementById('golpePlanSelect');
