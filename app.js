@@ -1,4 +1,4 @@
-// ==================== APP.JS – VERSIÓN FIREBASE COMPLETA ====================
+// ==================== APP.JS – VERSIÓN FIREBASE COMPLETA (CORREGIDA) ====================
 document.addEventListener('DOMContentLoaded', () => {
 
   const mainNav            = document.getElementById('mainNav');
@@ -222,7 +222,9 @@ document.addEventListener('DOMContentLoaded', () => {
     historial.forEach(eva => {
       const div = document.createElement('div');
       div.className = 'historial-item';
-      const badge = eva.tipo === 'profesor' ? '<span class="badge-tipo profesor">🔍 Profesor</span>' : '<span class="badge-tipo alumno">👤 Alumno</span>';
+      const badge = eva.tipo === 'profesor' ? '<span class="badge-tipo profesor">🔍 Profesor</span>' :
+                    eva.tipo === 'fiscal'   ? '<span class="badge-tipo fiscal">📋 Fiscal</span>' :
+                    '<span class="badge-tipo alumno">👤 Alumno</span>';
       div.innerHTML = `<div class="info">${badge} <strong>${eva.jugador}</strong> – ${eva.golpe} – ${eva.fecha}${eva.evaluadorNombre ? `<br><small>Por: ${eva.evaluadorNombre}</small>` : ''}</div><div class="btn-group"><button class="btn-secondary cargarEva" data-id="${eva.firestoreId}">📂 Cargar</button><button class="btn-secondary eliminarEva" data-id="${eva.firestoreId}">🗑️</button></div>`;
       historialLista.appendChild(div);
     });
@@ -579,12 +581,14 @@ document.addEventListener('DOMContentLoaded', () => {
         d.innerHTML = inner;
         container.appendChild(d);
       });
-    } catch (err) { container.innerHTML = `<p>Error: ${err.message}</p>`; }
+    } catch (err) {
+      console.error('Error cargando sesiones:', err);
+      container.innerHTML = `<p>Error: ${err.message}</p>`;
+    }
   }
 
-  // ========== PLANIFICACIONES ALUMNO/PROFESOR ==========
   // ========== PLANIFICACIONES ALUMNO/PROFESOR (CON ANOTACIONES) ==========
-async function cargarPlanificacionesAlumno() {
+  async function cargarPlanificacionesAlumno() {
     const container = document.getElementById('planificacionesAlumno');
     if (!container) return;
     container.innerHTML = '<p>Cargando planificaciones...</p>';
@@ -627,7 +631,6 @@ async function cargarPlanificacionesAlumno() {
           </div>
           <div id="plan-content-${planId}" style="margin-top:12px; display:none;">${plan.contenidoHTML || '<p>Sin contenido.</p>'}</div>
           
-          <!-- Sección de anotaciones -->
           <div id="anotaciones-${planId}" style="display:none; margin-top:16px; padding:16px; background:#f9f9f9; border-radius:8px;">
             <h4>💬 Anotaciones</h4>
             <div id="anotaciones-lista-${planId}" style="margin-bottom:12px;">
@@ -650,7 +653,6 @@ async function cargarPlanificacionesAlumno() {
       });
       container.innerHTML = html;
       
-      // Eventos para mostrar/ocultar ejercicios
       document.querySelectorAll('.ver-plan-btn').forEach(btn => {
         btn.addEventListener('click', () => {
           const planId = btn.dataset.planid;
@@ -660,7 +662,6 @@ async function cargarPlanificacionesAlumno() {
         });
       });
       
-      // Eventos para anotaciones
       document.querySelectorAll('.anotacion-btn').forEach(btn => {
         btn.addEventListener('click', () => {
           const planId = btn.dataset.planid;
@@ -670,7 +671,6 @@ async function cargarPlanificacionesAlumno() {
         });
       });
       
-      // Guardar anotación
       document.querySelectorAll('.guardar-anotacion-btn').forEach(btn => {
         btn.addEventListener('click', async () => {
           const planId = btn.dataset.planid;
@@ -694,12 +694,11 @@ async function cargarPlanificacionesAlumno() {
             await planRef.update({ anotaciones: anotaciones });
             alert('✅ Anotación guardada.');
             textarea.value = '';
-            cargarPlanificacionesAlumno(); // Recargar
+            cargarPlanificacionesAlumno();
           } catch (err) { alert('❌ Error: ' + err.message); }
         });
       });
       
-      // Eliminar anotación (solo profesor)
       document.querySelectorAll('.eliminar-anotacion-btn').forEach(btn => {
         btn.addEventListener('click', async () => {
           const planId = btn.dataset.planid;
@@ -714,12 +713,11 @@ async function cargarPlanificacionesAlumno() {
           
           try {
             await planRef.update({ anotaciones: anotaciones });
-            cargarPlanificacionesAlumno(); // Recargar
+            cargarPlanificacionesAlumno();
           } catch (err) { alert('❌ Error: ' + err.message); }
         });
       });
       
-      // Calificar (solo profesor)
       document.querySelectorAll('.calificar-plan-btn').forEach(btn => {
         btn.addEventListener('click', () => {
           const planId = btn.dataset.planid;
@@ -740,7 +738,6 @@ async function cargarPlanificacionesAlumno() {
         });
       });
       
-      // Guardar calificación
       document.querySelectorAll('.guardar-calificacion-btn').forEach(btn => {
         btn.addEventListener('click', async () => {
           const planId = btn.dataset.planid;
@@ -761,7 +758,8 @@ async function cargarPlanificacionesAlumno() {
       });
       
     } catch (err) { container.innerHTML = `<p>Error al cargar: ${err.message}</p>`; }
-}
+  }
+
   function obtenerNombreGolpe(golpeId) {
     const nombres = { smash: '🏐 Sobre Cabeza', volea: '🏸 Volea', pegadaFondo: '🎯 Pegada de Fondo', salidaPared: '🧱 Salida de Pared' };
     return nombres[golpeId] || golpeId;
