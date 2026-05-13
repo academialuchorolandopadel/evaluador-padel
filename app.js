@@ -1,4 +1,4 @@
-// ==================== APP.JS – VERSIÓN FIREBASE COMPLETA (CORREGIDA) ====================
+// ==================== APP.JS – VERSIÓN FIREBASE COMPLETA (CORREGIDA FINAL) ====================
 document.addEventListener('DOMContentLoaded', () => {
 
   const mainNav            = document.getElementById('mainNav');
@@ -379,7 +379,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // ========== SEGUIMIENTO (con botón corregir) ==========
+  // ========== SEGUIMIENTO ==========
   const alumnoSelectSeg = document.getElementById('alumnoSelectSeg');
   const categoriaObjetivoSeg = document.getElementById('categoriaObjetivoSeg');
   const cargarPlanSegBtn = document.getElementById('cargarPlanSeg');
@@ -460,10 +460,15 @@ document.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('.finalizar-ejercicio').forEach(btn => {
       btn.addEventListener('click', (ev) => finalizarEjercicio(parseInt(ev.target.dataset.index)));
     });
-    document.querySelectorAll('.corregir-ejercicio').forEach(btn => {
-      btn.addEventListener('click', (ev) => corregirEjercicio(parseInt(ev.target.dataset.index)));
-    });
     cargarHistorialSesiones().catch(console.error);
+  });
+
+  // Delegación para botones corregir (siempre funciona aunque se recargue el plan)
+  sesionContent.addEventListener('click', (e) => {
+    if (e.target.classList.contains('corregir-ejercicio')) {
+      const idx = parseInt(e.target.dataset.index);
+      corregirEjercicio(idx);
+    }
   });
 
   function extraerMinimoCriterio(criterioTexto, totalPosibles) {
@@ -797,7 +802,7 @@ document.addEventListener('DOMContentLoaded', () => {
     return nombres[golpeId] || golpeId;
   }
 
-  // ========== NUEVA PLANIFICACIÓN (con uid de alumno correcto) ==========
+  // ========== NUEVA PLANIFICACIÓN (carga desde usuarios) ==========
   const alumnoPlanSelect = document.getElementById('alumnoPlanSelect');
   const golpePlanSelect = document.getElementById('golpePlanSelect');
   const categoriaObjetivoPlan = document.getElementById('categoriaObjetivoPlan');
@@ -807,46 +812,41 @@ document.addEventListener('DOMContentLoaded', () => {
   let planificacionGenerada = null;
 
   async function cargarAlumnosParaPlanificacion() {
-    const historial = await cargarEvaluacionesDesdeFirestore(true);
     alumnoPlanSelect.innerHTML = '<option value="">-- Seleccionar alumno --</option>';
-    const nombresUnicos = [...new Set(historial.map(eva => eva.jugador))];
-    nombresUnicos.sort().forEach(nombre => {
-      const opt = document.createElement('option');
-      opt.value = nombre;
-      opt.textContent = `👤 ${nombre}`;
-      alumnoPlanSelect.appendChild(opt);
-    });
+    try {
+      const snapshot = await db.collection('usuarios').get();
+      const usuarios = [];
+      snapshot.docs.forEach(doc => {
+        const data = doc.data();
+        if (data.rol === 'alumno' || !data.rol) {
+          usuarios.push({ uid: doc.id, nombre: data.nombre || 'Sin nombre' });
+        }
+      });
+      usuarios.sort((a, b) => a.nombre.localeCompare(b.nombre));
+      usuarios.forEach(usuario => {
+        const opt = document.createElement('option');
+        opt.value = usuario.uid;
+        opt.textContent = `👤 ${usuario.nombre}`;
+        alumnoPlanSelect.appendChild(opt);
+      });
+    } catch (err) {
+      console.error('Error cargando usuarios:', err);
+    }
   }
 
   generarYGuardarPlanBtn.addEventListener('click', async () => {
-    const alumnoNombre = alumnoPlanSelect.value;
+    const alumnoUid = alumnoPlanSelect.value;
+    const alumnoNombre = alumnoPlanSelect.options[alumnoPlanSelect.selectedIndex]?.text.replace('👤 ', '') || '';
     const golpe = golpePlanSelect.value;
     const objetivo = parseInt(categoriaObjetivoPlan.value);
-    if (!alumnoNombre) return alert('⚠️ Seleccioná un alumno.');
+    if (!alumnoUid) return alert('⚠️ Seleccioná un alumno.');
     const historial = await cargarEvaluacionesDesdeFirestore(true);
-    const evaluacionesAlumno = historial.filter(eva => eva.jugador === alumnoNombre && eva.golpe === golpe);
+    const evaluacionesAlumno = historial.filter(eva => eva.uid === alumnoUid && eva.golpe === golpe);
     if (evaluacionesAlumno.length === 0) {
-      planMensaje.innerHTML = '<p style="color:var(--rojo);">⚠️ No hay evaluaciones para este golpe.</p>';
+      planMensaje.innerHTML = '<p style="color:var(--rojo);">⚠️ No hay evaluaciones de este alumno para este golpe.</p>';
       return;
     }
     const evaluacion = evaluacionesAlumno[0];
-
-    // Buscar el uid real del alumno en la colección usuarios
-    let alumnoUid = '';
-    try {
-      const usuarioSnapshot = await db.collection('usuarios')
-        .where('nombre', '==', alumnoNombre)
-        .limit(1)
-        .get();
-      if (!usuarioSnapshot.empty) {
-        alumnoUid = usuarioSnapshot.docs[0].id;
-      } else {
-        alumnoUid = evaluacion.uid || '';
-      }
-    } catch (err) {
-      alumnoUid = evaluacion.uid || '';
-    }
-
     planificacionGenerada = construirPlan(evaluacion, objetivo);
     planGeneradoPreview.innerHTML = `<h3>Vista previa</h3>${planificacionGenerada}<button id="confirmarGuardarPlanBtn" class="btn-primary" style="margin-top:16px;">💾 Confirmar y Asignar a ${alumnoNombre}</button>`;
     document.getElementById('confirmarGuardarPlanBtn').addEventListener('click', async () => {
