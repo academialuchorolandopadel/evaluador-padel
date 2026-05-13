@@ -45,10 +45,6 @@
                 <input type="text" id="regNombre" class="auth-input" placeholder="Nombre completo">
                 <input type="email" id="regEmail" class="auth-input" placeholder="Email" autocomplete="email">
                 <input type="password" id="regPassword" class="auth-input" placeholder="Contraseña (mín. 6 caracteres)">
-                <select id="regRol" class="auth-input">
-                    <option value="alumno">👤 Alumno</option>
-                    <option value="profesor">🔍 Profesor / Fiscal</option>
-                </select>
                 <button id="btnRegister" class="auth-btn">Crear cuenta</button>
                 <p class="auth-link">¿Ya tenés cuenta? <span id="btnShowLogin">Ingresar</span></p>
             </div>
@@ -79,6 +75,7 @@
                 <span class="tab solo-profesor" data-view="entrenamiento" style="display:none;">Entrenamiento</span>
                 <span class="tab solo-profesor" data-view="seguimiento" style="display:none;">Seguimiento</span>
                 <span class="tab solo-profesor" data-view="alumnos" style="display:none;">Alumnos</span>
+                <span class="tab solo-profesor" data-view="admin" style="display:none;">👥 Admin</span>
                 <span class="tab" data-view="historial">Historial</span>
                 <span class="tab" data-view="manual">Manual</span>
             </nav>
@@ -108,7 +105,7 @@
             </div>
         </div>
 
-        <!-- Vista Planificaciones (alumno) -->
+        <!-- Vista Planificaciones -->
         <div id="planificacionesView" class="view">
             <h2>📋 Mis Planificaciones</h2>
             <p>Acá verás las planificaciones que tu profesor comparta con vos.</p>
@@ -117,7 +114,7 @@
             </div>
         </div>
 
-        <!-- Vista Nueva Planificación (profesor) -->
+        <!-- Vista Nueva Planificación -->
         <div id="nuevaPlanificacionView" class="view">
             <h2>➕ Nueva Planificación</h2>
             <p>Creá un plan de ejercicios para un alumno y compartilo automáticamente.</p>
@@ -198,6 +195,15 @@
         <div id="alumnosView" class="view">
             <h2>Alumnos Registrados</h2>
             <div id="alumnosLista" class="alumnos-lista"></div>
+        </div>
+
+        <!-- Vista Admin -->
+        <div id="adminView" class="view">
+            <h2>👥 Administración de Usuarios</h2>
+            <p>Gestioná los roles y alumnos de tu academia.</p>
+            <div id="adminUsuariosLista" class="alumnos-lista">
+                <p>Cargando usuarios...</p>
+            </div>
         </div>
 
         <!-- Vista Historial -->
