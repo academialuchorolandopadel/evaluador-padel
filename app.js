@@ -583,7 +583,8 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // ========== PLANIFICACIONES ALUMNO/PROFESOR ==========
-  async function cargarPlanificacionesAlumno() {
+  // ========== PLANIFICACIONES ALUMNO/PROFESOR (CON ANOTACIONES) ==========
+async function cargarPlanificacionesAlumno() {
     const container = document.getElementById('planificacionesAlumno');
     if (!container) return;
     container.innerHTML = '<p>Cargando planificaciones...</p>';
@@ -611,6 +612,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const planId = doc.id;
         const estadoClase = plan.estado === 'completada' ? 'completada' : plan.estado === 'repetir' ? 'repetir' : 'pendiente';
         const estadoTexto = plan.estado === 'completada' ? '✅ Completada' : plan.estado === 'repetir' ? '🔄 Repetir' : '⏳ Pendiente';
+        const anotaciones = plan.anotaciones || [];
+        
         html += `<div class="planificacion-card" id="plan-card-${planId}">
           <h3>${obtenerNombreGolpe(plan.golpe)} - Objetivo: ${plan.objetivo}ª</h3>
           <p>Alumno: <strong>${plan.alumnoNombre || 'Sin nombre'}</strong></p>
@@ -620,12 +623,34 @@ document.addEventListener('DOMContentLoaded', () => {
           <div style="margin-top:12px;">
             <button class="btn-secondary btn-chico ver-plan-btn" data-planid="${planId}">📋 Ver ejercicios</button>
             ${(rol === 'profesor' || rol === 'fiscal') && plan.estado !== 'completada' ? `<button class="btn-primary btn-chico calificar-plan-btn" data-planid="${planId}">⭐ Calificar</button>` : ''}
+            <button class="btn-secondary btn-chico anotacion-btn" data-planid="${planId}">💬 Anotaciones (${anotaciones.length})</button>
           </div>
           <div id="plan-content-${planId}" style="margin-top:12px; display:none;">${plan.contenidoHTML || '<p>Sin contenido.</p>'}</div>
+          
+          <!-- Sección de anotaciones -->
+          <div id="anotaciones-${planId}" style="display:none; margin-top:16px; padding:16px; background:#f9f9f9; border-radius:8px;">
+            <h4>💬 Anotaciones</h4>
+            <div id="anotaciones-lista-${planId}" style="margin-bottom:12px;">
+              ${anotaciones.length === 0 ? '<p style="color:#888;">No hay anotaciones todavía.</p>' : 
+                anotaciones.map((a, i) => `
+                  <div style="background:white; padding:8px; border-radius:6px; margin-bottom:6px; border-left:3px solid var(--dorado);">
+                    <strong>${a.autor || 'Alumno'}:</strong> ${a.texto}
+                    <div style="font-size:0.75rem; color:#999;">${a.fecha || ''}</div>
+                    ${(rol === 'profesor' || rol === 'fiscal') ? `<button class="btn-chico eliminar-anotacion-btn" data-planid="${planId}" data-index="${i}" style="margin-top:4px; background:var(--rojo); color:white; border:none; padding:2px 8px; border-radius:4px; cursor:pointer;">🗑️ Eliminar</button>` : ''}
+                  </div>
+                `).join('')
+              }
+            </div>
+            <textarea id="nueva-anotacion-${planId}" class="auth-input" placeholder="Escribí tu consulta, sugerencia o dificultad..." style="width:100%; min-height:60px; margin-bottom:8px;"></textarea>
+            <button class="btn-primary btn-chico guardar-anotacion-btn" data-planid="${planId}">💾 Guardar anotación</button>
+          </div>
+          
           ${(rol === 'profesor' || rol === 'fiscal') ? `<div id="calificacion-${planId}" style="display:none; margin-top:16px; padding:16px; background:#f9f9f9; border-radius:8px;"><h4>⭐ Calificar Ejercicios</h4><div id="ejercicios-calificar-${planId}"></div><button class="btn-primary guardar-calificacion-btn" data-planid="${planId}" style="margin-top:12px;">💾 Guardar Calificación</button></div>` : ''}
         </div>`;
       });
       container.innerHTML = html;
+      
+      // Eventos para mostrar/ocultar ejercicios
       document.querySelectorAll('.ver-plan-btn').forEach(btn => {
         btn.addEventListener('click', () => {
           const planId = btn.dataset.planid;
@@ -634,6 +659,67 @@ document.addEventListener('DOMContentLoaded', () => {
           else { content.style.display = 'none'; btn.textContent = '📋 Ver ejercicios'; }
         });
       });
+      
+      // Eventos para anotaciones
+      document.querySelectorAll('.anotacion-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const planId = btn.dataset.planid;
+          const div = document.getElementById(`anotaciones-${planId}`);
+          if (div.style.display === 'none') { div.style.display = 'block'; btn.textContent = '🔼 Ocultar anotaciones'; }
+          else { div.style.display = 'none'; btn.textContent = `💬 Anotaciones (${anotaciones.length})`; }
+        });
+      });
+      
+      // Guardar anotación
+      document.querySelectorAll('.guardar-anotacion-btn').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const planId = btn.dataset.planid;
+          const textarea = document.getElementById(`nueva-anotacion-${planId}`);
+          const texto = textarea.value.trim();
+          if (!texto) return alert('Escribí una anotación.');
+          
+          const planRef = db.collection('planificaciones').doc(planId);
+          const planDoc = await planRef.get();
+          const planData = planDoc.data();
+          const anotaciones = planData.anotaciones || [];
+          
+          anotaciones.push({
+            texto: texto,
+            autor: window.currentUserData?.nombre || 'Usuario',
+            fecha: new Date().toLocaleString(),
+            uid: window.currentUser.uid
+          });
+          
+          try {
+            await planRef.update({ anotaciones: anotaciones });
+            alert('✅ Anotación guardada.');
+            textarea.value = '';
+            cargarPlanificacionesAlumno(); // Recargar
+          } catch (err) { alert('❌ Error: ' + err.message); }
+        });
+      });
+      
+      // Eliminar anotación (solo profesor)
+      document.querySelectorAll('.eliminar-anotacion-btn').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const planId = btn.dataset.planid;
+          const index = parseInt(btn.dataset.index);
+          if (!confirm('¿Eliminar esta anotación?')) return;
+          
+          const planRef = db.collection('planificaciones').doc(planId);
+          const planDoc = await planRef.get();
+          const planData = planDoc.data();
+          const anotaciones = planData.anotaciones || [];
+          anotaciones.splice(index, 1);
+          
+          try {
+            await planRef.update({ anotaciones: anotaciones });
+            cargarPlanificacionesAlumno(); // Recargar
+          } catch (err) { alert('❌ Error: ' + err.message); }
+        });
+      });
+      
+      // Calificar (solo profesor)
       document.querySelectorAll('.calificar-plan-btn').forEach(btn => {
         btn.addEventListener('click', () => {
           const planId = btn.dataset.planid;
@@ -653,6 +739,8 @@ document.addEventListener('DOMContentLoaded', () => {
           } else { calificacionDiv.style.display = 'none'; btn.textContent = '⭐ Calificar'; }
         });
       });
+      
+      // Guardar calificación
       document.querySelectorAll('.guardar-calificacion-btn').forEach(btn => {
         btn.addEventListener('click', async () => {
           const planId = btn.dataset.planid;
@@ -671,9 +759,9 @@ document.addEventListener('DOMContentLoaded', () => {
           } catch (err) { alert('❌ Error al guardar: ' + err.message); }
         });
       });
+      
     } catch (err) { container.innerHTML = `<p>Error al cargar: ${err.message}</p>`; }
-  }
-
+}
   function obtenerNombreGolpe(golpeId) {
     const nombres = { smash: '🏐 Sobre Cabeza', volea: '🏸 Volea', pegadaFondo: '🎯 Pegada de Fondo', salidaPared: '🧱 Salida de Pared' };
     return nombres[golpeId] || golpeId;
