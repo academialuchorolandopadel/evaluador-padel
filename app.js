@@ -14,15 +14,15 @@ document.addEventListener('DOMContentLoaded', () => {
   let evaluacionesCache= {};
   let planGeneradoHTML = '';
 
-  // ========== MODO ALUMNO/PROFESOR ==========
+  // ========== MODO ALUMNO/PROFESOR/FISCAL ==========
   function aplicarModoSegunRol() {
     const userData = JSON.parse(localStorage.getItem('userData') || '{}');
     const rol = userData.rol || 'alumno';
     const modoBadge = document.getElementById('modoBadge');
-    if (rol === 'profesor') {
+    if (rol === 'profesor' || rol === 'fiscal') {
       body.classList.remove('modo-alumno');
       body.classList.add('modo-fiscal');
-      if (modoBadge) modoBadge.textContent = 'Modo Profesor';
+      if (modoBadge) modoBadge.textContent = rol === 'fiscal' ? 'Modo Fiscal' : 'Modo Profesor';
     } else {
       body.classList.remove('modo-fiscal');
       body.classList.add('modo-alumno');
@@ -31,12 +31,13 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   aplicarModoSegunRol();
 
+  // ========== CONFIGURAR INTERFAZ SEGÚN ROL ==========
   function configurarInterfazSegunRol() {
     const userData = JSON.parse(localStorage.getItem('userData') || '{}');
     const rol = userData.rol || 'alumno';
     const tabsProfesor = document.querySelectorAll('.solo-profesor');
     const tabsAlumno = document.querySelectorAll('.solo-alumno');
-    if (rol === 'profesor') {
+    if (rol === 'profesor' || rol === 'fiscal') {
       tabsProfesor.forEach(tab => tab.style.display = '');
       tabsAlumno.forEach(tab => tab.style.display = 'none');
     } else {
@@ -54,12 +55,13 @@ document.addEventListener('DOMContentLoaded', () => {
       e.target.classList.add('active');
       views.forEach(v => v.classList.remove('active'));
       document.getElementById(view + 'View').classList.add('active');
-      if (view === 'historial')        cargarHistorial().catch(console.error);
-      if (view === 'entrenamiento')    cargarAlumnosEnSelect().catch(console.error);
-      if (view === 'alumnos')          cargarAlumnos().catch(console.error);
-      if (view === 'seguimiento')      cargarAlumnosSeguimiento().catch(console.error);
-      if (view === 'planificaciones')  cargarPlanificacionesAlumno().catch(console.error);
-      if (view === 'nuevaPlanificacion') cargarAlumnosParaPlanificacion().catch(console.error);
+      if (view === 'historial')           cargarHistorial().catch(console.error);
+      if (view === 'entrenamiento')       cargarAlumnosEnSelect().catch(console.error);
+      if (view === 'alumnos')             cargarAlumnos().catch(console.error);
+      if (view === 'seguimiento')         cargarAlumnosSeguimiento().catch(console.error);
+      if (view === 'planificaciones')     cargarPlanificacionesAlumno().catch(console.error);
+      if (view === 'nuevaPlanificacion')  cargarAlumnosParaPlanificacion().catch(console.error);
+      if (view === 'admin')               cargarAdminUsuarios().catch(console.error);
     }
   });
 
@@ -178,7 +180,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!window.currentUser) return [];
     try {
       let ref;
-      if (window.currentUserData?.rol === 'profesor') {
+      if (window.currentUserData?.rol === 'profesor' || window.currentUserData?.rol === 'fiscal') {
         ref = db.collection('evaluaciones').orderBy('fecha', 'desc').limit(200);
       } else {
         ref = db.collection('evaluaciones').where('uid', '==', window.currentUser.uid).orderBy('fecha', 'desc').limit(100);
@@ -200,7 +202,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const evaluacion = {
       uid: window.currentUser.uid, evaluadorUid: window.currentUser.uid,
       evaluadorNombre: window.currentUserData?.nombre || '',
-      tipo: window.currentUserData?.rol === 'profesor' ? 'profesor' : 'autoevaluacion',
+      tipo: (window.currentUserData?.rol === 'profesor' || window.currentUserData?.rol === 'fiscal') ? 'profesor' : 'autoevaluacion',
       jugador: nombre, golpe: golpeActual, selecciones: evaluacionesCache,
       fecha: firebase.firestore.FieldValue.serverTimestamp(), fechaLocal: new Date().toLocaleString()
     };
@@ -210,169 +212,171 @@ document.addEventListener('DOMContentLoaded', () => {
       alert('✅ Evaluación guardada correctamente.');
     } catch (err) { alert('❌ Error al guardar: ' + err.message); }
   }
-// ========== HISTORIAL ==========
-async function cargarHistorial() {
-  historialLista.innerHTML = '<p>Cargando evaluaciones...</p>';
-  const historial = await cargarEvaluacionesDesdeFirestore(true);
-  historialLista.innerHTML = '';
-  if (historial.length === 0) { historialLista.innerHTML = '<p>No hay evaluaciones guardadas.</p>'; return; }
-  historial.forEach(eva => {
-    const div = document.createElement('div');
-    div.className = 'historial-item';
-    const badge = eva.tipo === 'profesor' ? '<span class="badge-tipo profesor">🔍 Profesor</span>' : '<span class="badge-tipo alumno">👤 Alumno</span>';
-    div.innerHTML = `<div class="info">${badge} <strong>${eva.jugador}</strong> – ${eva.golpe} – ${eva.fecha}${eva.evaluadorNombre ? `<br><small>Por: ${eva.evaluadorNombre}</small>` : ''}</div><div class="btn-group"><button class="btn-secondary cargarEva" data-id="${eva.firestoreId}">📂 Cargar</button><button class="btn-secondary eliminarEva" data-id="${eva.firestoreId}">🗑️</button></div>`;
-    historialLista.appendChild(div);
-  });
-}
 
-historialLista.addEventListener('click', async (e) => {
-  if (e.target.classList.contains('cargarEva')) {
-    const id = e.target.dataset.id;
-    const historial = window.evaluacionesCargadas || [];
-    const eva = historial.find(item => item.firestoreId === id);
-    if (eva) {
-      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-      document.querySelector('.tab[data-view="evaluacion"]').classList.add('active');
-      views.forEach(v => v.classList.remove('active'));
-      document.getElementById('evaluacionView').classList.add('active');
-      golpeActual = eva.golpe;
-      evaluacionesCache = eva.selecciones || {};
-      playerNameInput.value = eva.jugador;
-      document.querySelectorAll('#golpesList li').forEach(li => li.classList.remove('active'));
-      document.querySelector(`#golpesList li[data-golpe="${eva.golpe}"]`).classList.add('active');
-      renderizarGolpe(eva.golpe);
-    }
-  } else if (e.target.classList.contains('eliminarEva')) {
-    const id = e.target.dataset.id;
-    if (!confirm('¿Eliminar esta evaluación?')) return;
-    try { await db.collection('evaluaciones').doc(id).delete(); window.evaluacionesCargadas = null; cargarHistorial(); }
-    catch (err) { alert('Error al eliminar: ' + err.message); }
+  // ========== HISTORIAL ==========
+  async function cargarHistorial() {
+    historialLista.innerHTML = '<p>Cargando evaluaciones...</p>';
+    const historial = await cargarEvaluacionesDesdeFirestore(true);
+    historialLista.innerHTML = '';
+    if (historial.length === 0) { historialLista.innerHTML = '<p>No hay evaluaciones guardadas.</p>'; return; }
+    historial.forEach(eva => {
+      const div = document.createElement('div');
+      div.className = 'historial-item';
+      const badge = eva.tipo === 'profesor' ? '<span class="badge-tipo profesor">🔍 Profesor</span>' : '<span class="badge-tipo alumno">👤 Alumno</span>';
+      div.innerHTML = `<div class="info">${badge} <strong>${eva.jugador}</strong> – ${eva.golpe} – ${eva.fecha}${eva.evaluadorNombre ? `<br><small>Por: ${eva.evaluadorNombre}</small>` : ''}</div><div class="btn-group"><button class="btn-secondary cargarEva" data-id="${eva.firestoreId}">📂 Cargar</button><button class="btn-secondary eliminarEva" data-id="${eva.firestoreId}">🗑️</button></div>`;
+      historialLista.appendChild(div);
+    });
   }
-});
 
-limpiarHistorialBtn?.addEventListener('click', async () => {
-  if (!window.currentUser) return;
-  if (!confirm('¿Borrar TODAS tus evaluaciones propias?')) return;
-  try {
-    const snapshot = await db.collection('evaluaciones').where('uid', '==', window.currentUser.uid).get();
-    if (snapshot.empty) { alert('No hay evaluaciones para borrar.'); return; }
-    const batch = db.batch();
-    snapshot.docs.forEach(doc => batch.delete(doc.ref));
-    await batch.commit();
-    window.evaluacionesCargadas = null;
-    cargarHistorial();
-  } catch (err) { alert('Error al limpiar: ' + err.message); }
-});
-
-// ========== ENTRENAMIENTO ==========
-const alumnoSelect = document.getElementById('alumnoSelect');
-const categoriaObjetivo = document.getElementById('categoriaObjetivo');
-const generarPlanBtn = document.getElementById('generarPlanBtn');
-const descargarPlanBtn = document.getElementById('descargarPlanBtn');
-const planEntrenamiento = document.getElementById('planEntrenamiento');
-
-async function cargarAlumnosEnSelect() {
-  const historial = await cargarEvaluacionesDesdeFirestore();
-  alumnoSelect.innerHTML = '<option value="">-- Seleccionar alumno --</option>';
-  historial.forEach((eva, idx) => {
-    const opt = document.createElement('option');
-    opt.value = idx;
-    opt.textContent = `${eva.jugador} – ${eva.golpe} (${eva.fecha})`;
-    alumnoSelect.appendChild(opt);
+  historialLista.addEventListener('click', async (e) => {
+    if (e.target.classList.contains('cargarEva')) {
+      const id = e.target.dataset.id;
+      const historial = window.evaluacionesCargadas || [];
+      const eva = historial.find(item => item.firestoreId === id);
+      if (eva) {
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        document.querySelector('.tab[data-view="evaluacion"]').classList.add('active');
+        views.forEach(v => v.classList.remove('active'));
+        document.getElementById('evaluacionView').classList.add('active');
+        golpeActual = eva.golpe;
+        evaluacionesCache = eva.selecciones || {};
+        playerNameInput.value = eva.jugador;
+        document.querySelectorAll('#golpesList li').forEach(li => li.classList.remove('active'));
+        document.querySelector(`#golpesList li[data-golpe="${eva.golpe}"]`).classList.add('active');
+        renderizarGolpe(eva.golpe);
+      }
+    } else if (e.target.classList.contains('eliminarEva')) {
+      const id = e.target.dataset.id;
+      if (!confirm('¿Eliminar esta evaluación?')) return;
+      try { await db.collection('evaluaciones').doc(id).delete(); window.evaluacionesCargadas = null; cargarHistorial(); }
+      catch (err) { alert('Error al eliminar: ' + err.message); }
+    }
   });
-}
 
-generarPlanBtn.addEventListener('click', () => {
-  const idx = alumnoSelect.value;
-  if (idx === '') return alert('⚠️ Seleccioná un alumno.');
-  const historial = window.evaluacionesCargadas || [];
-  const evaluacion = historial[parseInt(idx)];
-  if (!evaluacion) return alert('Error: evaluación no encontrada.');
-  const objetivo = parseInt(categoriaObjetivo.value);
-  planGeneradoHTML = construirPlan(evaluacion, objetivo);
-  planEntrenamiento.innerHTML = planGeneradoHTML;
-  descargarPlanBtn.style.display = 'inline-block';
-});
+  limpiarHistorialBtn?.addEventListener('click', async () => {
+    if (!window.currentUser) return;
+    if (!confirm('¿Borrar TODAS tus evaluaciones propias?')) return;
+    try {
+      const snapshot = await db.collection('evaluaciones').where('uid', '==', window.currentUser.uid).get();
+      if (snapshot.empty) { alert('No hay evaluaciones para borrar.'); return; }
+      const batch = db.batch();
+      snapshot.docs.forEach(doc => batch.delete(doc.ref));
+      await batch.commit();
+      window.evaluacionesCargadas = null;
+      cargarHistorial();
+    } catch (err) { alert('Error al limpiar: ' + err.message); }
+  });
 
-descargarPlanBtn.addEventListener('click', () => {
-  const ventana = window.open('', '_blank');
-  ventana.document.write(`<html><head><title>Plan</title><style>body{font-family:Arial;padding:20px;}</style></head><body>${planGeneradoHTML}</body></html>`);
-  ventana.document.close();
-  ventana.print();
-});
+  // ========== ENTRENAMIENTO ==========
+  const alumnoSelect = document.getElementById('alumnoSelect');
+  const categoriaObjetivo = document.getElementById('categoriaObjetivo');
+  const generarPlanBtn = document.getElementById('generarPlanBtn');
+  const descargarPlanBtn = document.getElementById('descargarPlanBtn');
+  const planEntrenamiento = document.getElementById('planEntrenamiento');
 
-function construirPlan(evaluacion, objetivo) {
-  let html = `<h2>Plan para ${evaluacion.jugador}</h2><p><strong>Golpe:</strong> ${evaluacion.golpe} | <strong>Objetivo:</strong> ${objetivo}ª</p>`;
-  let encontro = false;
-  const golpeData = DATA.golpes[evaluacion.golpe];
-  if (!golpeData) return html + '<p>No hay datos del golpe.</p>';
-  for (const [parKey, parData] of Object.entries(golpeData.pares)) {
-    const seleccionesPar = evaluacion.selecciones[parKey] || {};
-    let ejerciciosPar = '';
-    for (const cuant of parData.cuantificadores) {
-      const catActual = seleccionesPar[cuant.id];
-      if (catActual && catActual > objetivo) {
-        for (let cat = catActual; cat > objetivo; cat--) {
-          const transicion = `${cat}_${cat-1}`;
-          const ejercicio = window.EJERCICIOS?.[evaluacion.golpe]?.[parKey]?.[cuant.id]?.[transicion];
-          if (ejercicio) {
-            ejerciciosPar += `<div class="ejercicio-item"><strong>${cuant.nombre} (${cat}ª → ${cat-1}ª):</strong> ${ejercicio.nombre}<br><span class="series">${ejercicio.series} series x ${ejercicio.repeticiones}</span><br><em>${ejercicio.descripcion}</em><br>✅ Criterio: ${ejercicio.criterioExito}</div>`;
-            encontro = true;
+  async function cargarAlumnosEnSelect() {
+    const historial = await cargarEvaluacionesDesdeFirestore();
+    alumnoSelect.innerHTML = '<option value="">-- Seleccionar alumno --</option>';
+    historial.forEach((eva, idx) => {
+      const opt = document.createElement('option');
+      opt.value = idx;
+      opt.textContent = `${eva.jugador} – ${eva.golpe} (${eva.fecha})`;
+      alumnoSelect.appendChild(opt);
+    });
+  }
+
+  generarPlanBtn.addEventListener('click', () => {
+    const idx = alumnoSelect.value;
+    if (idx === '') return alert('⚠️ Seleccioná un alumno.');
+    const historial = window.evaluacionesCargadas || [];
+    const evaluacion = historial[parseInt(idx)];
+    if (!evaluacion) return alert('Error: evaluación no encontrada.');
+    const objetivo = parseInt(categoriaObjetivo.value);
+    planGeneradoHTML = construirPlan(evaluacion, objetivo);
+    planEntrenamiento.innerHTML = planGeneradoHTML;
+    descargarPlanBtn.style.display = 'inline-block';
+  });
+
+  descargarPlanBtn.addEventListener('click', () => {
+    const ventana = window.open('', '_blank');
+    ventana.document.write(`<html><head><title>Plan</title><style>body{font-family:Arial;padding:20px;}</style></head><body>${planGeneradoHTML}</body></html>`);
+    ventana.document.close();
+    ventana.print();
+  });
+
+  function construirPlan(evaluacion, objetivo) {
+    let html = `<h2>Plan para ${evaluacion.jugador}</h2><p><strong>Golpe:</strong> ${evaluacion.golpe} | <strong>Objetivo:</strong> ${objetivo}ª</p>`;
+    let encontro = false;
+    const golpeData = DATA.golpes[evaluacion.golpe];
+    if (!golpeData) return html + '<p>No hay datos del golpe.</p>';
+    for (const [parKey, parData] of Object.entries(golpeData.pares)) {
+      const seleccionesPar = evaluacion.selecciones[parKey] || {};
+      let ejerciciosPar = '';
+      for (const cuant of parData.cuantificadores) {
+        const catActual = seleccionesPar[cuant.id];
+        if (catActual && catActual > objetivo) {
+          for (let cat = catActual; cat > objetivo; cat--) {
+            const transicion = `${cat}_${cat-1}`;
+            const ejercicio = window.EJERCICIOS?.[evaluacion.golpe]?.[parKey]?.[cuant.id]?.[transicion];
+            if (ejercicio) {
+              ejerciciosPar += `<div class="ejercicio-item"><strong>${cuant.nombre} (${cat}ª → ${cat-1}ª):</strong> ${ejercicio.nombre}<br><span class="series">${ejercicio.series} series x ${ejercicio.repeticiones}</span><br><em>${ejercicio.descripcion}</em><br>✅ Criterio: ${ejercicio.criterioExito}</div>`;
+              encontro = true;
+            }
           }
         }
       }
+      if (ejerciciosPar) html += `<div class="plan-par"><h4>${parData.nombre}</h4>${ejerciciosPar}</div>`;
     }
-    if (ejerciciosPar) html += `<div class="plan-par"><h4>${parData.nombre}</h4>${ejerciciosPar}</div>`;
+    if (!encontro) html += '<p>✅ Ya alcanza o supera el nivel en todos los aspectos.</p>';
+    return html;
   }
-  if (!encontro) html += '<p>✅ Ya alcanza o supera el nivel en todos los aspectos.</p>';
-  return html;
-}
 
-// ========== ALUMNOS ==========
-const alumnosLista = document.getElementById('alumnosLista');
-async function cargarAlumnos() {
-  alumnosLista.innerHTML = '<p>Cargando...</p>';
-  const historial = await cargarEvaluacionesDesdeFirestore();
-  if (historial.length === 0) { alumnosLista.innerHTML = '<p>No hay alumnos registrados.</p>'; return; }
-  const alumnos = {};
-  historial.forEach(eva => { if (!alumnos[eva.jugador]) alumnos[eva.jugador] = []; alumnos[eva.jugador].push(eva); });
-  let html = '';
-  for (const [nombre, evaluaciones] of Object.entries(alumnos)) {
-    html += `<div class="alumno-card"><h3>${nombre}</h3><table><thead><tr><th>Golpe</th><th>Tipo</th><th>Fecha</th><th>Acciones</th></tr></thead><tbody>`;
-    evaluaciones.forEach(eva => {
-      const tipoBadge = eva.tipo === 'profesor' ? '🔍' : '👤';
-      html += `<tr><td>${eva.golpe}</td><td>${tipoBadge}</td><td>${eva.fecha}</td><td><button class="btn-secondary btn-chico generar-plan-alumno" data-id="${eva.firestoreId}">📋 Plan</button><button class="btn-secondary btn-chico eliminar-eva-alumno" data-id="${eva.firestoreId}">🗑️</button></td></tr>`;
-    });
-    html += `</tbody></table></div>`;
+  // ========== ALUMNOS ==========
+  const alumnosLista = document.getElementById('alumnosLista');
+  async function cargarAlumnos() {
+    alumnosLista.innerHTML = '<p>Cargando...</p>';
+    const historial = await cargarEvaluacionesDesdeFirestore();
+    if (historial.length === 0) { alumnosLista.innerHTML = '<p>No hay alumnos registrados.</p>'; return; }
+    const alumnos = {};
+    historial.forEach(eva => { if (!alumnos[eva.jugador]) alumnos[eva.jugador] = []; alumnos[eva.jugador].push(eva); });
+    let html = '';
+    for (const [nombre, evaluaciones] of Object.entries(alumnos)) {
+      html += `<div class="alumno-card"><h3>${nombre}</h3><table><thead><tr><th>Golpe</th><th>Tipo</th><th>Fecha</th><th>Acciones</th></tr></thead><tbody>`;
+      evaluaciones.forEach(eva => {
+        const tipoBadge = eva.tipo === 'profesor' ? '🔍' : '👤';
+        html += `<tr><td>${eva.golpe}</td><td>${tipoBadge}</td><td>${eva.fecha}</td><td><button class="btn-secondary btn-chico generar-plan-alumno" data-id="${eva.firestoreId}">📋 Plan</button><button class="btn-secondary btn-chico eliminar-eva-alumno" data-id="${eva.firestoreId}">🗑️</button></td></tr>`;
+      });
+      html += `</tbody></table></div>`;
+    }
+    alumnosLista.innerHTML = html;
   }
-  alumnosLista.innerHTML = html;
-}
 
-alumnosLista.addEventListener('click', async (e) => {
-  if (e.target.classList.contains('generar-plan-alumno')) {
-    const id = e.target.dataset.id;
-    const historial = window.evaluacionesCargadas || [];
-    const eva = historial.find(item => item.firestoreId === id);
-    if (eva) {
-      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-      document.querySelector('.tab[data-view="entrenamiento"]').classList.add('active');
-      views.forEach(v => v.classList.remove('active'));
-      document.getElementById('entrenamientoView').classList.add('active');
-      await cargarAlumnosEnSelect();
-      const options = alumnoSelect.options;
-      for (let i = 0; i < options.length; i++) {
-        if (options[i].textContent.includes(eva.jugador) && options[i].textContent.includes(eva.golpe)) {
-          alumnoSelect.selectedIndex = i; break;
+  alumnosLista.addEventListener('click', async (e) => {
+    if (e.target.classList.contains('generar-plan-alumno')) {
+      const id = e.target.dataset.id;
+      const historial = window.evaluacionesCargadas || [];
+      const eva = historial.find(item => item.firestoreId === id);
+      if (eva) {
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        document.querySelector('.tab[data-view="entrenamiento"]').classList.add('active');
+        views.forEach(v => v.classList.remove('active'));
+        document.getElementById('entrenamientoView').classList.add('active');
+        await cargarAlumnosEnSelect();
+        const options = alumnoSelect.options;
+        for (let i = 0; i < options.length; i++) {
+          if (options[i].textContent.includes(eva.jugador) && options[i].textContent.includes(eva.golpe)) {
+            alumnoSelect.selectedIndex = i; break;
+          }
         }
       }
+    } else if (e.target.classList.contains('eliminar-eva-alumno')) {
+      const id = e.target.dataset.id;
+      if (!confirm('¿Eliminar?')) return;
+      try { await db.collection('evaluaciones').doc(id).delete(); window.evaluacionesCargadas = null; cargarAlumnos(); }
+      catch (err) { alert('Error: ' + err.message); }
     }
-  } else if (e.target.classList.contains('eliminar-eva-alumno')) {
-    const id = e.target.dataset.id;
-    if (!confirm('¿Eliminar?')) return;
-    try { await db.collection('evaluaciones').doc(id).delete(); window.evaluacionesCargadas = null; cargarAlumnos(); }
-    catch (err) { alert('Error: ' + err.message); }
-  }
-});
+  });
+
   // ========== SEGUIMIENTO ==========
   const alumnoSelectSeg = document.getElementById('alumnoSelectSeg');
   const categoriaObjetivoSeg = document.getElementById('categoriaObjetivoSeg');
@@ -415,8 +419,7 @@ alumnosLista.addEventListener('click', async (e) => {
               ejercicios.push({
                 parKey, cuantId: cuant.id, nombreCuant: cuant.nombre,
                 transicion, catInicio: cat, catFin: cat - 1, ejercicio,
-                totalSeries: ejercicio.series,
-                totalRepsPorSerie: parseInt(ejercicio.repeticiones),
+                totalSeries: ejercicio.series, totalRepsPorSerie: parseInt(ejercicio.repeticiones),
                 criterioExigido: ejercicio.criterioExito,
                 minimoExitos: extraerMinimoCriterio(ejercicio.criterioExito, ejercicio.series * parseInt(ejercicio.repeticiones))
               });
@@ -499,186 +502,184 @@ alumnosLista.addEventListener('click', async (e) => {
     } catch (err) { alert('Error al guardar: ' + err.message); }
   });
 
-  function mostrarResultadoSesion(plan) { /* ... misma lógica de resultado ... */ }
+  function mostrarResultadoSesion(plan) {
+    const viejo = document.getElementById('resultadoSesion');
+    if (viejo) viejo.remove();
+    const div = document.createElement('div');
+    div.id = 'resultadoSesion';
+    div.className = 'resultado-sesion';
+    div.innerHTML = '<h3>📊 Resultado</h3>';
+    const historial = window.evaluacionesCargadas || [];
+    const evaluacion = historial[parseInt(alumnoSelectSeg.value)];
+    const cats = {};
+    const nombres = {};
+    if (evaluacion) {
+      for (const [, sels] of Object.entries(evaluacion.selecciones))
+        for (const [id, cat] of Object.entries(sels)) cats[id] = cat;
+      const golpeData = DATA.golpes[evaluacion.golpe];
+      if (golpeData) for (const parData of Object.values(golpeData.pares))
+        for (const cuant of parData.cuantificadores) nombres[cuant.id] = cuant.nombre;
+    }
+    const obj = plan.objetivo;
+    const res = {};
+    for (const id of Object.keys(cats)) res[id] = { nombre: nombres[id]||id, catActual: cats[id]||7, catAlc: cats[id]||7, ejs:[] };
+    plan.ejercicios.forEach(ej => {
+      if (!res[ej.cuantId]) res[ej.cuantId] = { nombre: ej.nombreCuant, catActual: cats[ej.cuantId]||7, catAlc: cats[ej.cuantId]||7, ejs:[] };
+      const ok = ej.repeticionesExitosas >= ej.minimoExitos;
+      res[ej.cuantId].ejs.push({...ej, ok});
+      if (ok && ej.catFin < res[ej.cuantId].catAlc) res[ej.cuantId].catAlc = ej.catFin;
+    });
+    let asc = 0, rep = 0, desc = 0;
+    let tabla = '<table class="tabla-veredicto"><tr><th>Cuantificador</th><th>Actual</th><th>Obj</th><th>Alc</th><th>Veredicto</th></tr>';
+    for (const [, d] of Object.entries(res)) {
+      let v = '';
+      if (d.catAlc <= obj)      { v = '⬆ Ascender';  asc++; }
+      else if (d.catAlc > d.catActual) { v = '⬇ Descender'; desc++; }
+      else                      { v = '↻ Repetir';   rep++; }
+      tabla += `<tr><td>${d.nombre}</td><td>${d.catActual}ª</td><td>${obj}ª</td><td>${d.catAlc}ª</td><td>${v}</td></tr>`;
+    }
+    tabla += '</table>';
+    let vg = '';
+    if (desc > 0) vg = '<span class="veredicto descenso">⬇ DESCENDER</span>';
+    else if (rep > 0) vg = '<span class="veredicto repetir">↻ REPETIR</span>';
+    else vg = '<span class="veredicto ascenso">⬆ ASCENDER</span>';
+    div.innerHTML += tabla + `<p class="veredicto-global">${vg}</p>`;
+    sesionContent.appendChild(div);
+  }
 
-  async function cargarHistorialSesiones() { /* ... misma lógica de historial ... */ }
+  async function cargarHistorialSesiones() {
+    const idx = alumnoSelectSeg.value;
+    if (idx === '') return;
+    const historial = window.evaluacionesCargadas || [];
+    const eva = historial[parseInt(idx)];
+    if (!eva) return;
+    let container = document.getElementById('historialSesiones');
+    if (!container) {
+      container = document.createElement('div');
+      container.className = 'historial-sesiones';
+      container.id = 'historialSesiones';
+      sesionContent.appendChild(container);
+    }
+    container.innerHTML = '<p>Cargando sesiones...</p>';
+    try {
+      const snapshot = await db.collection('sesiones')
+        .where('uid', '==', window.currentUser.uid)
+        .orderBy('fecha', 'desc').limit(30).get();
+      const sesiones = snapshot.docs
+        .map(doc => ({...doc.data(), fecha: doc.data().fechaLocal || 'Sin fecha'}))
+        .filter(s => s.jugador === eva.jugador && s.golpe === eva.golpe).slice(0,5);
+      container.innerHTML = '';
+      if (sesiones.length === 0) { container.innerHTML = '<p>No hay sesiones anteriores.</p>'; return; }
+      container.innerHTML = '<h3>📅 Últimas sesiones</h3>';
+      sesiones.forEach(ses => {
+        const d = document.createElement('div');
+        d.className = 'sesion-ejercicio';
+        let inner = `<strong>${ses.fecha}</strong> – Objetivo: ${ses.objetivo}ª<br>`;
+        ses.ejercicios.forEach(ej => inner += `${ej.nombreCuant}: ${ej.seriesRealizadas}/${ej.totalSeries} series, ${ej.repeticionesExitosas} éxitos<br>`);
+        d.innerHTML = inner;
+        container.appendChild(d);
+      });
+    } catch (err) { container.innerHTML = `<p>Error: ${err.message}</p>`; }
+  }
 
-  // ========== PLANIFICACIONES ALUMNO ==========
-async function cargarPlanificacionesAlumno() {
+  // ========== PLANIFICACIONES ALUMNO/PROFESOR ==========
+  async function cargarPlanificacionesAlumno() {
     const container = document.getElementById('planificacionesAlumno');
     if (!container) return;
     container.innerHTML = '<p>Cargando planificaciones...</p>';
-    
-    if (!window.currentUser) {
-        container.innerHTML = '<p>Debés iniciar sesión.</p>';
-        return;
-    }
-    
+    if (!window.currentUser) { container.innerHTML = '<p>Debés iniciar sesión.</p>'; return; }
     try {
-        const userData = JSON.parse(localStorage.getItem('userData') || '{}');
-        const rol = userData.rol || 'alumno';
-        
-        let snapshot;
-        if (rol === 'profesor') {
-            snapshot = await db.collection('planificaciones')
-                .where('profesorUid', '==', window.currentUser.uid)
-                .orderBy('fecha', 'desc')
-                .limit(50)
-                .get();
-        } else {
-            snapshot = await db.collection('planificaciones')
-                .where('alumnoUid', '==', window.currentUser.uid)
-                .orderBy('fecha', 'desc')
-                .limit(50)
-                .get();
-        }
-        
-        if (snapshot.empty) {
-            container.innerHTML = rol === 'profesor' 
-                ? '<p>No has creado ninguna planificación todavía.</p>' 
-                : '<p>No tenés planificaciones asignadas todavía.</p>';
-            return;
-        }
-        
-        let html = '';
-        snapshot.docs.forEach(doc => {
-            const plan = doc.data();
-            const planId = doc.id;
-            const estadoClase = plan.estado === 'completada' ? 'completada' : 
-                               plan.estado === 'repetir' ? 'repetir' : 'pendiente';
-            const estadoTexto = plan.estado === 'completada' ? '✅ Completada' :
-                               plan.estado === 'repetir' ? '🔄 Repetir' : '⏳ Pendiente';
-            
-            html += `
-                <div class="planificacion-card" id="plan-card-${planId}">
-                    <h3>${obtenerNombreGolpe(plan.golpe)} - Objetivo: ${plan.objetivo}ª</h3>
-                    <p>Alumno: <strong>${plan.alumnoNombre || 'Sin nombre'}</strong></p>
-                    <p>Asignado: ${plan.fechaLocal || ''}</p>
-                    <span class="estado ${estadoClase}" id="estado-plan-${planId}">${estadoTexto}</span>
-                    <span id="progreso-plan-${planId}" style="margin-left:10px;font-weight:600;">
-                        ${plan.progreso ? `(${plan.progreso}%)` : ''}
-                    </span>
-                    <div style="margin-top:12px;">
-                        <button class="btn-secondary btn-chico ver-plan-btn" data-planid="${planId}">📋 Ver ejercicios</button>
-                        ${rol === 'profesor' && plan.estado !== 'completada' ? 
-                            `<button class="btn-primary btn-chico calificar-plan-btn" data-planid="${planId}">⭐ Calificar</button>` : ''}
-                    </div>
-                    <div id="plan-content-${planId}" style="margin-top:12px; display:none;">
-                        ${plan.contenidoHTML || '<p>Sin contenido.</p>'}
-                    </div>
-                    <!-- Sección de calificación (solo profesor) -->
-                    ${rol === 'profesor' ? `
-                        <div id="calificacion-${planId}" style="display:none; margin-top:16px; padding:16px; background:#f9f9f9; border-radius:8px;">
-                            <h4>⭐ Calificar Ejercicios</h4>
-                            <div id="ejercicios-calificar-${planId}"></div>
-                            <button class="btn-primary guardar-calificacion-btn" data-planid="${planId}" style="margin-top:12px;">💾 Guardar Calificación</button>
-                        </div>
-                    ` : ''}
-                </div>
-            `;
+      const userData = JSON.parse(localStorage.getItem('userData') || '{}');
+      const rol = userData.rol || 'alumno';
+      let snapshot;
+      if (rol === 'profesor' || rol === 'fiscal') {
+        snapshot = await db.collection('planificaciones')
+          .where('profesorUid', '==', window.currentUser.uid)
+          .orderBy('fecha', 'desc').limit(50).get();
+      } else {
+        snapshot = await db.collection('planificaciones')
+          .where('alumnoUid', '==', window.currentUser.uid)
+          .orderBy('fecha', 'desc').limit(50).get();
+      }
+      if (snapshot.empty) {
+        container.innerHTML = (rol === 'profesor' || rol === 'fiscal') ? '<p>No has creado ninguna planificación todavía.</p>' : '<p>No tenés planificaciones asignadas todavía.</p>';
+        return;
+      }
+      let html = '';
+      snapshot.docs.forEach(doc => {
+        const plan = doc.data();
+        const planId = doc.id;
+        const estadoClase = plan.estado === 'completada' ? 'completada' : plan.estado === 'repetir' ? 'repetir' : 'pendiente';
+        const estadoTexto = plan.estado === 'completada' ? '✅ Completada' : plan.estado === 'repetir' ? '🔄 Repetir' : '⏳ Pendiente';
+        html += `<div class="planificacion-card" id="plan-card-${planId}">
+          <h3>${obtenerNombreGolpe(plan.golpe)} - Objetivo: ${plan.objetivo}ª</h3>
+          <p>Alumno: <strong>${plan.alumnoNombre || 'Sin nombre'}</strong></p>
+          <p>Asignado: ${plan.fechaLocal || ''}</p>
+          <span class="estado ${estadoClase}" id="estado-plan-${planId}">${estadoTexto}</span>
+          <span id="progreso-plan-${planId}" style="margin-left:10px;font-weight:600;">${plan.progreso ? `(${plan.progreso}%)` : ''}</span>
+          <div style="margin-top:12px;">
+            <button class="btn-secondary btn-chico ver-plan-btn" data-planid="${planId}">📋 Ver ejercicios</button>
+            ${(rol === 'profesor' || rol === 'fiscal') && plan.estado !== 'completada' ? `<button class="btn-primary btn-chico calificar-plan-btn" data-planid="${planId}">⭐ Calificar</button>` : ''}
+          </div>
+          <div id="plan-content-${planId}" style="margin-top:12px; display:none;">${plan.contenidoHTML || '<p>Sin contenido.</p>'}</div>
+          ${(rol === 'profesor' || rol === 'fiscal') ? `<div id="calificacion-${planId}" style="display:none; margin-top:16px; padding:16px; background:#f9f9f9; border-radius:8px;"><h4>⭐ Calificar Ejercicios</h4><div id="ejercicios-calificar-${planId}"></div><button class="btn-primary guardar-calificacion-btn" data-planid="${planId}" style="margin-top:12px;">💾 Guardar Calificación</button></div>` : ''}
+        </div>`;
+      });
+      container.innerHTML = html;
+      document.querySelectorAll('.ver-plan-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const planId = btn.dataset.planid;
+          const content = document.getElementById(`plan-content-${planId}`);
+          if (content.style.display === 'none') { content.style.display = 'block'; btn.textContent = '🔼 Ocultar'; }
+          else { content.style.display = 'none'; btn.textContent = '📋 Ver ejercicios'; }
         });
-        container.innerHTML = html;
-        
-        // Eventos para mostrar/ocultar ejercicios
-        document.querySelectorAll('.ver-plan-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
-                const planId = btn.dataset.planid;
-                const content = document.getElementById(`plan-content-${planId}`);
-                if (content.style.display === 'none') {
-                    content.style.display = 'block';
-                    btn.textContent = '🔼 Ocultar';
-                } else {
-                    content.style.display = 'none';
-                    btn.textContent = '📋 Ver ejercicios';
-                }
-            });
+      });
+      document.querySelectorAll('.calificar-plan-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const planId = btn.dataset.planid;
+          const calificacionDiv = document.getElementById(`calificacion-${planId}`);
+          const ejerciciosDiv = document.getElementById(`ejercicios-calificar-${planId}`);
+          if (calificacionDiv.style.display === 'none') {
+            calificacionDiv.style.display = 'block';
+            btn.textContent = '🔽 Ocultar calificación';
+            const plan = snapshot.docs.find(d => d.id === planId);
+            if (plan && plan.data().ejercicios) {
+              let ejerciciosHTML = '';
+              plan.data().ejercicios.forEach((ej, idx) => {
+                ejerciciosHTML += `<div style="margin-bottom:12px; padding:8px; background:white; border-radius:6px; border:1px solid #ddd;"><strong>${ej.nombreCuant} - ${ej.transicion.replace('_', 'ª → ')}ª</strong><p style="margin:4px 0; font-size:0.85rem; color:#666;">${ej.ejercicio.nombre}</p><label>Porcentaje alcanzado:</label><input type="number" min="0" max="100" value="${ej.calificacion || 0}" class="calificacion-input" data-ejercicio="${idx}" data-planid="${planId}" style="width:80px; padding:4px; margin-left:8px;"> %</div>`;
+              });
+              ejerciciosDiv.innerHTML = ejerciciosHTML;
+            }
+          } else { calificacionDiv.style.display = 'none'; btn.textContent = '⭐ Calificar'; }
         });
-        
-        // Eventos para calificar (solo profesor)
-        document.querySelectorAll('.calificar-plan-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
-                const planId = btn.dataset.planid;
-                const calificacionDiv = document.getElementById(`calificacion-${planId}`);
-                const ejerciciosDiv = document.getElementById(`ejercicios-calificar-${planId}`);
-                
-                // Mostrar/ocultar sección de calificación
-                if (calificacionDiv.style.display === 'none') {
-                    calificacionDiv.style.display = 'block';
-                    btn.textContent = '🔽 Ocultar calificación';
-                    
-                    // Cargar ejercicios de esta planificación
-                    const plan = snapshot.docs.find(d => d.id === planId);
-                    if (plan && plan.data().ejercicios) {
-                        let ejerciciosHTML = '';
-                        plan.data().ejercicios.forEach((ej, idx) => {
-                            ejerciciosHTML += `
-                                <div style="margin-bottom:12px; padding:8px; background:white; border-radius:6px; border:1px solid #ddd;">
-                                    <strong>${ej.nombreCuant} - ${ej.transicion.replace('_', 'ª → ')}ª</strong>
-                                    <p style="margin:4px 0; font-size:0.85rem; color:#666;">${ej.ejercicio.nombre}</p>
-                                    <label>Porcentaje alcanzado:</label>
-                                    <input type="number" min="0" max="100" value="${ej.calificacion || 0}" 
-                                           class="calificacion-input" data-ejercicio="${idx}" data-planid="${planId}"
-                                           style="width:80px; padding:4px; margin-left:8px;"> %
-                                </div>
-                            `;
-                        });
-                        ejerciciosDiv.innerHTML = ejerciciosHTML;
-                    }
-                } else {
-                    calificacionDiv.style.display = 'none';
-                    btn.textContent = '⭐ Calificar';
-                }
-            });
+      });
+      document.querySelectorAll('.guardar-calificacion-btn').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const planId = btn.dataset.planid;
+          const inputs = document.querySelectorAll(`.calificacion-input[data-planid="${planId}"]`);
+          let suma = 0, cantidad = 0;
+          inputs.forEach(input => { suma += parseInt(input.value) || 0; cantidad++; });
+          const promedio = cantidad > 0 ? Math.round(suma / cantidad) : 0;
+          const nuevoEstado = promedio >= 80 ? 'completada' : 'repetir';
+          try {
+            await db.collection('planificaciones').doc(planId).update({ estado: nuevoEstado, progreso: promedio });
+            const estadoSpan = document.getElementById(`estado-plan-${planId}`);
+            const progresoSpan = document.getElementById(`progreso-plan-${planId}`);
+            if (estadoSpan) { estadoSpan.textContent = nuevoEstado === 'completada' ? '✅ Completada' : '🔄 Repetir'; estadoSpan.className = `estado ${nuevoEstado}`; }
+            if (progresoSpan) { progresoSpan.textContent = `(${promedio}%)`; }
+            alert(`✅ Calificación guardada. Promedio: ${promedio}%. Estado: ${nuevoEstado}`);
+          } catch (err) { alert('❌ Error al guardar: ' + err.message); }
         });
-        
-        // Eventos para guardar calificación
-        document.querySelectorAll('.guardar-calificacion-btn').forEach(btn => {
-            btn.addEventListener('click', async () => {
-                const planId = btn.dataset.planid;
-                const inputs = document.querySelectorAll(`.calificacion-input[data-planid="${planId}"]`);
-                
-                let suma = 0;
-                let cantidad = 0;
-                
-                inputs.forEach(input => {
-                    suma += parseInt(input.value) || 0;
-                    cantidad++;
-                });
-                
-                const promedio = cantidad > 0 ? Math.round(suma / cantidad) : 0;
-                const nuevoEstado = promedio >= 80 ? 'completada' : 'repetir';
-                
-                try {
-                    await db.collection('planificaciones').doc(planId).update({
-                        estado: nuevoEstado,
-                        progreso: promedio
-                    });
-                    
-                    // Actualizar visualmente
-                    const estadoSpan = document.getElementById(`estado-plan-${planId}`);
-                    const progresoSpan = document.getElementById(`progreso-plan-${planId}`);
-                    
-                    if (estadoSpan) {
-                        estadoSpan.textContent = nuevoEstado === 'completada' ? '✅ Completada' : '🔄 Repetir';
-                        estadoSpan.className = `estado ${nuevoEstado}`;
-                    }
-                    if (progresoSpan) {
-                        progresoSpan.textContent = `(${promedio}%)`;
-                    }
-                    
-                    alert(`✅ Calificación guardada. Promedio: ${promedio}%. Estado: ${nuevoEstado}`);
-                    
-                } catch (err) {
-                    alert('❌ Error al guardar: ' + err.message);
-                }
-            });
-        });
-        
-    } catch (err) {
-        container.innerHTML = `<p>Error al cargar: ${err.message}</p>`;
-    }
-}
-  // ========== NUEVA PLANIFICACIÓN (PROFESOR) ==========
+      });
+    } catch (err) { container.innerHTML = `<p>Error al cargar: ${err.message}</p>`; }
+  }
+
+  function obtenerNombreGolpe(golpeId) {
+    const nombres = { smash: '🏐 Sobre Cabeza', volea: '🏸 Volea', pegadaFondo: '🎯 Pegada de Fondo', salidaPared: '🧱 Salida de Pared' };
+    return nombres[golpeId] || golpeId;
+  }
+
+  // ========== NUEVA PLANIFICACIÓN ==========
   const alumnoPlanSelect = document.getElementById('alumnoPlanSelect');
   const golpePlanSelect = document.getElementById('golpePlanSelect');
   const categoriaObjetivoPlan = document.getElementById('categoriaObjetivoPlan');
@@ -716,17 +717,12 @@ async function cargarPlanificacionesAlumno() {
     document.getElementById('confirmarGuardarPlanBtn').addEventListener('click', async () => {
       try {
         await db.collection('planificaciones').add({
-          profesorUid: window.currentUser.uid,
-          alumnoNombre: alumnoNombre,
-          alumnoUid: evaluacion.uid || '',
-          golpe: golpe,
-          objetivo: objetivo,
+          profesorUid: window.currentUser.uid, alumnoNombre: alumnoNombre,
+          alumnoUid: evaluacion.uid || '', golpe: golpe, objetivo: objetivo,
           contenidoHTML: planificacionGenerada,
           ejercicios: extraerEjerciciosDePlan(evaluacion, objetivo),
           fecha: firebase.firestore.FieldValue.serverTimestamp(),
-          fechaLocal: new Date().toLocaleString(),
-          estado: 'pendiente',
-          progreso: 0
+          fechaLocal: new Date().toLocaleString(), estado: 'pendiente', progreso: 0
         });
         alert('✅ Planificación asignada correctamente.');
         planGeneradoPreview.innerHTML = '';
@@ -755,15 +751,78 @@ async function cargarPlanificacionesAlumno() {
     }
     return ejercicios;
   }
-function obtenerNombreGolpe(golpeId) {
-    const nombres = {
-        smash: '🏐 Sobre Cabeza',
-        volea: '🏸 Volea',
-        pegadaFondo: '🎯 Pegada de Fondo',
-        salidaPared: '🧱 Salida de Pared'
-    };
-    return nombres[golpeId] || golpeId;
-}
+
+  // ========== ADMINISTRACIÓN DE USUARIOS ==========
+  async function cargarAdminUsuarios() {
+    const container = document.getElementById('adminUsuariosLista');
+    if (!container) return;
+    container.innerHTML = '<p>Cargando usuarios...</p>';
+    try {
+      const snapshot = await db.collection('usuarios').get();
+      if (snapshot.empty) { container.innerHTML = '<p>No hay usuarios registrados.</p>'; return; }
+      const vinculadosSnapshot = await db.collection('vinculaciones')
+        .where('profesorUid', '==', window.currentUser.uid).get();
+      const vinculadosUids = new Set();
+      vinculadosSnapshot.docs.forEach(doc => vinculadosUids.add(doc.data().alumnoUid));
+      let html = '';
+      snapshot.docs.forEach(doc => {
+        const usuario = doc.data();
+        const userId = doc.id;
+        const esVinculado = vinculadosUids.has(userId);
+        const rolActual = usuario.rol || 'alumno';
+        html += `<div class="alumno-card">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <h3>${usuario.nombre || 'Sin nombre'}</h3>
+            <span class="user-rol-badge">${rolActual.toUpperCase()}</span>
+          </div>
+          <p>Email: ${usuario.email || 'No disponible'}</p>
+          <div style="margin-top:12px; display:flex; gap:8px; flex-wrap:wrap;">
+            ${!esVinculado ? `<button class="btn-primary btn-chico vincular-alumno-btn" data-uid="${userId}" data-nombre="${usuario.nombre}">➕ Agregar a mis alumnos</button>` : `<button class="btn-secondary btn-chico desvincular-alumno-btn" data-uid="${userId}">🔗 Quitar de mis alumnos</button>`}
+            <select class="cambiar-rol-select" data-uid="${userId}" style="padding:4px 8px; border-radius:6px;">
+              <option value="alumno" ${rolActual === 'alumno' ? 'selected' : ''}>👤 Alumno</option>
+              <option value="profesor" ${rolActual === 'profesor' ? 'selected' : ''}>🔍 Profesor</option>
+              <option value="fiscal" ${rolActual === 'fiscal' ? 'selected' : ''}>📋 Fiscal</option>
+            </select>
+          </div>
+        </div>`;
+      });
+      container.innerHTML = html;
+      document.querySelectorAll('.vincular-alumno-btn').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          try {
+            await db.collection('vinculaciones').add({
+              profesorUid: window.currentUser.uid, alumnoUid: btn.dataset.uid,
+              alumnoNombre: btn.dataset.nombre,
+              fecha: firebase.firestore.FieldValue.serverTimestamp()
+            });
+            alert('✅ Alumno agregado a tu lista.');
+            cargarAdminUsuarios();
+          } catch (err) { alert('❌ Error: ' + err.message); }
+        });
+      });
+      document.querySelectorAll('.desvincular-alumno-btn').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          try {
+            const snap = await db.collection('vinculaciones')
+              .where('profesorUid', '==', window.currentUser.uid)
+              .where('alumnoUid', '==', btn.dataset.uid).get();
+            snap.docs.forEach(async (doc) => { await db.collection('vinculaciones').doc(doc.id).delete(); });
+            alert('✅ Alumno quitado de tu lista.');
+            cargarAdminUsuarios();
+          } catch (err) { alert('❌ Error: ' + err.message); }
+        });
+      });
+      document.querySelectorAll('.cambiar-rol-select').forEach(select => {
+        select.addEventListener('change', async () => {
+          try {
+            await db.collection('usuarios').doc(select.dataset.uid).update({ rol: select.value });
+            alert(`✅ Rol cambiado a ${select.value}.`);
+          } catch (err) { alert('❌ Error: ' + err.message); }
+        });
+      });
+    } catch (err) { container.innerHTML = `<p>Error: ${err.message}</p>`; }
+  }
+
   // ========== INICIALIZAR ==========
   renderizarGolpe('smash');
 });
