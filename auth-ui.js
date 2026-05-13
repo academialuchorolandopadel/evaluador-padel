@@ -20,18 +20,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let currentUser = null;
 
-    // ============================================================
-    // 1. EVENTOS DE BOTONES
-    // ============================================================
     if (btnLogin) btnLogin.addEventListener('click', loginUser);
     if (btnRegister) btnRegister.addEventListener('click', registerUser);
     if (btnLogout) btnLogout.addEventListener('click', logoutUser);
     if (btnShowRegister) btnShowRegister.addEventListener('click', showRegister);
     if (btnShowLogin) btnShowLogin.addEventListener('click', showLogin);
 
-    // ============================================================
-    // 2. OBSERVADOR DE AUTENTICACIÓN
-    // ============================================================
     auth.onAuthStateChanged(async (user) => {
         const body = document.body;
 
@@ -105,9 +99,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // ============================================================
-    // 3. FUNCIONES DE AUTENTICACIÓN
-    // ============================================================
     async function loginUser() {
         const email = document.getElementById('loginEmail').value.trim();
         const password = document.getElementById('loginPassword').value;
@@ -173,16 +164,19 @@ document.addEventListener('DOMContentLoaded', () => {
             currentUser = null;
             window.currentUser = null;
             window.currentUserData = null;
-            window.location.reload(true);
+            // Limpiar caché del Service Worker si existe
+            if ('caches' in window) {
+                const cacheNames = await caches.keys();
+                await Promise.all(cacheNames.map(name => caches.delete(name)));
+            }
+            // Recargar con parámetro aleatorio para evitar caché
+            window.location.href = window.location.href.split('?')[0] + '?nocache=' + Date.now();
         } catch (error) {
             console.error('Error al cerrar sesión:', error);
             mostrarError('Error al cerrar sesión.');
         }
     }
 
-    // ============================================================
-    // 4. UI
-    // ============================================================
     function mostrarError(mensaje) {
         if (authError) {
             authError.textContent = mensaje;
@@ -202,9 +196,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if (authError) authError.textContent = '';
     }
 
-    // ============================================================
-    // 5. MODO ALUMNO/PROFESOR/FISCAL
-    // ============================================================
     function aplicarModoSegunRol(rol) {
         const body = document.body;
         if (rol === 'profesor' || rol === 'fiscal') {
