@@ -135,7 +135,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const nombre = document.getElementById('regNombre').value.trim();
         const email = document.getElementById('regEmail').value.trim();
         const password = document.getElementById('regPassword').value;
-        const rol = 'alumno'; // Todos se registran como alumnos
+        const rol = 'alumno';
 
         if (!nombre || !email || !password) {
             mostrarError('Por favor, completá todos los campos.');
@@ -173,7 +173,7 @@ document.addEventListener('DOMContentLoaded', () => {
             currentUser = null;
             window.currentUser = null;
             window.currentUserData = null;
-            window.location.reload();
+            window.location.reload(true);
         } catch (error) {
             console.error('Error al cerrar sesión:', error);
             mostrarError('Error al cerrar sesión.');
