@@ -1,8 +1,8 @@
-// ==================== AUTH-UI.JS (Eventos automáticos) ====================
+// ==================== AUTH-UI.JS (Corregido – sin duplicaciones) ====================
 document.addEventListener('DOMContentLoaded', () => {
 
-    const auth = firebase.auth();
-    const db = firebase.firestore();
+    // Las referencias a auth y db ya son globales (window.auth, window.db)
+    // No es necesario volver a declararlas
 
     const authOverlay = document.getElementById('authOverlay');
     const loginForm = document.getElementById('loginForm');
@@ -26,11 +26,13 @@ document.addEventListener('DOMContentLoaded', () => {
     if (btnShowRegister) btnShowRegister.addEventListener('click', showRegister);
     if (btnShowLogin) btnShowLogin.addEventListener('click', showLogin);
 
+    // Escuchar cambios en el estado de autenticación
     auth.onAuthStateChanged(async (user) => {
         const body = document.body;
 
         if (user) {
             currentUser = user;
+            window.currentUser = user;   // Para que app.js lo detecte
 
             try {
                 const userDoc = await db.collection('usuarios').doc(user.uid).get();
@@ -43,13 +45,21 @@ document.addEventListener('DOMContentLoaded', () => {
                         rol: userData.rol || 'alumno'
                     };
                     localStorage.setItem('userData', JSON.stringify(usuarioLocal));
+                    window.currentUserData = usuarioLocal;
 
                     if (userNameDisplay) userNameDisplay.textContent = usuarioLocal.nombre;
-                    if (userRolDisplay) userRolDisplay.textContent = usuarioLocal.rol === 'profesor' ? 'Profesor' : usuarioLocal.rol === 'fiscal' ? 'Fiscal' : 'Alumno';
+                    if (userRolDisplay) userRolDisplay.textContent = 
+                        usuarioLocal.rol === 'profesor' ? 'Profesor' : 
+                        usuarioLocal.rol === 'fiscal' ? 'Fiscal' : 'Alumno';
 
-                    aplicarModoSegunRol(usuarioLocal.rol);
+                    // Usar la función global definida en app.js (no duplicar)
+                    if (typeof window.aplicarModoSegunRol === 'function') {
+                        window.aplicarModoSegunRol(usuarioLocal.rol);
+                    }
+                    
                     body.classList.remove('sin-sesion');
-
+                    
+                    // Actualizar clases CSS
                     if (usuarioLocal.rol === 'profesor' || usuarioLocal.rol === 'fiscal') {
                         body.classList.add('modo-fiscal');
                         body.classList.remove('modo-alumno');
@@ -57,17 +67,20 @@ document.addEventListener('DOMContentLoaded', () => {
                         body.classList.add('modo-alumno');
                         body.classList.remove('modo-fiscal');
                     }
-                    actualizarBadgeModo(usuarioLocal.rol);
 
-                    window.currentUser = user;
-                    window.currentUserData = usuarioLocal;
+                    // Llamar a la función de configuración de interfaz según rol (global)
+                    if (typeof window.configurarInterfazSegunRol === 'function') {
+                        window.configurarInterfazSegunRol();
+                    }
 
-                    if (typeof configurarInterfazSegunRol === 'function') {
-                        configurarInterfazSegunRol();
+                    // Inicializar la app (renderizar vista actual)
+                    if (typeof window.initApp === 'function') {
+                        window.initApp();
                     }
                 }
             } catch (error) {
-                console.error('Error al obtener datos:', error);
+                console.error('Error al obtener datos del usuario:', error);
+                // Usuario existe en Auth pero no en Firestore: crear documento básico
                 const usuarioBasico = {
                     uid: user.uid,
                     email: user.email,
@@ -75,27 +88,46 @@ document.addEventListener('DOMContentLoaded', () => {
                     rol: 'alumno'
                 };
                 localStorage.setItem('userData', JSON.stringify(usuarioBasico));
+                window.currentUserData = usuarioBasico;
+                
+                // Intentar crear el documento en Firestore para futuras veces
+                try {
+                    await db.collection('usuarios').doc(user.uid).set({
+                        nombre: usuarioBasico.nombre,
+                        email: usuarioBasico.email,
+                        rol: 'alumno',
+                        fechaRegistro: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                } catch (e) { console.warn('No se pudo crear el documento de usuario:', e); }
+
                 if (userNameDisplay) userNameDisplay.textContent = usuarioBasico.nombre;
                 if (userRolDisplay) userRolDisplay.textContent = 'Alumno';
-                aplicarModoSegunRol('alumno');
+                
+                if (typeof window.aplicarModoSegunRol === 'function') {
+                    window.aplicarModoSegunRol('alumno');
+                }
                 body.classList.remove('sin-sesion');
                 body.classList.add('modo-alumno');
-                actualizarBadgeModo('alumno');
 
-                window.currentUser = user;
-                window.currentUserData = usuarioBasico;
-
-                if (typeof configurarInterfazSegunRol === 'function') {
-                    configurarInterfazSegunRol();
+                if (typeof window.configurarInterfazSegunRol === 'function') {
+                    window.configurarInterfazSegunRol();
+                }
+                if (typeof window.initApp === 'function') {
+                    window.initApp();
                 }
             }
         } else {
+            // Usuario no logueado
             currentUser = null;
-            localStorage.removeItem('userData');
             window.currentUser = null;
             window.currentUserData = null;
+            localStorage.removeItem('userData');
             body.classList.add('sin-sesion');
             showLogin();
+            
+            // Opcional: limpiar la vista principal
+            const golpeContent = document.getElementById('golpeContent');
+            if (golpeContent) golpeContent.innerHTML = '<p style="padding:20px; text-align:center;">Iniciá sesión para comenzar a evaluar.</p>';
         }
     });
 
@@ -110,6 +142,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         try {
             await auth.signInWithEmailAndPassword(email, password);
+            // El resto se maneja en onAuthStateChanged
         } catch (error) {
             console.error('Error de login:', error);
             switch (error.code) {
@@ -126,7 +159,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const nombre = document.getElementById('regNombre').value.trim();
         const email = document.getElementById('regEmail').value.trim();
         const password = document.getElementById('regPassword').value;
-        const rol = 'alumno';
+        const rol = 'alumno';  // Siempre se registran como alumnos
 
         if (!nombre || !email || !password) {
             mostrarError('Por favor, completá todos los campos.');
@@ -146,6 +179,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 rol: rol,
                 fechaRegistro: firebase.firestore.FieldValue.serverTimestamp()
             });
+            // El onAuthStateChanged se encargará de cargar los datos
         } catch (error) {
             console.error('Error de registro:', error);
             switch (error.code) {
@@ -161,7 +195,6 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             await auth.signOut();
             localStorage.removeItem('userData');
-            currentUser = null;
             window.currentUser = null;
             window.currentUserData = null;
             // Limpiar caché del Service Worker si existe
@@ -169,7 +202,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const cacheNames = await caches.keys();
                 await Promise.all(cacheNames.map(name => caches.delete(name)));
             }
-            // Recargar con parámetro aleatorio para evitar caché
+            // Recargar la página para resetear toda la interfaz
             window.location.href = window.location.href.split('?')[0] + '?nocache=' + Date.now();
         } catch (error) {
             console.error('Error al cerrar sesión:', error);
@@ -196,23 +229,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (authError) authError.textContent = '';
     }
 
-    function aplicarModoSegunRol(rol) {
-        const body = document.body;
-        if (rol === 'profesor' || rol === 'fiscal') {
-            body.classList.remove('modo-alumno');
-            body.classList.add('modo-fiscal');
-        } else {
-            body.classList.remove('modo-fiscal');
-            body.classList.add('modo-alumno');
-        }
-    }
-
-    function actualizarBadgeModo(rol) {
-        if (modoBadge) {
-            modoBadge.textContent = rol === 'profesor' ? 'Modo Profesor' : rol === 'fiscal' ? 'Modo Fiscal' : 'Modo Alumno';
-        }
-    }
-
+    // Funciones auxiliares globales que puede usar app.js
     window.getUserData = () => {
         const data = localStorage.getItem('userData');
         return data ? JSON.parse(data) : null;
