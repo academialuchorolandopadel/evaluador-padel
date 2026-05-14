@@ -408,53 +408,162 @@ document.addEventListener('DOMContentLoaded', () => {
     return html;
   }
 
-  // ========== ALUMNOS ==========
-  const alumnosLista = document.getElementById('alumnosLista');
-  async function cargarAlumnos() {
-    if (!window.currentUser) { alumnosLista.innerHTML = '<p>Iniciá sesión para ver alumnos.</p>'; return; }
-    alumnosLista.innerHTML = '<p>Cargando...</p>';
-    const historial = await cargarEvaluacionesDesdeFirestore();
-    if (historial.length === 0) { alumnosLista.innerHTML = '<p>No hay alumnos registrados.</p>'; return; }
-    const alumnos = {};
-    historial.forEach(eva => { if (!alumnos[eva.jugador]) alumnos[eva.jugador] = []; alumnos[eva.jugador].push(eva); });
-    let html = '';
-    for (const [nombre, evaluaciones] of Object.entries(alumnos)) {
-      html += `<div class="alumno-card"><h3>${nombre}</h3><table><thead><tr><th>Golpe</th><th>Tipo</th><th>Fecha</th><th>Acciones</th></tr></thead><tbody>`;
-      evaluaciones.forEach(eva => {
-        const tipoBadge = eva.tipo === 'profesor' ? '🔍' : '👤';
-        html += `<tr><td>${eva.golpe}</td><td>${tipoBadge}</td><td>${eva.fecha}</td><td><button class="btn-secondary btn-chico generar-plan-alumno" data-id="${eva.firestoreId}">📋 Plan</button><button class="btn-secondary btn-chico eliminar-eva-alumno" data-id="${eva.firestoreId}">🗑️</button></td></tr>`;
-      });
-      html += `</tbody></table></div>`;
-    }
-    alumnosLista.innerHTML = html;
+// ========== ALUMNOS (para profesores: lista de alumnos vinculados) ==========
+const alumnosLista = document.getElementById('alumnosLista');
+
+async function cargarAlumnos() {
+  if (!window.currentUser) {
+    alumnosLista.innerHTML = '<p>Iniciá sesión para ver alumnos.</p>';
+    return;
   }
 
-  alumnosLista.addEventListener('click', async (e) => {
-    if (e.target.classList.contains('generar-plan-alumno')) {
-      const id = e.target.dataset.id;
-      const historial = window.evaluacionesCargadas || [];
-      const eva = historial.find(item => item.firestoreId === id);
-      if (eva) {
-        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-        document.querySelector('.tab[data-view="entrenamiento"]').classList.add('active');
-        views.forEach(v => v.classList.remove('active'));
-        document.getElementById('entrenamientoView').classList.add('active');
-        await cargarAlumnosEnSelect();
-        const options = alumnoSelect.options;
-        for (let i = 0; i < options.length; i++) {
-          if (options[i].textContent.includes(eva.jugador) && options[i].textContent.includes(eva.golpe)) {
-            alumnoSelect.selectedIndex = i; break;
-          }
-        }
-      }
-    } else if (e.target.classList.contains('eliminar-eva-alumno')) {
-      const id = e.target.dataset.id;
-      if (!confirm('¿Eliminar?')) return;
-      try { await db.collection('evaluaciones').doc(id).delete(); window.evaluacionesCargadas = null; cargarAlumnos(); }
-      catch (err) { alert('Error: ' + err.message); }
-    }
-  });
+  const esProfesor = (window.currentUserData?.rol === 'profesor' || window.currentUserData?.rol === 'fiscal');
 
+  if (!esProfesor) {
+    // Los alumnos normales no ven esta pestaña (debería estar oculta, pero por si acaso)
+    alumnosLista.innerHTML = '<p>No tenés permisos para ver esta sección.</p>';
+    return;
+  }
+
+  alumnosLista.innerHTML = '<p>Cargando lista de alumnos vinculados...</p>';
+
+  try {
+    // Obtener todas las vinculaciones donde este profesor es el que enseña
+    const vinculacionesSnap = await db.collection('vinculaciones')
+      .where('profesorUid', '==', window.currentUser.uid)
+      .get();
+
+    if (vinculacionesSnap.empty) {
+      alumnosLista.innerHTML = '<p>No tenés alumnos vinculados todavía. Usá la pestaña "Admin" para agregar alumnos.</p>';
+      return;
+    }
+
+    // Para cada vinculación, obtener los datos del alumno desde la colección 'usuarios'
+    let html = '';
+    for (const doc of vinculacionesSnap.docs) {
+      const vinculacion = doc.data();
+      const alumnoUid = vinculacion.alumnoUid;
+      const nombreVinculacion = vinculacion.alumnoNombre || 'Sin nombre';
+
+      // Obtener datos completos del alumno (opcional, para mostrar email)
+      let alumnoData = { email: 'No disponible', rol: 'alumno' };
+      try {
+        const alumnoDoc = await db.collection('usuarios').doc(alumnoUid).get();
+        if (alumnoDoc.exists) {
+          alumnoData = alumnoDoc.data();
+        }
+      } catch (err) {
+        console.warn('No se pudo obtener datos del alumno', alumnoUid, err);
+      }
+
+      html += `
+        <div class="alumno-card" data-uid="${alumnoUid}">
+          <h3>${nombreVinculacion}</h3>
+          <p>Email: ${alumnoData.email || 'No disponible'}</p>
+          <p>Rol: ${alumnoData.rol === 'profesor' ? 'Profesor' : 'Alumno'}</p>
+          <div class="alumno-acciones">
+            <button class="btn-secondary btn-chico ver-evaluaciones-alumno" data-uid="${alumnoUid}" data-nombre="${nombreVinculacion}">📋 Ver evaluaciones</button>
+            <button class="btn-secondary btn-chico ver-planificaciones-alumno" data-uid="${alumnoUid}" data-nombre="${nombreVinculacion}">📅 Planificaciones</button>
+          </div>
+          <div id="evaluaciones-${alumnoUid}" style="display:none; margin-top:12px;"></div>
+          <div id="planificaciones-${alumnoUid}" style="display:none; margin-top:12px;"></div>
+        </div>
+      `;
+    }
+
+    alumnosLista.innerHTML = html;
+
+    // Agregar eventos a los botones de cada alumno
+    document.querySelectorAll('.ver-evaluaciones-alumno').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        const uid = btn.dataset.uid;
+        const nombre = btn.dataset.nombre;
+        const container = document.getElementById(`evaluaciones-${uid}`);
+        if (container.style.display === 'none') {
+          container.style.display = 'block';
+          container.innerHTML = '<p>Cargando evaluaciones...</p>';
+          try {
+            const evaluacionesSnap = await db.collection('evaluaciones')
+              .where('uid', '==', uid)
+              .orderBy('fecha', 'desc')
+              .limit(20)
+              .get();
+            if (evaluacionesSnap.empty) {
+              container.innerHTML = '<p>Este alumno aún no tiene evaluaciones.</p>';
+            } else {
+              let evaHtml = '<h4>Evaluaciones recientes</h4><ul>';
+              evaluacionesSnap.forEach(doc => {
+                const eva = doc.data();
+                evaHtml += `<li><strong>${eva.golpe}</strong> - ${eva.fechaLocal || 'Sin fecha'} - Categoría promedio: ${calcularPromedioEvaluacion(eva.selecciones)}ª</li>`;
+              });
+              evaHtml += '</ul>';
+              container.innerHTML = evaHtml;
+            }
+          } catch (err) {
+            container.innerHTML = `<p>Error: ${err.message}</p>`;
+          }
+          btn.textContent = '🔼 Ocultar evaluaciones';
+        } else {
+          container.style.display = 'none';
+          btn.textContent = '📋 Ver evaluaciones';
+        }
+      });
+    });
+
+    document.querySelectorAll('.ver-planificaciones-alumno').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        const uid = btn.dataset.uid;
+        const nombre = btn.dataset.nombre;
+        const container = document.getElementById(`planificaciones-${uid}`);
+        if (container.style.display === 'none') {
+          container.style.display = 'block';
+          container.innerHTML = '<p>Cargando planificaciones...</p>';
+          try {
+            const planesSnap = await db.collection('planificaciones')
+              .where('alumnoUid', '==', uid)
+              .orderBy('fecha', 'desc')
+              .limit(10)
+              .get();
+            if (planesSnap.empty) {
+              container.innerHTML = '<p>No hay planificaciones para este alumno.</p>';
+            } else {
+              let planHtml = '<h4>Planificaciones asignadas</h4><ul>';
+              planesSnap.forEach(doc => {
+                const plan = doc.data();
+                planHtml += `<li><strong>${plan.golpe}</strong> - Objetivo ${plan.objetivo}ª - Estado: ${plan.estado || 'pendiente'}</li>`;
+              });
+              planHtml += '</ul>';
+              container.innerHTML = planHtml;
+            }
+          } catch (err) {
+            container.innerHTML = `<p>Error: ${err.message}</p>`;
+          }
+          btn.textContent = '🔼 Ocultar planificaciones';
+        } else {
+          container.style.display = 'none';
+          btn.textContent = '📅 Planificaciones';
+        }
+      });
+    });
+
+  } catch (err) {
+    console.error('Error cargando alumnos vinculados:', err);
+    alumnosLista.innerHTML = `<p>Error al cargar la lista: ${err.message}</p>`;
+  }
+}
+
+// Función auxiliar para calcular el promedio de una evaluación (útil en la vista)
+function calcularPromedioEvaluacion(selecciones) {
+  let total = 0;
+  let count = 0;
+  for (const par of Object.values(selecciones)) {
+    for (const cat of Object.values(par)) {
+      total += cat;
+      count++;
+    }
+  }
+  return count > 0 ? (total / count).toFixed(1) : 'N/A';
+}
   // ========== SEGUIMIENTO ==========
   const alumnoSelectSeg = document.getElementById('alumnoSelectSeg');
   const categoriaObjetivoSeg = document.getElementById('categoriaObjetivoSeg');
