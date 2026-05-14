@@ -1,4 +1,4 @@
-// ==================== APP.JS – VERSIÓN FIREBASE CORREGIDA + GRÁFICOS ====================
+// ==================== APP.JS – VERSIÓN COMPLETA (GRÁFICOS + FORTALEZAS) ====================
 document.addEventListener('DOMContentLoaded', () => {
 
   const mainNav            = document.getElementById('mainNav');
@@ -69,6 +69,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (view === 'nuevaPlanificacion')  cargarAlumnosParaPlanificacion().catch(console.error);
       if (view === 'admin')               cargarAdminUsuarios().catch(console.error);
       if (view === 'progreso')            cargarProgreso().catch(console.error);
+      if (view === 'fortalezas')          analizarFortalezasDebilidades().catch(console.error);
     }
   });
 
@@ -278,12 +279,6 @@ document.addEventListener('DOMContentLoaded', () => {
     } catch (err) { alert('Error al limpiar: ' + err.message); }
   });
 
-  // Evento para el botón de actualizar gráfico
-  const actualizarGraficoBtn = document.getElementById('actualizarGraficoBtn');
-  if (actualizarGraficoBtn) {
-    actualizarGraficoBtn.addEventListener('click', cargarProgreso);
-  }
-
   // ========== ENTRENAMIENTO ==========
   const alumnoSelect = document.getElementById('alumnoSelect');
   const categoriaObjetivo = document.getElementById('categoriaObjetivo');
@@ -360,12 +355,12 @@ document.addEventListener('DOMContentLoaded', () => {
     historial.forEach(eva => { if (!alumnos[eva.jugador]) alumnos[eva.jugador] = []; alumnos[eva.jugador].push(eva); });
     let html = '';
     for (const [nombre, evaluaciones] of Object.entries(alumnos)) {
-      html += `<div class="alumno-card"><h3>${nombre}</h3><tr><thead><tr><th>Golpe</th><th>Tipo</th><th>Fecha</th><th>Acciones</th></tr></thead><tbody>`;
+      html += `<div class="alumno-card"><h3>${nombre}</h3><table><thead><tr><th>Golpe</th><th>Tipo</th><th>Fecha</th><th>Acciones</th></tr></thead><tbody>`;
       evaluaciones.forEach(eva => {
         const tipoBadge = eva.tipo === 'profesor' ? '🔍' : '👤';
         html += `<tr><td>${eva.golpe}</td><td>${tipoBadge}</td><td>${eva.fecha}</td><td><button class="btn-secondary btn-chico generar-plan-alumno" data-id="${eva.firestoreId}">📋 Plan</button><button class="btn-secondary btn-chico eliminar-eva-alumno" data-id="${eva.firestoreId}">🗑️</button></td></tr>`;
       });
-      html += `</tbody>}</div>`;
+      html += `</tbody></table></div>`;
     }
     alumnosLista.innerHTML = html;
   }
@@ -1091,6 +1086,165 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+  // ========== FORTALEZAS Y DEBILIDADES ==========
+  async function analizarFortalezasDebilidades() {
+    const resultadoDiv = document.getElementById('fortalezasResultado');
+    if (!resultadoDiv) return;
+    
+    if (!window.currentUser) {
+      resultadoDiv.innerHTML = '<p style="color:red;">⚠️ Debés iniciar sesión para ver tu análisis.</p>';
+      return;
+    }
+    
+    resultadoDiv.innerHTML = '<p>Cargando tus evaluaciones...</p>';
+    
+    try {
+      const snapshot = await db.collection('evaluaciones')
+        .where('uid', '==', window.currentUser.uid)
+        .get();
+      
+      if (snapshot.empty) {
+        resultadoDiv.innerHTML = '<p>📭 No tenés evaluaciones guardadas. Completá algunas evaluaciones para obtener un análisis.</p>';
+        return;
+      }
+      
+      const evaluaciones = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+        fecha: doc.data().fechaLocal || new Date(doc.data().fecha?.toDate()).toLocaleDateString()
+      }));
+      
+      const golpesData = {};
+      for (const eva of evaluaciones) {
+        const golpe = eva.golpe;
+        if (!golpesData[golpe]) {
+          golpesData[golpe] = {
+            nombre: obtenerNombreGolpe(golpe),
+            evaluaciones: [],
+            sumaCategorias: 0,
+            cantidad: 0
+          };
+        }
+        
+        let sumaEva = 0;
+        let countEva = 0;
+        for (const par of Object.values(eva.selecciones)) {
+          for (const cat of Object.values(par)) {
+            sumaEva += cat;
+            countEva++;
+          }
+        }
+        const promedioEva = countEva > 0 ? sumaEva / countEva : 0;
+        
+        golpesData[golpe].evaluaciones.push({
+          fecha: eva.fecha,
+          promedio: promedioEva,
+          selecciones: eva.selecciones
+        });
+        golpesData[golpe].sumaCategorias += promedioEva;
+        golpesData[golpe].cantidad++;
+      }
+      
+      for (const golpe of Object.keys(golpesData)) {
+        golpesData[golpe].promedioGeneral = golpesData[golpe].sumaCategorias / golpesData[golpe].cantidad;
+      }
+      
+      const golpesOrdenados = Object.entries(golpesData).sort((a, b) => b[1].promedioGeneral - a[1].promedioGeneral);
+      
+      let html = `
+        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color:white; padding:20px; border-radius:16px; margin-bottom:20px;">
+          <h3 style="margin:0 0 10px 0;">📊 Resumen General</h3>
+          <p>Tenés <strong>${evaluaciones.length}</strong> evaluaciones registradas en <strong>${Object.keys(golpesData).length}</strong> golpes diferentes.</p>
+          <p>Tu promedio general ponderado es: <strong>${(golpesOrdenados.reduce((acc, [_, g]) => acc + g.promedioGeneral, 0) / golpesOrdenados.length).toFixed(1)}ª categoría</strong></p>
+        </div>
+      `;
+      
+      html += `<div style="background:#e8f5e9; padding:16px; border-radius:12px; margin-bottom:20px; border-left:5px solid #4caf50;">`;
+      html += `<h3 style="color:#2e7d32; margin-top:0;">✅ FORTALEZAS</h3>`;
+      const fortalezas = golpesOrdenados.slice(0, 2);
+      for (const [golpeId, data] of fortalezas) {
+        html += `<div style="margin-bottom:12px;">
+          <strong>🏆 ${data.nombre}</strong> - Promedio: <strong>${data.promedioGeneral.toFixed(1)}ª</strong>
+          <div style="background:#ddd; border-radius:10px; height:10px; margin-top:5px;">
+            <div style="background:#4caf50; width:${(data.promedioGeneral / 7) * 100}%; height:10px; border-radius:10px;"></div>
+          </div>
+          <p style="font-size:0.85rem; margin:5px 0 0 0;">${data.evaluaciones.length} evaluación(es) - Última: ${data.evaluaciones[data.evaluaciones.length-1]?.fecha || 'N/A'}</p>
+        </div>`;
+      }
+      html += `</div>`;
+      
+      html += `<div style="background:#ffebee; padding:16px; border-radius:12px; margin-bottom:20px; border-left:5px solid #f44336;">`;
+      html += `<h3 style="color:#c62828; margin-top:0;">⚠️ ÁREAS A MEJORAR</h3>`;
+      const debilidades = golpesOrdenados.slice(-2).reverse();
+      for (const [golpeId, data] of debilidades) {
+        html += `<div style="margin-bottom:12px;">
+          <strong>🎯 ${data.nombre}</strong> - Promedio: <strong>${data.promedioGeneral.toFixed(1)}ª</strong>
+          <div style="background:#ddd; border-radius:10px; height:10px; margin-top:5px;">
+            <div style="background:#f44336; width:${(data.promedioGeneral / 7) * 100}%; height:10px; border-radius:10px;"></div>
+          </div>
+          <p style="font-size:0.85rem; margin:5px 0 0 0;">${data.evaluaciones.length} evaluación(es) - Última: ${data.evaluaciones[data.evaluaciones.length-1]?.fecha || 'N/A'}</p>
+        </div>`;
+      }
+      html += `</div>`;
+      
+      html += `<details style="margin-top:20px;">
+        <summary style="cursor:pointer; font-weight:bold; padding:10px; background:#f5f5f5; border-radius:8px;">📋 Ver detalle completo por golpe</summary>
+        <div style="margin-top:16px;">
+          <table style="width:100%; border-collapse:collapse;">
+            <thead>
+              <tr style="background:#333; color:white;">
+                <th style="padding:8px; text-align:left;">Golpe</th>
+                <th style="padding:8px; text-align:center;">Evaluaciones</th>
+                <th style="padding:8px; text-align:center;">Promedio</th>
+                <th style="padding:8px; text-align:center;">Tendencia</th>
+               </tr>
+            </thead>
+            <tbody>`;
+      
+      for (const [golpeId, data] of golpesOrdenados) {
+        let tendencia = '⚪ Sin datos';
+        if (data.evaluaciones.length >= 2) {
+          const primera = data.evaluaciones[0].promedio;
+          const ultima = data.evaluaciones[data.evaluaciones.length-1].promedio;
+          if (ultima > primera) tendencia = '🟢 Mejorando';
+          else if (ultima < primera) tendencia = '🔴 Bajando';
+          else tendencia = '🟡 Estable';
+        } else if (data.evaluaciones.length === 1) {
+          tendencia = '🟡 Primera evaluación';
+        }
+        
+        html += `<tr style="border-bottom:1px solid #ddd;">
+          <td style="padding:8px;"><strong>${data.nombre}</strong></td>
+          <td style="padding:8px; text-align:center;">${data.evaluaciones.length}</td>
+          <td style="padding:8px; text-align:center;"><strong>${data.promedioGeneral.toFixed(1)}ª</strong></td>
+          <td style="padding:8px; text-align:center;">${tendencia}</td>
+         </tr>`;
+      }
+      
+      html += `</tbody>
+           </table>
+        </div>
+      </details>`;
+      
+      resultadoDiv.innerHTML = html;
+      
+    } catch (err) {
+      console.error('Error al analizar:', err);
+      resultadoDiv.innerHTML = `<p style="color:red;">❌ Error al analizar: ${err.message}</p>`;
+    }
+  }
+
+  // ========== EVENTOS DE BOTONES ADICIONALES ==========
+  const actualizarGraficoBtn = document.getElementById('actualizarGraficoBtn');
+  if (actualizarGraficoBtn) {
+    actualizarGraficoBtn.addEventListener('click', cargarProgreso);
+  }
+
+  const analizarFortalezasBtn = document.getElementById('analizarFortalezasBtn');
+  if (analizarFortalezasBtn) {
+    analizarFortalezasBtn.addEventListener('click', analizarFortalezasDebilidades);
+  }
+
   // ========== INICIALIZAR APLICACIÓN ==========
   window.renderizarGolpe = renderizarGolpe;
   
@@ -1107,6 +1261,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (view === 'nuevaPlanificacion') cargarAlumnosParaPlanificacion().catch(console.error);
         if (view === 'admin') cargarAdminUsuarios().catch(console.error);
         if (view === 'progreso') cargarProgreso().catch(console.error);
+        if (view === 'fortalezas') analizarFortalezasDebilidades().catch(console.error);
       }
     } else {
       if (golpeContent) golpeContent.innerHTML = '<p style="padding:20px; text-align:center;">Iniciá sesión para comenzar a evaluar.</p>';
