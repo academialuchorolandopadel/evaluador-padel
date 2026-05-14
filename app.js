@@ -1,4 +1,4 @@
-// ==================== APP.JS – VERSIÓN FIREBASE CORREGIDA (GLOBAL FUNCTIONS) ====================
+// ==================== APP.JS – VERSIÓN FIREBASE CORREGIDA + GRÁFICOS ====================
 document.addEventListener('DOMContentLoaded', () => {
 
   const mainNav            = document.getElementById('mainNav');
@@ -28,13 +28,12 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  // ========== CONFIGURAR INTERFAZ SEGÚN ROL (mostrar/ocultar pestañas) ==========
+  // ========== CONFIGURAR INTERFAZ SEGÚN ROL ==========
   function configurarInterfazSegunRol() {
     const userData = JSON.parse(localStorage.getItem('userData') || '{}');
     const rol = userData.rol || 'alumno';
     const esProfesorOFiscal = (rol === 'profesor' || rol === 'fiscal');
     
-    // Ocultar/mostrar pestañas que solo ven profesores
     const tabsProfesor = document.querySelectorAll('.solo-profesor');
     const tabsAlumno = document.querySelectorAll('.solo-alumno');
     
@@ -45,14 +44,12 @@ document.addEventListener('DOMContentLoaded', () => {
       tab.style.display = esProfesorOFiscal ? 'none' : '';
     });
     
-    // Adicional: mostrar/ocultar elementos específicos por ID
     const adminTab = document.querySelector('.tab[data-view="admin"]');
     const nuevaPlanificacionTab = document.querySelector('.tab[data-view="nuevaPlanificacion"]');
     if (adminTab) adminTab.style.display = esProfesorOFiscal ? '' : 'none';
     if (nuevaPlanificacionTab) nuevaPlanificacionTab.style.display = esProfesorOFiscal ? '' : 'none';
   }
 
-  // Exponer funciones globalmente para que auth-ui.js las pueda llamar
   window.aplicarModoSegunRol = aplicarModoSegunRol;
   window.configurarInterfazSegunRol = configurarInterfazSegunRol;
 
@@ -71,6 +68,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (view === 'planificaciones')     cargarPlanificacionesAlumno().catch(console.error);
       if (view === 'nuevaPlanificacion')  cargarAlumnosParaPlanificacion().catch(console.error);
       if (view === 'admin')               cargarAdminUsuarios().catch(console.error);
+      if (view === 'progreso')            cargarProgreso().catch(console.error);
     }
   });
 
@@ -280,6 +278,12 @@ document.addEventListener('DOMContentLoaded', () => {
     } catch (err) { alert('Error al limpiar: ' + err.message); }
   });
 
+  // Evento para el botón de actualizar gráfico
+  const actualizarGraficoBtn = document.getElementById('actualizarGraficoBtn');
+  if (actualizarGraficoBtn) {
+    actualizarGraficoBtn.addEventListener('click', cargarProgreso);
+  }
+
   // ========== ENTRENAMIENTO ==========
   const alumnoSelect = document.getElementById('alumnoSelect');
   const categoriaObjetivo = document.getElementById('categoriaObjetivo');
@@ -356,12 +360,12 @@ document.addEventListener('DOMContentLoaded', () => {
     historial.forEach(eva => { if (!alumnos[eva.jugador]) alumnos[eva.jugador] = []; alumnos[eva.jugador].push(eva); });
     let html = '';
     for (const [nombre, evaluaciones] of Object.entries(alumnos)) {
-      html += `<div class="alumno-card"><h3>${nombre}</h3><table><thead><tr><th>Golpe</th><th>Tipo</th><th>Fecha</th><th>Acciones</th></tr></thead><tbody>`;
+      html += `<div class="alumno-card"><h3>${nombre}</h3><tr><thead><tr><th>Golpe</th><th>Tipo</th><th>Fecha</th><th>Acciones</th></tr></thead><tbody>`;
       evaluaciones.forEach(eva => {
         const tipoBadge = eva.tipo === 'profesor' ? '🔍' : '👤';
         html += `<tr><td>${eva.golpe}</td><td>${tipoBadge}</td><td>${eva.fecha}</td><td><button class="btn-secondary btn-chico generar-plan-alumno" data-id="${eva.firestoreId}">📋 Plan</button><button class="btn-secondary btn-chico eliminar-eva-alumno" data-id="${eva.firestoreId}">🗑️</button></td></tr>`;
       });
-      html += `</tbody></table></div>`;
+      html += `</tbody>}</div>`;
     }
     alumnosLista.innerHTML = html;
   }
@@ -637,7 +641,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  // ========== PLANIFICACIONES ALUMNO/PROFESOR (CON ANOTACIONES) ==========
+  // ========== PLANIFICACIONES ALUMNO/PROFESOR ==========
   async function cargarPlanificacionesAlumno() {
     const container = document.getElementById('planificacionesAlumno');
     if (!container) return;
@@ -978,13 +982,121 @@ document.addEventListener('DOMContentLoaded', () => {
     } catch (err) { container.innerHTML = `<p>Error: ${err.message}</p>`; }
   }
 
-  // ========== INICIALIZAR APLICACIÓN (después de login) ==========
+  // ========== PROGRESO VISUAL (GRÁFICOS) ==========
+  let chartInstance = null;
+
+  async function cargarProgreso() {
+    if (!window.currentUser) return;
+    const golpe = document.getElementById('progresoGolpeSelect').value;
+    const metrica = document.getElementById('progresoMetricaSelect').value;
+    
+    const snapshot = await db.collection('evaluaciones')
+      .where('uid', '==', window.currentUser.uid)
+      .where('golpe', '==', golpe)
+      .orderBy('fecha', 'asc')
+      .get();
+    
+    if (snapshot.empty) {
+      document.getElementById('graficoEvolucion').style.display = 'none';
+      document.getElementById('noDatosProgreso').style.display = 'block';
+      return;
+    }
+    
+    document.getElementById('graficoEvolucion').style.display = 'block';
+    document.getElementById('noDatosProgreso').style.display = 'none';
+    
+    const evaluaciones = snapshot.docs.map(doc => ({
+      fecha: doc.data().fechaLocal || new Date(doc.data().fecha?.toDate()).toLocaleDateString(),
+      selecciones: doc.data().selecciones,
+      timestamp: doc.data().fecha?.toDate() || new Date()
+    }));
+    
+    const labels = evaluaciones.map(e => e.fecha);
+    
+    if (metrica === 'promedio') {
+      const promedios = evaluaciones.map(eva => {
+        let total = 0;
+        let count = 0;
+        for (const par of Object.values(eva.selecciones)) {
+          for (const cat of Object.values(par)) {
+            total += cat;
+            count++;
+          }
+        }
+        return count > 0 ? total / count : 0;
+      });
+      
+      if (chartInstance) chartInstance.destroy();
+      const ctx = document.getElementById('graficoEvolucion').getContext('2d');
+      chartInstance = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: labels,
+          datasets: [{
+            label: `Categoría promedio - ${obtenerNombreGolpe(golpe)}`,
+            data: promedios,
+            borderColor: '#f1c40f',
+            backgroundColor: 'rgba(241, 196, 15, 0.1)',
+            tension: 0.2,
+            fill: true
+          }]
+        },
+        options: {
+          responsive: true,
+          scales: { y: { min: 2, max: 7, title: { display: true, text: 'Categoría' } } },
+          plugins: { tooltip: { callbacks: { label: (ctx) => `${ctx.raw.toFixed(1)}ª categoría` } } }
+        }
+      });
+    } 
+    else if (metrica === 'cuantificadores') {
+      const golpeData = DATA.golpes[golpe];
+      if (!golpeData) return;
+      const cuantificadoresMap = new Map();
+      for (const par of Object.values(golpeData.pares)) {
+        for (const cuant of par.cuantificadores) {
+          cuantificadoresMap.set(cuant.id, cuant.nombre);
+        }
+      }
+      
+      const datasets = [];
+      for (let [cuantId, cuantNombre] of cuantificadoresMap.entries()) {
+        const datos = evaluaciones.map(eva => {
+          for (const par of Object.values(eva.selecciones)) {
+            if (par[cuantId] !== undefined) return par[cuantId];
+          }
+          return null;
+        }).filter(v => v !== null);
+        
+        if (datos.length >= 2) {
+          datasets.push({
+            label: cuantNombre,
+            data: datos,
+            borderColor: `hsl(${Math.random() * 360}, 70%, 50%)`,
+            tension: 0.2,
+            fill: false
+          });
+        }
+      }
+      
+      if (chartInstance) chartInstance.destroy();
+      const ctx = document.getElementById('graficoEvolucion').getContext('2d');
+      chartInstance = new Chart(ctx, {
+        type: 'line',
+        data: { labels: labels, datasets: datasets },
+        options: {
+          responsive: true,
+          scales: { y: { min: 2, max: 7, title: { display: true, text: 'Categoría' } } }
+        }
+      });
+    }
+  }
+
+  // ========== INICIALIZAR APLICACIÓN ==========
   window.renderizarGolpe = renderizarGolpe;
   
   window.initApp = function() {
     if (window.currentUser) {
       renderizarGolpe('smash');
-      // Opcional: refrescar la vista activa actual
       const activeTab = document.querySelector('#mainNav .tab.active');
       if (activeTab && activeTab.dataset.view) {
         const view = activeTab.dataset.view;
@@ -994,18 +1106,16 @@ document.addEventListener('DOMContentLoaded', () => {
         if (view === 'planificaciones') cargarPlanificacionesAlumno().catch(console.error);
         if (view === 'nuevaPlanificacion') cargarAlumnosParaPlanificacion().catch(console.error);
         if (view === 'admin') cargarAdminUsuarios().catch(console.error);
+        if (view === 'progreso') cargarProgreso().catch(console.error);
       }
     } else {
-      // No hay sesión: mostrar mensaje en el área de evaluación
       if (golpeContent) golpeContent.innerHTML = '<p style="padding:20px; text-align:center;">Iniciá sesión para comenzar a evaluar.</p>';
     }
   };
 
-  // Si ya hay usuario al cargar la página (por ejemplo, después de un refresh), inicializar
   if (window.currentUser) {
     window.initApp();
   } else {
-    // No hay usuario, mostrar mensaje
     if (golpeContent) golpeContent.innerHTML = '<p style="padding:20px; text-align:center;">Iniciá sesión para comenzar a evaluar.</p>';
   }
 });
