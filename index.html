@@ -13,6 +13,7 @@
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <script src="firebase-config.js"></script>
 
     <!-- PWA -->
@@ -70,6 +71,7 @@
             </div>
             <nav class="nav-tabs" id="mainNav">
                 <span class="tab active" data-view="evaluacion">Evaluación</span>
+                <span class="tab" data-view="progreso">📈 Progreso</span>
                 <span class="tab solo-alumno" data-view="planificaciones" style="display:none;">📋 Planificaciones</span>
                 <span class="tab solo-profesor" data-view="nuevaPlanificacion" style="display:none;">➕ Nueva Planif.</span>
                 <span class="tab solo-profesor" data-view="entrenamiento" style="display:none;">Entrenamiento</span>
@@ -144,6 +146,26 @@
             <div id="planGeneradoPreview" class="plan-content" style="margin-top:20px;"></div>
             <div id="planMensaje" style="margin-top:16px;"></div>
         </div>
+
+        <!-- Vista Progreso -->
+<div id="progresoView" class="view">
+    <h2>📈 Mi Evolución</h2>
+    <div class="progreso-filtros">
+        <select id="progresoGolpeSelect">
+            <option value="smash">🏐 Sobre Cabeza</option>
+            <option value="volea">🏸 Volea</option>
+            <option value="pegadaFondo">🎯 Pegada de Fondo</option>
+            <option value="salidaPared">🧱 Salida de Pared</option>
+        </select>
+        <select id="progresoMetricaSelect">
+            <option value="promedio">📊 Promedio general</option>
+            <option value="cuantificadores">📋 Por cuantificador</option>
+        </select>
+        <button id="actualizarGraficoBtn" class="btn-primary">Actualizar gráfico</button>
+    </div>
+    <canvas id="graficoEvolucion" width="400" height="300" style="max-width:100%; height:auto; background:#fff; border-radius:12px; margin-top:20px;"></canvas>
+    <div id="noDatosProgreso" style="display:none; text-align:center; padding:40px; color:#999;">No hay suficientes evaluaciones para mostrar evolución.</div>
+</div>
 
         <!-- Vista Entrenamiento -->
         <div id="entrenamientoView" class="view">
