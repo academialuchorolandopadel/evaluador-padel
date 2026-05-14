@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CATEGORIZACIÓN | Academia Lucho Rolando</title>
+    <title>CATEGORIZACIÓN Y PLANIFICACION| Academia Lucho Rolando</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700&family=Oswald:wght@500;700&display=swap" rel="stylesheet">
@@ -72,6 +72,7 @@
             <nav class="nav-tabs" id="mainNav">
                 <span class="tab active" data-view="evaluacion">Evaluación</span>
                 <span class="tab" data-view="progreso">📈 Progreso</span>
+                <span class="tab" data-view="fortalezas">💪 Fortalezas</span>
                 <span class="tab solo-alumno" data-view="planificaciones" style="display:none;">📋 Planificaciones</span>
                 <span class="tab solo-profesor" data-view="nuevaPlanificacion" style="display:none;">➕ Nueva Planif.</span>
                 <span class="tab solo-profesor" data-view="entrenamiento" style="display:none;">Entrenamiento</span>
@@ -148,24 +149,35 @@
         </div>
 
         <!-- Vista Progreso -->
-<div id="progresoView" class="view">
-    <h2>📈 Mi Evolución</h2>
-    <div class="progreso-filtros">
-        <select id="progresoGolpeSelect">
-            <option value="smash">🏐 Sobre Cabeza</option>
-            <option value="volea">🏸 Volea</option>
-            <option value="pegadaFondo">🎯 Pegada de Fondo</option>
-            <option value="salidaPared">🧱 Salida de Pared</option>
-        </select>
-        <select id="progresoMetricaSelect">
-            <option value="promedio">📊 Promedio general</option>
-            <option value="cuantificadores">📋 Por cuantificador</option>
-        </select>
-        <button id="actualizarGraficoBtn" class="btn-primary">Actualizar gráfico</button>
-    </div>
-    <canvas id="graficoEvolucion" width="400" height="300" style="max-width:100%; height:auto; background:#fff; border-radius:12px; margin-top:20px;"></canvas>
-    <div id="noDatosProgreso" style="display:none; text-align:center; padding:40px; color:#999;">No hay suficientes evaluaciones para mostrar evolución.</div>
-</div>
+        <div id="progresoView" class="view">
+            <h2>📈 Mi Evolución</h2>
+            <div class="progreso-filtros">
+                <select id="progresoGolpeSelect">
+                    <option value="smash">🏐 Sobre Cabeza</option>
+                    <option value="volea">🏸 Volea</option>
+                    <option value="pegadaFondo">🎯 Pegada de Fondo</option>
+                    <option value="salidaPared">🧱 Salida de Pared</option>
+                </select>
+                <select id="progresoMetricaSelect">
+                    <option value="promedio">📊 Promedio general</option>
+                    <option value="cuantificadores">📋 Por cuantificador</option>
+                </select>
+                <button id="actualizarGraficoBtn" class="btn-primary">Actualizar gráfico</button>
+            </div>
+            <canvas id="graficoEvolucion" width="400" height="300" style="max-width:100%; height:auto; background:#fff; border-radius:12px; margin-top:20px;"></canvas>
+            <div id="noDatosProgreso" style="display:none; text-align:center; padding:40px; color:#999;">No hay suficientes evaluaciones para mostrar evolución.</div>
+        </div>
+
+        <!-- Vista Fortalezas y Debilidades (NUEVA) -->
+        <div id="fortalezasView" class="view">
+            <h2>💪 Análisis de Fortalezas y Debilidades</h2>
+            <div class="fortalezas-filtros">
+                <button id="analizarFortalezasBtn" class="btn-primary">🔍 Analizar mi rendimiento</button>
+            </div>
+            <div id="fortalezasResultado" style="margin-top:24px;">
+                <p style="color:#888;">Presioná "Analizar" para ver un informe personalizado basado en tus evaluaciones.</p>
+            </div>
+        </div>
 
         <!-- Vista Entrenamiento -->
         <div id="entrenamientoView" class="view">
