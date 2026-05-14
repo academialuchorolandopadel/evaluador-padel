@@ -1,4 +1,4 @@
-// ==================== APP.JS – VERSIÓN FIREBASE COMPLETA (CORREGIDA FINAL) ====================
+// ==================== APP.JS – VERSIÓN FIREBASE CORREGIDA (GLOBAL FUNCTIONS) ====================
 document.addEventListener('DOMContentLoaded', () => {
 
   const mainNav            = document.getElementById('mainNav');
@@ -15,9 +15,7 @@ document.addEventListener('DOMContentLoaded', () => {
   let planGeneradoHTML = '';
 
   // ========== MODO ALUMNO/PROFESOR/FISCAL ==========
-  function aplicarModoSegunRol() {
-    const userData = JSON.parse(localStorage.getItem('userData') || '{}');
-    const rol = userData.rol || 'alumno';
+  function aplicarModoSegunRol(rol) {
     const modoBadge = document.getElementById('modoBadge');
     if (rol === 'profesor' || rol === 'fiscal') {
       body.classList.remove('modo-alumno');
@@ -29,23 +27,34 @@ document.addEventListener('DOMContentLoaded', () => {
       if (modoBadge) modoBadge.textContent = 'Modo Alumno';
     }
   }
-  aplicarModoSegunRol();
 
-  // ========== CONFIGURAR INTERFAZ SEGÚN ROL ==========
+  // ========== CONFIGURAR INTERFAZ SEGÚN ROL (mostrar/ocultar pestañas) ==========
   function configurarInterfazSegunRol() {
     const userData = JSON.parse(localStorage.getItem('userData') || '{}');
     const rol = userData.rol || 'alumno';
+    const esProfesorOFiscal = (rol === 'profesor' || rol === 'fiscal');
+    
+    // Ocultar/mostrar pestañas que solo ven profesores
     const tabsProfesor = document.querySelectorAll('.solo-profesor');
     const tabsAlumno = document.querySelectorAll('.solo-alumno');
-    if (rol === 'profesor' || rol === 'fiscal') {
-      tabsProfesor.forEach(tab => tab.style.display = '');
-      tabsAlumno.forEach(tab => tab.style.display = 'none');
-    } else {
-      tabsProfesor.forEach(tab => tab.style.display = 'none');
-      tabsAlumno.forEach(tab => tab.style.display = '');
-    }
+    
+    tabsProfesor.forEach(tab => {
+      tab.style.display = esProfesorOFiscal ? '' : 'none';
+    });
+    tabsAlumno.forEach(tab => {
+      tab.style.display = esProfesorOFiscal ? 'none' : '';
+    });
+    
+    // Adicional: mostrar/ocultar elementos específicos por ID
+    const adminTab = document.querySelector('.tab[data-view="admin"]');
+    const nuevaPlanificacionTab = document.querySelector('.tab[data-view="nuevaPlanificacion"]');
+    if (adminTab) adminTab.style.display = esProfesorOFiscal ? '' : 'none';
+    if (nuevaPlanificacionTab) nuevaPlanificacionTab.style.display = esProfesorOFiscal ? '' : 'none';
   }
-  configurarInterfazSegunRol();
+
+  // Exponer funciones globalmente para que auth-ui.js las pueda llamar
+  window.aplicarModoSegunRol = aplicarModoSegunRol;
+  window.configurarInterfazSegunRol = configurarInterfazSegunRol;
 
   // ========== NAVEGACIÓN ==========
   mainNav.addEventListener('click', (e) => {
@@ -204,7 +213,8 @@ document.addEventListener('DOMContentLoaded', () => {
       evaluadorNombre: window.currentUserData?.nombre || '',
       tipo: (window.currentUserData?.rol === 'profesor' || window.currentUserData?.rol === 'fiscal') ? 'profesor' : 'autoevaluacion',
       jugador: nombre, golpe: golpeActual, selecciones: evaluacionesCache,
-      fecha: firebase.firestore.FieldValue.serverTimestamp(), fechaLocal: new Date().toLocaleString()
+      fecha: window.firebase.firestore.FieldValue.serverTimestamp(),
+      fechaLocal: new Date().toLocaleString()
     };
     try {
       await db.collection('evaluaciones').add(evaluacion);
@@ -215,6 +225,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // ========== HISTORIAL ==========
   async function cargarHistorial() {
+    if (!window.currentUser) { historialLista.innerHTML = '<p>Iniciá sesión para ver tu historial.</p>'; return; }
     historialLista.innerHTML = '<p>Cargando evaluaciones...</p>';
     const historial = await cargarEvaluacionesDesdeFirestore(true);
     historialLista.innerHTML = '';
@@ -277,6 +288,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const planEntrenamiento = document.getElementById('planEntrenamiento');
 
   async function cargarAlumnosEnSelect() {
+    if (!window.currentUser) return;
     const historial = await cargarEvaluacionesDesdeFirestore();
     alumnoSelect.innerHTML = '<option value="">-- Seleccionar alumno --</option>';
     historial.forEach((eva, idx) => {
@@ -336,6 +348,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // ========== ALUMNOS ==========
   const alumnosLista = document.getElementById('alumnosLista');
   async function cargarAlumnos() {
+    if (!window.currentUser) { alumnosLista.innerHTML = '<p>Iniciá sesión para ver alumnos.</p>'; return; }
     alumnosLista.innerHTML = '<p>Cargando...</p>';
     const historial = await cargarEvaluacionesDesdeFirestore();
     if (historial.length === 0) { alumnosLista.innerHTML = '<p>No hay alumnos registrados.</p>'; return; }
@@ -389,6 +402,7 @@ document.addEventListener('DOMContentLoaded', () => {
   let ejerciciosCompletados = [];
 
   async function cargarAlumnosSeguimiento() {
+    if (!window.currentUser) return;
     const historial = await cargarEvaluacionesDesdeFirestore();
     alumnoSelectSeg.innerHTML = '<option value="">-- Seleccionar --</option>';
     historial.forEach((eva, idx) => {
@@ -463,7 +477,6 @@ document.addEventListener('DOMContentLoaded', () => {
     cargarHistorialSesiones().catch(console.error);
   });
 
-  // Delegación para botones corregir (siempre funciona aunque se recargue el plan)
   sesionContent.addEventListener('click', (e) => {
     if (e.target.classList.contains('corregir-ejercicio')) {
       const idx = parseInt(e.target.dataset.index);
@@ -522,7 +535,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     const sesionParaGuardar = {
       uid: window.currentUser.uid,
-      fecha: firebase.firestore.FieldValue.serverTimestamp(),
+      fecha: window.firebase.firestore.FieldValue.serverTimestamp(),
       fechaLocal: new Date().toLocaleString(),
       jugador: planSesion.jugador, golpe: planSesion.golpe, objetivo: planSesion.objetivo,
       ejercicios: planSesion.ejercicios.map(ej => ({
@@ -628,8 +641,8 @@ document.addEventListener('DOMContentLoaded', () => {
   async function cargarPlanificacionesAlumno() {
     const container = document.getElementById('planificacionesAlumno');
     if (!container) return;
-    container.innerHTML = '<p>Cargando planificaciones...</p>';
     if (!window.currentUser) { container.innerHTML = '<p>Debés iniciar sesión.</p>'; return; }
+    container.innerHTML = '<p>Cargando planificaciones...</p>';
     try {
       const userData = JSON.parse(localStorage.getItem('userData') || '{}');
       const rol = userData.rol || 'alumno';
@@ -673,10 +686,10 @@ document.addEventListener('DOMContentLoaded', () => {
             <div id="anotaciones-lista-${planId}" style="margin-bottom:12px;">
               ${anotaciones.length === 0 ? '<p style="color:#888;">No hay anotaciones todavía.</p>' : 
                 anotaciones.map((a, i) => `
-                  <div style="background:white; padding:8px; border-radius:6px; margin-bottom:6px; border-left:3px solid var(--dorado);">
+                  <div style="background:white; padding:8px; border-radius:6px; margin-bottom:6px; border-left:3px solid var(--dorado, #ffd700);">
                     <strong>${a.autor || 'Alumno'}:</strong> ${a.texto}
                     <div style="font-size:0.75rem; color:#999;">${a.fecha || ''}</div>
-                    ${(rol === 'profesor' || rol === 'fiscal') ? `<button class="btn-chico eliminar-anotacion-btn" data-planid="${planId}" data-index="${i}" style="margin-top:4px; background:var(--rojo); color:white; border:none; padding:2px 8px; border-radius:4px; cursor:pointer;">🗑️ Eliminar</button>` : ''}
+                    ${(rol === 'profesor' || rol === 'fiscal') ? `<button class="btn-chico eliminar-anotacion-btn" data-planid="${planId}" data-index="${i}" style="margin-top:4px; background:#e74c3c; color:white; border:none; padding:2px 8px; border-radius:4px; cursor:pointer;">🗑️ Eliminar</button>` : ''}
                   </div>
                 `).join('')
               }
@@ -802,7 +815,7 @@ document.addEventListener('DOMContentLoaded', () => {
     return nombres[golpeId] || golpeId;
   }
 
-  // ========== NUEVA PLANIFICACIÓN (carga desde usuarios) ==========
+  // ========== NUEVA PLANIFICACIÓN ==========
   const alumnoPlanSelect = document.getElementById('alumnoPlanSelect');
   const golpePlanSelect = document.getElementById('golpePlanSelect');
   const categoriaObjetivoPlan = document.getElementById('categoriaObjetivoPlan');
@@ -812,6 +825,7 @@ document.addEventListener('DOMContentLoaded', () => {
   let planificacionGenerada = null;
 
   async function cargarAlumnosParaPlanificacion() {
+    if (!window.currentUser) return;
     alumnoPlanSelect.innerHTML = '<option value="">-- Seleccionar alumno --</option>';
     try {
       const snapshot = await db.collection('usuarios').get();
@@ -843,7 +857,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const historial = await cargarEvaluacionesDesdeFirestore(true);
     const evaluacionesAlumno = historial.filter(eva => eva.uid === alumnoUid && eva.golpe === golpe);
     if (evaluacionesAlumno.length === 0) {
-      planMensaje.innerHTML = '<p style="color:var(--rojo);">⚠️ No hay evaluaciones de este alumno para este golpe.</p>';
+      planMensaje.innerHTML = '<p style="color:var(--rojo, red);">⚠️ No hay evaluaciones de este alumno para este golpe.</p>';
       return;
     }
     const evaluacion = evaluacionesAlumno[0];
@@ -859,7 +873,7 @@ document.addEventListener('DOMContentLoaded', () => {
           objetivo: objetivo,
           contenidoHTML: planificacionGenerada,
           ejercicios: extraerEjerciciosDePlan(evaluacion, objetivo),
-          fecha: firebase.firestore.FieldValue.serverTimestamp(),
+          fecha: window.firebase.firestore.FieldValue.serverTimestamp(),
           fechaLocal: new Date().toLocaleString(),
           estado: 'pendiente',
           progreso: 0
@@ -896,6 +910,7 @@ document.addEventListener('DOMContentLoaded', () => {
   async function cargarAdminUsuarios() {
     const container = document.getElementById('adminUsuariosLista');
     if (!container) return;
+    if (!window.currentUser) { container.innerHTML = '<p>Debés iniciar sesión como profesor para administrar usuarios.</p>'; return; }
     container.innerHTML = '<p>Cargando usuarios...</p>';
     try {
       const snapshot = await db.collection('usuarios').get();
@@ -933,7 +948,7 @@ document.addEventListener('DOMContentLoaded', () => {
             await db.collection('vinculaciones').add({
               profesorUid: window.currentUser.uid, alumnoUid: btn.dataset.uid,
               alumnoNombre: btn.dataset.nombre,
-              fecha: firebase.firestore.FieldValue.serverTimestamp()
+              fecha: window.firebase.firestore.FieldValue.serverTimestamp()
             });
             alert('✅ Alumno agregado a tu lista.');
             cargarAdminUsuarios();
@@ -963,6 +978,34 @@ document.addEventListener('DOMContentLoaded', () => {
     } catch (err) { container.innerHTML = `<p>Error: ${err.message}</p>`; }
   }
 
-  // ========== INICIALIZAR ==========
-  renderizarGolpe('smash');
+  // ========== INICIALIZAR APLICACIÓN (después de login) ==========
+  window.renderizarGolpe = renderizarGolpe;
+  
+  window.initApp = function() {
+    if (window.currentUser) {
+      renderizarGolpe('smash');
+      // Opcional: refrescar la vista activa actual
+      const activeTab = document.querySelector('#mainNav .tab.active');
+      if (activeTab && activeTab.dataset.view) {
+        const view = activeTab.dataset.view;
+        if (view === 'historial') cargarHistorial().catch(console.error);
+        if (view === 'alumnos') cargarAlumnos().catch(console.error);
+        if (view === 'seguimiento') cargarAlumnosSeguimiento().catch(console.error);
+        if (view === 'planificaciones') cargarPlanificacionesAlumno().catch(console.error);
+        if (view === 'nuevaPlanificacion') cargarAlumnosParaPlanificacion().catch(console.error);
+        if (view === 'admin') cargarAdminUsuarios().catch(console.error);
+      }
+    } else {
+      // No hay sesión: mostrar mensaje en el área de evaluación
+      if (golpeContent) golpeContent.innerHTML = '<p style="padding:20px; text-align:center;">Iniciá sesión para comenzar a evaluar.</p>';
+    }
+  };
+
+  // Si ya hay usuario al cargar la página (por ejemplo, después de un refresh), inicializar
+  if (window.currentUser) {
+    window.initApp();
+  } else {
+    // No hay usuario, mostrar mensaje
+    if (golpeContent) golpeContent.innerHTML = '<p style="padding:20px; text-align:center;">Iniciá sesión para comenzar a evaluar.</p>';
+  }
 });
