@@ -2,8 +2,8 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CATEGORIZACIÓN | Academia Lucho Rolando</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Categorización y Planificación | Academia Lucho Rolando</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700&family=Oswald:wght@500;700&display=swap" rel="stylesheet">
@@ -20,8 +20,8 @@
     <link rel="manifest" href="manifest.json">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="CATEGORIZACIÓN">
-    <link rel="apple-touch-icon" href="1000001630.png">
+    <meta name="apple-mobile-web-app-title" content="Cat&Plan">
+    <link rel="apple-touch-icon" href="LRSolo.png">
     <meta name="theme-color" content="#003366">
 </head>
 <body class="modo-alumno sin-sesion">
@@ -30,8 +30,8 @@
     <div id="authOverlay">
         <div class="auth-card">
             <div class="auth-header">
-                <img src="1000001630.png" alt="Logo" class="auth-logo">
-                <h2>CATEGORIZACIÓN</h2>
+                <img src="LRAlto.png" alt="Logo Academia" class="auth-logo">
+                <h2>Categorización y Planificación</h2>
                 <p class="auth-subtitle">Sistema Academia Lucho Rolando</p>
             </div>
             <div id="loginForm" class="auth-form">
@@ -56,9 +56,9 @@
     <!-- HEADER -->
     <header class="app-header">
         <div class="header-brand">
-            <img src="1000001630.png" alt="Logo Academia Lucho Rolando" class="logo-img">
+            <img src="LRLargo.png" alt="Logo Academia Lucho Rolando" class="logo-img">
             <div class="header-titles">
-                <h1>CATEGORIZACIÓN</h1>
+                <h1>Categorización y Planificación</h1>
                 <div class="subtitle">Sistema Academia Lucho Rolando</div>
             </div>
         </div>
@@ -87,8 +87,7 @@
 
     <!-- CONTENEDOR PRINCIPAL -->
     <main class="container" id="appContainer">
-
-        <!-- Vista Evaluación -->
+        <!-- Vista Evaluación (sin cambios) -->
         <div id="evaluacionView" class="view active">
             <div class="evaluacion-layout">
                 <aside class="golpes-sidebar">
@@ -236,23 +235,6 @@
         <div id="adminView" class="view">
             <h2>👥 Administración de Usuarios</h2>
             <p>Gestioná los roles y alumnos de tu academia.</p>
-            <div class="panel-control" style="max-width:500px; margin-bottom:24px;">
-                <h3>➕ Crear Nuevo Alumno</h3>
-                <div class="form-group">
-                    <label for="nuevoAlumnoNombre">Nombre completo</label>
-                    <input type="text" id="nuevoAlumnoNombre" class="auth-input" placeholder="Nombre del alumno">
-                </div>
-                <div class="form-group">
-                    <label for="nuevoAlumnoEmail">Email</label>
-                    <input type="email" id="nuevoAlumnoEmail" class="auth-input" placeholder="Email del alumno">
-                </div>
-                <div class="form-group">
-                    <label for="nuevoAlumnoPassword">Contraseña inicial</label>
-                    <input type="password" id="nuevoAlumnoPassword" class="auth-input" placeholder="Mínimo 6 caracteres">
-                </div>
-                <button id="crearAlumnoBtn" class="btn-primary">👤 Crear Alumno</button>
-                <div id="crearAlumnoMensaje" style="margin-top:12px;"></div>
-            </div>
             <div id="adminUsuariosLista" class="alumnos-lista">
                 <p>Cargando usuarios...</p>
             </div>
@@ -282,7 +264,8 @@
     </main>
 
     <footer class="app-footer">
-        <p>Sistema de Categorización – Academia Lucho Rolando</p>
+        <img src="LRSolo.png" alt="Logo" class="footer-logo" style="height:30px; margin-right:10px;">
+        <p>Sistema de Categorización y Planificación – Academia Lucho Rolando</p>
     </footer>
 
     <script src="data.js"></script>
@@ -290,24 +273,11 @@
     <script src="auth-ui.js"></script>
     <script src="app.js"></script>
 
-    <!-- Service Worker actualizado (detección de nueva versión) -->
     <script>
         if ('serviceWorker' in navigator && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('sw.js')
-                    .then(registration => {
-                        console.log('SW registrado:', registration.scope);
-                        registration.addEventListener('updatefound', () => {
-                            const newWorker = registration.installing;
-                            newWorker.addEventListener('statechange', () => {
-                                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                                    if (confirm('Hay una nueva versión disponible. ¿Actualizar ahora?')) {
-                                        window.location.reload();
-                                    }
-                                }
-                            });
-                        });
-                    })
+                    .then(r => console.log('SW registrado:', r.scope))
                     .catch(e => console.warn('SW no disponible:', e.message));
             });
         }
