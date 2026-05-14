@@ -99,7 +99,6 @@
                         <li data-golpe="pegadaFondo">🎯 Pegada de Fondo</li>
                         <li data-golpe="salidaPared">🧱 Salida de Pared</li>
                     </ul>
-                    <!-- CAMPO JUGADOR (se oculta/muestra según rol con CSS/JS) -->
                     <div class="jugador-info" id="jugadorInfoDiv">
                         <label id="jugadorLabel">Jugador</label>
                         <input type="text" id="playerName" placeholder="Nombre (opcional)">
@@ -238,22 +237,22 @@
             <h2>👥 Administración de Usuarios</h2>
             <p>Gestioná los roles y alumnos de tu academia.</p>
             <div class="panel-control" style="max-width:500px; margin-bottom:24px;">
-    <h3>➕ Crear Nuevo Alumno</h3>
-    <div class="form-group">
-        <label for="nuevoAlumnoNombre">Nombre completo</label>
-        <input type="text" id="nuevoAlumnoNombre" class="auth-input" placeholder="Nombre del alumno">
-    </div>
-    <div class="form-group">
-        <label for="nuevoAlumnoEmail">Email</label>
-        <input type="email" id="nuevoAlumnoEmail" class="auth-input" placeholder="Email del alumno">
-    </div>
-    <div class="form-group">
-        <label for="nuevoAlumnoPassword">Contraseña inicial</label>
-        <input type="password" id="nuevoAlumnoPassword" class="auth-input" placeholder="Mínimo 6 caracteres">
-    </div>
-    <button id="crearAlumnoBtn" class="btn-primary">👤 Crear Alumno</button>
-    <div id="crearAlumnoMensaje" style="margin-top:12px;"></div>
-</div>
+                <h3>➕ Crear Nuevo Alumno</h3>
+                <div class="form-group">
+                    <label for="nuevoAlumnoNombre">Nombre completo</label>
+                    <input type="text" id="nuevoAlumnoNombre" class="auth-input" placeholder="Nombre del alumno">
+                </div>
+                <div class="form-group">
+                    <label for="nuevoAlumnoEmail">Email</label>
+                    <input type="email" id="nuevoAlumnoEmail" class="auth-input" placeholder="Email del alumno">
+                </div>
+                <div class="form-group">
+                    <label for="nuevoAlumnoPassword">Contraseña inicial</label>
+                    <input type="password" id="nuevoAlumnoPassword" class="auth-input" placeholder="Mínimo 6 caracteres">
+                </div>
+                <button id="crearAlumnoBtn" class="btn-primary">👤 Crear Alumno</button>
+                <div id="crearAlumnoMensaje" style="margin-top:12px;"></div>
+            </div>
             <div id="adminUsuariosLista" class="alumnos-lista">
                 <p>Cargando usuarios...</p>
             </div>
@@ -291,11 +290,24 @@
     <script src="auth-ui.js"></script>
     <script src="app.js"></script>
 
+    <!-- Service Worker actualizado (detección de nueva versión) -->
     <script>
         if ('serviceWorker' in navigator && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('sw.js')
-                    .then(r => console.log('SW registrado:', r.scope))
+                    .then(registration => {
+                        console.log('SW registrado:', registration.scope);
+                        registration.addEventListener('updatefound', () => {
+                            const newWorker = registration.installing;
+                            newWorker.addEventListener('statechange', () => {
+                                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                                    if (confirm('Hay una nueva versión disponible. ¿Actualizar ahora?')) {
+                                        window.location.reload();
+                                    }
+                                }
+                            });
+                        });
+                    })
                     .catch(e => console.warn('SW no disponible:', e.message));
             });
         }
