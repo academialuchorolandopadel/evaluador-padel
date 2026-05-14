@@ -235,6 +235,23 @@
         <div id="adminView" class="view">
             <h2>👥 Administración de Usuarios</h2>
             <p>Gestioná los roles y alumnos de tu academia.</p>
+            <div class="panel-control" style="max-width:500px; margin-bottom:24px;">
+    <h3>➕ Crear Nuevo Alumno</h3>
+    <div class="form-group">
+        <label for="nuevoAlumnoNombre">Nombre completo</label>
+        <input type="text" id="nuevoAlumnoNombre" class="auth-input" placeholder="Nombre del alumno">
+    </div>
+    <div class="form-group">
+        <label for="nuevoAlumnoEmail">Email</label>
+        <input type="email" id="nuevoAlumnoEmail" class="auth-input" placeholder="Email del alumno">
+    </div>
+    <div class="form-group">
+        <label for="nuevoAlumnoPassword">Contraseña inicial</label>
+        <input type="password" id="nuevoAlumnoPassword" class="auth-input" placeholder="Mínimo 6 caracteres">
+    </div>
+    <button id="crearAlumnoBtn" class="btn-primary">👤 Crear Alumno</button>
+    <div id="crearAlumnoMensaje" style="margin-top:12px;"></div>
+</div>
             <div id="adminUsuariosLista" class="alumnos-lista">
                 <p>Cargando usuarios...</p>
             </div>
