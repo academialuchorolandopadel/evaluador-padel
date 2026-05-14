@@ -1157,6 +1157,75 @@ function calcularPromedioEvaluacion(selecciones) {
       });
     } catch (err) { container.innerHTML = `<p>Error: ${err.message}</p>`; }
   }
+  // ========== CREAR ALUMNO DESDE ADMIN ==========
+const nuevoAlumnoNombre = document.getElementById('nuevoAlumnoNombre');
+const nuevoAlumnoEmail = document.getElementById('nuevoAlumnoEmail');
+const nuevoAlumnoPassword = document.getElementById('nuevoAlumnoPassword');
+const crearAlumnoBtn = document.getElementById('crearAlumnoBtn');
+const crearAlumnoMensaje = document.getElementById('crearAlumnoMensaje');
+
+if (crearAlumnoBtn) {
+    crearAlumnoBtn.addEventListener('click', async () => {
+        const nombre = nuevoAlumnoNombre.value.trim();
+        const email = nuevoAlumnoEmail.value.trim();
+        const password = nuevoAlumnoPassword.value;
+
+        if (!nombre || !email || !password) {
+            crearAlumnoMensaje.innerHTML = '<p style="color:var(--rojo);">Completá todos los campos.</p>';
+            return;
+        }
+        if (password.length < 6) {
+            crearAlumnoMensaje.innerHTML = '<p style="color:var(--rojo);">La contraseña debe tener al menos 6 caracteres.</p>';
+            return;
+        }
+
+        try {
+            // 1. Crear usuario en Firebase Auth
+            const userCredential = await firebase.auth().createUserWithEmailAndPassword(email, password);
+            const user = userCredential.user;
+
+            // 2. Guardar datos en Firestore
+            await db.collection('usuarios').doc(user.uid).set({
+                nombre: nombre,
+                email: email,
+                rol: 'alumno',
+                fechaRegistro: firebase.firestore.FieldValue.serverTimestamp()
+            });
+
+            // 3. Crear vinculación automática con el profesor actual
+            await db.collection('vinculaciones').add({
+                profesorUid: window.currentUser.uid,
+                alumnoUid: user.uid,
+                alumnoNombre: nombre,
+                fecha: firebase.firestore.FieldValue.serverTimestamp()
+            });
+
+            // 4. Limpiar formulario y mostrar éxito
+            nuevoAlumnoNombre.value = '';
+            nuevoAlumnoEmail.value = '';
+            nuevoAlumnoPassword.value = '';
+            crearAlumnoMensaje.innerHTML = '<p style="color:green;">✅ Alumno creado correctamente. Ya podés evaluarlo y planificar.</p>';
+
+            // Recargar lista de usuarios
+            cargarAdminUsuarios();
+
+            // Cerrar sesión del alumno recién creado (porque createUserWithEmailAndPassword inicia sesión automáticamente)
+            await firebase.auth().signOut();
+            // Volver a iniciar sesión con el profesor (si hay sesión guardada)
+            const profData = JSON.parse(localStorage.getItem('userData') || '{}');
+            if (profData.email) {
+                await firebase.auth().signInWithEmailAndPassword(profData.email, prompt('Para continuar, ingresá tu contraseña de profesor:'));
+            }
+        } catch (error) {
+            console.error('Error al crear alumno:', error);
+            if (error.code === 'auth/email-already-in-use') {
+                crearAlumnoMensaje.innerHTML = '<p style="color:var(--rojo);">Ya existe un usuario con ese email.</p>';
+            } else {
+                crearAlumnoMensaje.innerHTML = `<p style="color:var(--rojo);">Error: ${error.message}</p>`;
+            }
+        }
+    });
+}
 
   // ========== PROGRESO VISUAL (GRÁFICOS) ==========
   let chartInstance = null;
