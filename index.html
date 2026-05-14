@@ -2,81 +2,95 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>Evaluador de Pádel FAP</title>
-    <link rel="manifest" href="manifest.json">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CATEGORIZACIÓN | Academia Lucho Rolando</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700&family=Oswald:wght@500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
+
     <!-- Firebase SDKs -->
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
-    <!-- Chart.js para gráficos -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-    <!-- Archivos de la app -->
     <script src="firebase-config.js"></script>
-    <script src="data.js"></script>
-    <script src="ejercicios.js"></script>
-    <script src="app.js"></script>
-    <script src="auth-ui.js"></script>
-</head>
-<body class="sin-sesion">
 
-    <!-- Overlay de autenticación (se muestra cuando no hay sesión) -->
-    <div id="authOverlay" class="auth-overlay">
+    <!-- PWA -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="CATEGORIZACIÓN">
+    <link rel="apple-touch-icon" href="1000001630.png">
+    <meta name="theme-color" content="#003366">
+</head>
+<body class="modo-alumno sin-sesion">
+
+    <!-- OVERLAY DE AUTENTICACIÓN -->
+    <div id="authOverlay">
         <div class="auth-card">
-            <h2>🏸 Evaluador de Pádel</h2>
+            <div class="auth-header">
+                <img src="1000001630.png" alt="Logo" class="auth-logo">
+                <h2>CATEGORIZACIÓN</h2>
+                <p class="auth-subtitle">Sistema Academia Lucho Rolando</p>
+            </div>
             <div id="loginForm" class="auth-form">
-                <input type="email" id="loginEmail" placeholder="Email" class="auth-input">
-                <input type="password" id="loginPassword" placeholder="Contraseña" class="auth-input">
-                <button id="btnLogin" class="btn-primary">Iniciar sesión</button>
-                <p>¿No tenés cuenta? <a href="#" id="btnShowRegister">Registrate</a></p>
+                <h3>Iniciar Sesión</h3>
+                <input type="email" id="loginEmail" class="auth-input" placeholder="Email" autocomplete="email">
+                <input type="password" id="loginPassword" class="auth-input" placeholder="Contraseña" autocomplete="current-password">
+                <button id="btnLogin" class="auth-btn">Ingresar</button>
+                <p class="auth-link">¿No tenés cuenta? <span id="btnShowRegister">Registrarse</span></p>
             </div>
             <div id="registerForm" class="auth-form" style="display:none;">
-                <input type="text" id="regNombre" placeholder="Nombre completo" class="auth-input">
-                <input type="email" id="regEmail" placeholder="Email" class="auth-input">
-                <input type="password" id="regPassword" placeholder="Contraseña (mínimo 6 caracteres)" class="auth-input">
-                <button id="btnRegister" class="btn-primary">Registrarse</button>
-                <p>¿Ya tenés cuenta? <a href="#" id="btnShowLogin">Iniciar sesión</a></p>
+                <h3>Crear Cuenta</h3>
+                <input type="text" id="regNombre" class="auth-input" placeholder="Nombre completo">
+                <input type="email" id="regEmail" class="auth-input" placeholder="Email" autocomplete="email">
+                <input type="password" id="regPassword" class="auth-input" placeholder="Contraseña (mín. 6 caracteres)">
+                <button id="btnRegister" class="auth-btn">Crear cuenta</button>
+                <p class="auth-link">¿Ya tenés cuenta? <span id="btnShowLogin">Ingresar</span></p>
             </div>
             <div id="authError" class="auth-error"></div>
         </div>
     </div>
 
-    <!-- Cabecera visible cuando hay sesión -->
-    <header>
-        <div class="header-left">
-            <h1>🏸 Evaluador de Pádel</h1>
-            <span id="modoBadge" class="modo-badge">Modo Alumno</span>
+    <!-- HEADER -->
+    <header class="app-header">
+        <div class="header-brand">
+            <img src="1000001630.png" alt="Logo Academia Lucho Rolando" class="logo-img">
+            <div class="header-titles">
+                <h1>CATEGORIZACIÓN</h1>
+                <div class="subtitle">Sistema Academia Lucho Rolando</div>
+            </div>
         </div>
-        <div class="header-right">
-            <span id="userNameDisplay" class="user-name"></span>
-            <span id="userRolDisplay" class="user-rol"></span>
-            <button id="btnLogout" class="btn-logout">Cerrar sesión</button>
+        <div class="header-actions">
+            <div class="user-info-bar">
+                <span id="userNameDisplay" class="user-nombre"></span>
+                <span id="userRolDisplay" class="user-rol-badge"></span>
+                <span id="modoBadge" class="user-rol-badge" style="background:rgba(200,150,62,0.3); color:#E0C78A;"></span>
+                <button id="btnLogout" class="btn-logout">Salir →</button>
+            </div>
+            <nav class="nav-tabs" id="mainNav">
+                <span class="tab active" data-view="evaluacion">Evaluación</span>
+                <span class="tab" data-view="progreso">📈 Progreso</span>
+                <span class="tab solo-alumno" data-view="planificaciones" style="display:none;">📋 Planificaciones</span>
+                <span class="tab solo-profesor" data-view="nuevaPlanificacion" style="display:none;">➕ Nueva Planif.</span>
+                <span class="tab solo-profesor" data-view="entrenamiento" style="display:none;">Entrenamiento</span>
+                <span class="tab solo-profesor" data-view="seguimiento" style="display:none;">Seguimiento</span>
+                <span class="tab solo-profesor" data-view="alumnos" style="display:none;">Alumnos</span>
+                <span class="tab solo-profesor" data-view="admin" style="display:none;">👥 Admin</span>
+                <span class="tab" data-view="historial">Historial</span>
+                <span class="tab" data-view="manual">Manual</span>
+            </nav>
         </div>
     </header>
 
-    <!-- Navegación principal -->
-    <nav id="mainNav">
-        <div class="nav-container">
-            <span class="tab active" data-view="evaluacion">🎯 Evaluación</span>
-            <span class="tab" data-view="historial">📜 Historial</span>
-            <span class="tab" data-view="entrenamiento">🏋️ Entrenamiento</span>
-            <span class="tab solo-alumno" data-view="planificaciones" style="display:none;">📋 Planificaciones</span>
-            <span class="tab solo-alumno" data-view="progreso" style="display:none;">📈 Progreso</span>
-            <span class="tab solo-alumno" data-view="fortalezas" style="display:none;">💪 Fortalezas</span>
-            <span class="tab solo-profesor" data-view="alumnos" style="display:none;">👥 Alumnos</span>
-            <span class="tab solo-profesor" data-view="seguimiento" style="display:none;">📊 Seguimiento</span>
-            <span class="tab solo-profesor" data-view="nuevaPlanificacion" style="display:none;">✏️ Nueva Planif</span>
-            <span class="tab solo-profesor" data-view="admin" style="display:none;">⚙️ Admin</span>
-        </div>
-    </nav>
+    <!-- CONTENEDOR PRINCIPAL -->
+    <main class="container" id="appContainer">
 
-    <!-- Contenedor de vistas -->
-    <main>
         <!-- Vista Evaluación -->
         <div id="evaluacionView" class="view active">
-            <div class="evaluacion-container">
-                <div class="sidebar">
+            <div class="evaluacion-layout">
+                <aside class="golpes-sidebar">
                     <h3>Golpes</h3>
                     <ul id="golpesList">
                         <li data-golpe="smash" class="active">🏐 Sobre Cabeza</li>
@@ -84,152 +98,176 @@
                         <li data-golpe="pegadaFondo">🎯 Pegada de Fondo</li>
                         <li data-golpe="salidaPared">🧱 Salida de Pared</li>
                     </ul>
-                    <div class="player-info">
-                        <label>Nombre del jugador:</label>
-                        <input type="text" id="playerName" placeholder="Ej: Juan Pérez">
+                    <div class="jugador-info">
+                        <label for="playerName">Jugador</label>
+                        <input type="text" id="playerName" placeholder="Nombre (opcional)">
                     </div>
+                </aside>
+                <section id="golpeContent" class="golpe-content"></section>
+            </div>
+        </div>
+
+        <!-- Vista Planificaciones -->
+        <div id="planificacionesView" class="view">
+            <h2>📋 Mis Planificaciones</h2>
+            <p>Acá verás las planificaciones que tu profesor comparta con vos.</p>
+            <div id="planificacionesAlumno" class="planificaciones-lista">
+                <p style="color: var(--texto-secundario);">No tenés planificaciones asignadas todavía.</p>
+            </div>
+        </div>
+
+        <!-- Vista Nueva Planificación -->
+        <div id="nuevaPlanificacionView" class="view">
+            <h2>➕ Nueva Planificación</h2>
+            <p>Creá un plan de ejercicios para un alumno y compartilo automáticamente.</p>
+            <div class="panel-control" style="max-width:500px; margin-top:20px;">
+                <div class="form-group">
+                    <label for="alumnoPlanSelect">Alumno</label>
+                    <select id="alumnoPlanSelect"><option value="">-- Seleccionar alumno --</option></select>
                 </div>
-                <div class="golpe-content" id="golpeContent">
-                    <!-- Aquí se renderiza el contenido del golpe seleccionado -->
+                <div class="form-group">
+                    <label for="golpePlanSelect">Golpe</label>
+                    <select id="golpePlanSelect">
+                        <option value="smash">🏐 Sobre Cabeza</option>
+                        <option value="volea">🏸 Volea</option>
+                        <option value="pegadaFondo">🎯 Pegada de Fondo</option>
+                        <option value="salidaPared">🧱 Salida de Pared</option>
+                    </select>
                 </div>
+                <div class="form-group">
+                    <label for="categoriaObjetivoPlan">Categoría objetivo</label>
+                    <select id="categoriaObjetivoPlan">
+                        <option value="7">7ª</option><option value="6">6ª</option><option value="5">5ª</option>
+                        <option value="4">4ª</option><option value="3">3ª</option><option value="2">2ª</option><option value="1">1ª</option>
+                    </select>
+                </div>
+                <button id="generarYGuardarPlanBtn" class="btn-primary">📋 Generar y Asignar Plan</button>
+            </div>
+            <div id="planGeneradoPreview" class="plan-content" style="margin-top:20px;"></div>
+            <div id="planMensaje" style="margin-top:16px;"></div>
+        </div>
+
+        <!-- Vista Progreso -->
+<div id="progresoView" class="view">
+    <h2>📈 Mi Evolución</h2>
+    <div class="progreso-filtros">
+        <select id="progresoGolpeSelect">
+            <option value="smash">🏐 Sobre Cabeza</option>
+            <option value="volea">🏸 Volea</option>
+            <option value="pegadaFondo">🎯 Pegada de Fondo</option>
+            <option value="salidaPared">🧱 Salida de Pared</option>
+        </select>
+        <select id="progresoMetricaSelect">
+            <option value="promedio">📊 Promedio general</option>
+            <option value="cuantificadores">📋 Por cuantificador</option>
+        </select>
+        <button id="actualizarGraficoBtn" class="btn-primary">Actualizar gráfico</button>
+    </div>
+    <canvas id="graficoEvolucion" width="400" height="300" style="max-width:100%; height:auto; background:#fff; border-radius:12px; margin-top:20px;"></canvas>
+    <div id="noDatosProgreso" style="display:none; text-align:center; padding:40px; color:#999;">No hay suficientes evaluaciones para mostrar evolución.</div>
+</div>
+
+        <!-- Vista Entrenamiento -->
+        <div id="entrenamientoView" class="view">
+            <div class="entrenamiento-layout">
+                <aside class="panel-control">
+                    <h3>Generar Entrenamiento</h3>
+                    <div class="form-group">
+                        <label for="alumnoSelect">Alumno</label>
+                        <select id="alumnoSelect"><option value="">-- Seleccionar alumno --</option></select>
+                    </div>
+                    <div class="form-group">
+                        <label for="categoriaObjetivo">Categoría objetivo</label>
+                        <select id="categoriaObjetivo">
+                            <option value="7">7ª</option><option value="6">6ª</option><option value="5">5ª</option>
+                            <option value="4">4ª</option><option value="3">3ª</option><option value="2">2ª</option><option value="1">1ª</option>
+                        </select>
+                    </div>
+                    <button id="generarPlanBtn" class="btn-primary">📋 Generar Plan</button>
+                    <button id="descargarPlanBtn" class="btn-secondary" style="display:none;">📥 Descargar PDF</button>
+                </aside>
+                <section id="planEntrenamiento" class="plan-content"></section>
+            </div>
+        </div>
+
+        <!-- Vista Seguimiento -->
+        <div id="seguimientoView" class="view">
+            <div class="seguimiento-layout">
+                <aside class="panel-control">
+                    <h3>Seguimiento en Clase</h3>
+                    <div class="form-group">
+                        <label for="alumnoSelectSeg">Alumno</label>
+                        <select id="alumnoSelectSeg"><option value="">-- Seleccionar --</option></select>
+                    </div>
+                    <div class="form-group">
+                        <label for="categoriaObjetivoSeg">Categoría objetivo</label>
+                        <select id="categoriaObjetivoSeg">
+                            <option value="7">7ª</option><option value="6">6ª</option><option value="5">5ª</option>
+                            <option value="4">4ª</option><option value="3">3ª</option><option value="2">2ª</option><option value="1">1ª</option>
+                        </select>
+                    </div>
+                    <button id="cargarPlanSeg" class="btn-primary">📋 Cargar Plan</button>
+                    <button id="guardarSesionBtn" class="btn-primary" style="display:none;">💾 Guardar Sesión</button>
+                </aside>
+                <section id="sesionContent" class="plan-content"></section>
+            </div>
+        </div>
+
+        <!-- Vista Alumnos -->
+        <div id="alumnosView" class="view">
+            <h2>Alumnos Registrados</h2>
+            <div id="alumnosLista" class="alumnos-lista"></div>
+        </div>
+
+        <!-- Vista Admin -->
+        <div id="adminView" class="view">
+            <h2>👥 Administración de Usuarios</h2>
+            <p>Gestioná los roles y alumnos de tu academia.</p>
+            <div id="adminUsuariosLista" class="alumnos-lista">
+                <p>Cargando usuarios...</p>
             </div>
         </div>
 
         <!-- Vista Historial -->
         <div id="historialView" class="view">
-            <h2>📜 Historial de Evaluaciones</h2>
+            <h2>Evaluaciones Guardadas</h2>
             <div id="historialLista" class="historial-lista"></div>
-            <button id="limpiarHistorialBtn" class="btn-secondary">🗑️ Borrar todas mis evaluaciones</button>
+            <button id="limpiarHistorialBtn" class="btn-secondary">🗑️ Limpiar mis evaluaciones</button>
         </div>
 
-        <!-- Vista Entrenamiento -->
-        <div id="entrenamientoView" class="view">
-            <h2>🏋️ Generar Plan de Entrenamiento</h2>
-            <div class="form-group">
-                <label>Seleccionar evaluación:</label>
-                <select id="alumnoSelect"></select>
+        <!-- Vista Manual -->
+        <div id="manualView" class="view">
+            <h2>Manual de Referencia</h2>
+            <p>Consultá el <strong>Método Sistemático de Categorización</strong> del Colegio de Fiscales F.A.P. (2010) para más detalles.</p>
+            <div style="background:white;padding:16px;border-radius:8px;margin-top:16px;">
+                <h3>Capítulo Séptimo</h3>
+                <p>Descripciones completas de cada categoría para los cuatro golpes.</p>
             </div>
-            <div class="form-group">
-                <label>Categoría objetivo:</label>
-                <select id="categoriaObjetivo">
-                    <option value="7">7ª (Principiante)</option>
-                    <option value="6">6ª</option>
-                    <option value="5">5ª</option>
-                    <option value="4">4ª</option>
-                    <option value="3">3ª</option>
-                    <option value="2">2ª (Avanzado)</option>
-                </select>
-            </div>
-            <button id="generarPlanBtn" class="btn-primary">Generar Plan</button>
-            <div id="planEntrenamiento" class="plan-container"></div>
-            <button id="descargarPlanBtn" class="btn-secondary" style="display:none;">📄 Descargar / Imprimir</button>
-        </div>
-
-        <!-- Vista Planificaciones (Alumno) -->
-        <div id="planificacionesView" class="view">
-            <h2>📋 Mis Planificaciones</h2>
-            <div id="planificacionesAlumno" class="planificaciones-container"></div>
-        </div>
-
-        <!-- Vista Progreso (Gráficos) -->
-        <div id="progresoView" class="view">
-            <h2>📈 Mi Evolución</h2>
-            <div class="progreso-filtros">
-                <select id="progresoGolpeSelect">
-                    <option value="smash">🏐 Sobre Cabeza</option>
-                    <option value="volea">🏸 Volea</option>
-                    <option value="pegadaFondo">🎯 Pegada de Fondo</option>
-                    <option value="salidaPared">🧱 Salida de Pared</option>
-                </select>
-                <select id="progresoMetricaSelect">
-                    <option value="promedio">📊 Promedio general</option>
-                    <option value="cuantificadores">📋 Por cuantificador</option>
-                </select>
-                <button id="actualizarGraficoBtn" class="btn-primary">Actualizar gráfico</button>
-            </div>
-            <canvas id="graficoEvolucion" width="400" height="300" style="max-width:100%; height:auto; background:#fff; border-radius:12px; margin-top:20px;"></canvas>
-            <div id="noDatosProgreso" style="display:none; text-align:center; padding:40px; color:#999;">No hay suficientes evaluaciones para mostrar evolución.</div>
-        </div>
-
-        <!-- Vista Fortalezas y Debilidades -->
-        <div id="fortalezasView" class="view">
-            <h2>💪 Análisis de Fortalezas y Debilidades</h2>
-            <div class="fortalezas-filtros">
-                <button id="analizarFortalezasBtn" class="btn-primary">🔍 Analizar mi rendimiento</button>
-            </div>
-            <div id="fortalezasResultado" style="margin-top:24px;">
-                <p style="color:#888;">Presioná "Analizar" para ver un informe personalizado basado en tus evaluaciones.</p>
+            <div style="background:white;padding:16px;border-radius:8px;margin-top:16px;">
+                <h3>Capítulos Primero a Sexto</h3>
+                <p>Fundamentos de los golpes, devolución, posicionamiento y pares.</p>
             </div>
         </div>
 
-        <!-- Vistas exclusivas para profesores/fiscales -->
-        <div id="alumnosView" class="view">
-            <h2>👥 Alumnos</h2>
-            <div id="alumnosLista" class="alumnos-lista"></div>
-        </div>
-
-        <div id="seguimientoView" class="view">
-            <h2>📊 Seguimiento de Sesiones</h2>
-            <div class="form-group">
-                <label>Seleccionar evaluación:</label>
-                <select id="alumnoSelectSeg"></select>
-            </div>
-            <div class="form-group">
-                <label>Categoría objetivo:</label>
-                <select id="categoriaObjetivoSeg">
-                    <option value="7">7ª</option>
-                    <option value="6">6ª</option>
-                    <option value="5">5ª</option>
-                    <option value="4">4ª</option>
-                    <option value="3">3ª</option>
-                    <option value="2">2ª</option>
-                </select>
-            </div>
-            <button id="cargarPlanSeg" class="btn-primary">Cargar Plan</button>
-            <div id="sesionContent" class="sesion-container"></div>
-            <button id="guardarSesionBtn" class="btn-primary" style="display:none;">💾 Guardar Sesión</button>
-        </div>
-
-        <div id="nuevaPlanificacionView" class="view">
-            <h2>✏️ Nueva Planificación para Alumno</h2>
-            <div class="form-group">
-                <label>Alumno:</label>
-                <select id="alumnoPlanSelect"></select>
-            </div>
-            <div class="form-group">
-                <label>Golpe a trabajar:</label>
-                <select id="golpePlanSelect">
-                    <option value="smash">Sobre Cabeza</option>
-                    <option value="volea">Volea</option>
-                    <option value="pegadaFondo">Pegada de Fondo</option>
-                    <option value="salidaPared">Salida de Pared</option>
-                </select>
-            </div>
-            <div class="form-group">
-                <label>Categoría objetivo:</label>
-                <select id="categoriaObjetivoPlan">
-                    <option value="7">7ª</option>
-                    <option value="6">6ª</option>
-                    <option value="5">5ª</option>
-                    <option value="4">4ª</option>
-                    <option value="3">3ª</option>
-                    <option value="2">2ª</option>
-                </select>
-            </div>
-            <button id="generarYGuardarPlanBtn" class="btn-primary">Generar y Asignar Plan</button>
-            <div id="planMensaje"></div>
-            <div id="planGeneradoPreview" class="plan-preview"></div>
-        </div>
-
-        <div id="adminView" class="view">
-            <h2>⚙️ Administración de Usuarios</h2>
-            <div id="adminUsuariosLista" class="usuarios-lista"></div>
-        </div>
     </main>
 
-    <footer>
-        <p>© 2025 Evaluador de Pádel FAP - Mejorá tu juego con datos</p>
+    <footer class="app-footer">
+        <p>Sistema de Categorización – Academia Lucho Rolando</p>
     </footer>
 
+    <script src="data.js"></script>
+    <script src="ejercicios.js"></script>
+    <script src="auth-ui.js"></script>
+    <script src="app.js"></script>
+
+    <script>
+        if ('serviceWorker' in navigator && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js')
+                    .then(r => console.log('SW registrado:', r.scope))
+                    .catch(e => console.warn('SW no disponible:', e.message));
+            });
+        }
+    </script>
 </body>
 </html>
