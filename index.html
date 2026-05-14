@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CATEGORIZACIÓN Y PLANIFICACION| Academia Lucho Rolando</title>
+    <title>CATEGORIZACIÓN | Academia Lucho Rolando</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700&family=Oswald:wght@500;700&display=swap" rel="stylesheet">
@@ -99,9 +99,11 @@
                         <li data-golpe="pegadaFondo">🎯 Pegada de Fondo</li>
                         <li data-golpe="salidaPared">🧱 Salida de Pared</li>
                     </ul>
-                    <div class="jugador-info">
-                        <label for="playerName">Jugador</label>
+                    <!-- CAMPO JUGADOR (se oculta/muestra según rol con CSS/JS) -->
+                    <div class="jugador-info" id="jugadorInfoDiv">
+                        <label id="jugadorLabel">Jugador</label>
                         <input type="text" id="playerName" placeholder="Nombre (opcional)">
+                        <select id="alumnoSelectEval" style="display:none;"></select>
                     </div>
                 </aside>
                 <section id="golpeContent" class="golpe-content"></section>
@@ -168,7 +170,7 @@
             <div id="noDatosProgreso" style="display:none; text-align:center; padding:40px; color:#999;">No hay suficientes evaluaciones para mostrar evolución.</div>
         </div>
 
-        <!-- Vista Fortalezas y Debilidades (NUEVA) -->
+        <!-- Vista Fortalezas -->
         <div id="fortalezasView" class="view">
             <h2>💪 Análisis de Fortalezas y Debilidades</h2>
             <div class="fortalezas-filtros">
