@@ -115,8 +115,8 @@ document.addEventListener('DOMContentLoaded', () => {
       if (view === 'planificaciones')     cargarPlanificacionesAlumno().catch(console.error);
       if (view === 'nuevaPlanificacion')  cargarAlumnosParaPlanificacion().catch(console.error);
       if (view === 'admin')               cargarAdminUsuarios().catch(console.error);
-      if (view === 'progreso')            cargarProgreso().catch(console.error);
-      if (view === 'fortalezas')          analizarFortalezasDebilidades().catch(console.error);
+      if (view === 'progreso')            prepararVistaProgreso().catch(console.error);
+      if (view === 'fortalezas')          prepararVistaFortalezas().catch(console.error);
     }
   });
 
@@ -420,7 +420,6 @@ async function cargarAlumnos() {
   const esProfesor = (window.currentUserData?.rol === 'profesor' || window.currentUserData?.rol === 'fiscal');
 
   if (!esProfesor) {
-    // Los alumnos normales no ven esta pestaña (debería estar oculta, pero por si acaso)
     alumnosLista.innerHTML = '<p>No tenés permisos para ver esta sección.</p>';
     return;
   }
@@ -428,7 +427,6 @@ async function cargarAlumnos() {
   alumnosLista.innerHTML = '<p>Cargando lista de alumnos vinculados...</p>';
 
   try {
-    // Obtener todas las vinculaciones donde este profesor es el que enseña
     const vinculacionesSnap = await db.collection('vinculaciones')
       .where('profesorUid', '==', window.currentUser.uid)
       .get();
@@ -438,14 +436,12 @@ async function cargarAlumnos() {
       return;
     }
 
-    // Para cada vinculación, obtener los datos del alumno desde la colección 'usuarios'
     let html = '';
     for (const doc of vinculacionesSnap.docs) {
       const vinculacion = doc.data();
       const alumnoUid = vinculacion.alumnoUid;
       const nombreVinculacion = vinculacion.alumnoNombre || 'Sin nombre';
 
-      // Obtener datos completos del alumno (opcional, para mostrar email)
       let alumnoData = { email: 'No disponible', rol: 'alumno' };
       try {
         const alumnoDoc = await db.collection('usuarios').doc(alumnoUid).get();
@@ -473,7 +469,6 @@ async function cargarAlumnos() {
 
     alumnosLista.innerHTML = html;
 
-    // Agregar eventos a los botones de cada alumno
     document.querySelectorAll('.ver-evaluaciones-alumno').forEach(btn => {
       btn.addEventListener('click', async (e) => {
         const uid = btn.dataset.uid;
@@ -552,7 +547,6 @@ async function cargarAlumnos() {
   }
 }
 
-// Función auxiliar para calcular el promedio de una evaluación (útil en la vista)
 function calcularPromedioEvaluacion(selecciones) {
   let total = 0;
   let count = 0;
@@ -760,15 +754,7 @@ function calcularPromedioEvaluacion(selecciones) {
       if (d.catAlc <= obj)      { v = '⬆ Ascender';  asc++; }
       else if (d.catAlc > d.catActual) { v = '⬇ Descender'; desc++; }
       else                      { v = '↻ Repetir';   rep++; }
-      tabla += `<tr><td>${d.nombre}</td>
- 
-.*${d.catActual}ª</td>
- 
-.*${obj}ª</td>
- 
-.*${d.catAlc}ª</td>
- 
-.*${v}</td></tr>`;
+      tabla += `<tr><td>${d.nombre}</td><td>${d.catActual}ª</td><td>${obj}ª</td><td>${d.catAlc}ª</td><td>${v}</td></tr>`;
     }
     tabla += '</table>';
     let vg = '';
@@ -1230,13 +1216,94 @@ if (crearAlumnoBtn) {
   // ========== PROGRESO VISUAL (GRÁFICOS) ==========
   let chartInstance = null;
 
+  // Prepara la vista de Progreso: si es profesor, muestra selector de alumno; luego carga gráfico
+  async function prepararVistaProgreso() {
+    const esProfesor = (window.currentUserData?.rol === 'profesor' || window.currentUserData?.rol === 'fiscal');
+    const selectorContainer = document.getElementById('progresoAlumnoContainer');
+    const selector = document.getElementById('progresoAlumnoSelect');
+    
+    // Crear contenedor si no existe
+    if (esProfesor) {
+      if (!selectorContainer) {
+        const cont = document.createElement('div');
+        cont.id = 'progresoAlumnoContainer';
+        cont.style.marginBottom = '16px';
+        cont.innerHTML = `<label style="font-weight:600;">Alumno: </label><select id="progresoAlumnoSelect"><option value="">-- Todos mis alumnos --</option></select>`;
+        const filtrosDiv = document.querySelector('.progreso-filtros');
+        if (filtrosDiv) filtrosDiv.parentNode.insertBefore(cont, filtrosDiv);
+      }
+      const selectEl = document.getElementById('progresoAlumnoSelect');
+      if (selectEl) {
+        await cargarAlumnosSelect(selectEl);
+        selectEl.addEventListener('change', () => cargarProgreso());
+      }
+    } else {
+      if (selectorContainer) selectorContainer.style.display = 'none';
+    }
+    cargarProgreso();
+  }
+
+  async function cargarAlumnosSelect(selectElement) {
+    selectElement.innerHTML = '<option value="">-- Seleccionar alumno --</option>';
+    try {
+      const vinculaciones = await db.collection('vinculaciones')
+        .where('profesorUid', '==', window.currentUser.uid)
+        .get();
+      for (const doc of vinculaciones.docs) {
+        const data = doc.data();
+        const opt = document.createElement('option');
+        opt.value = data.alumnoUid;
+        opt.textContent = data.alumnoNombre || 'Alumno sin nombre';
+        selectElement.appendChild(opt);
+      }
+    } catch (err) {
+      console.error('Error cargando alumnos para selector:', err);
+    }
+  }
+
+  // Prepara la vista de Fortalezas: si es profesor, muestra selector de alumno; luego ejecuta análisis
+  async function prepararVistaFortalezas() {
+    const esProfesor = (window.currentUserData?.rol === 'profesor' || window.currentUserData?.rol === 'fiscal');
+    const selectorContainer = document.getElementById('fortalezasAlumnoContainer');
+    const selector = document.getElementById('fortalezasAlumnoSelect');
+    
+    if (esProfesor) {
+      if (!selectorContainer) {
+        const cont = document.createElement('div');
+        cont.id = 'fortalezasAlumnoContainer';
+        cont.style.marginBottom = '16px';
+        cont.innerHTML = `<label style="font-weight:600;">Alumno: </label><select id="fortalezasAlumnoSelect"><option value="">-- Todos mis alumnos --</option></select>`;
+        const filtrosDiv = document.querySelector('.fortalezas-filtros');
+        if (filtrosDiv) filtrosDiv.parentNode.insertBefore(cont, filtrosDiv);
+      }
+      const selectEl = document.getElementById('fortalezasAlumnoSelect');
+      if (selectEl) {
+        await cargarAlumnosSelect(selectEl);
+        selectEl.addEventListener('change', () => analizarFortalezasDebilidades());
+      }
+    } else {
+      if (selectorContainer) selectorContainer.style.display = 'none';
+    }
+    analizarFortalezasDebilidades();
+  }
+
   async function cargarProgreso() {
     if (!window.currentUser) return;
     const golpe = document.getElementById('progresoGolpeSelect').value;
     const metrica = document.getElementById('progresoMetricaSelect').value;
+    const esProfesor = (window.currentUserData?.rol === 'profesor' || window.currentUserData?.rol === 'fiscal');
+    
+    let uid = window.currentUser.uid;
+    if (esProfesor) {
+      const alumnoSelect = document.getElementById('progresoAlumnoSelect');
+      if (alumnoSelect && alumnoSelect.value) {
+        uid = alumnoSelect.value;
+      }
+      // Si no seleccionó alumno, usar uid propio no tiene sentido; podríamos buscar todos
+    }
     
     const snapshot = await db.collection('evaluaciones')
-      .where('uid', '==', window.currentUser.uid)
+      .where('uid', '==', uid)
       .where('golpe', '==', golpe)
       .orderBy('fecha', 'asc')
       .get();
@@ -1346,11 +1413,23 @@ if (crearAlumnoBtn) {
       return;
     }
     
-    resultadoDiv.innerHTML = '<p>Cargando tus evaluaciones...</p>';
+    const esProfesor = (window.currentUserData?.rol === 'profesor' || window.currentUserData?.rol === 'fiscal');
+    let uid = window.currentUser.uid;
+    let nombrePersona = window.currentUserData?.nombre || 'Usuario';
+    
+    if (esProfesor) {
+      const alumnoSelect = document.getElementById('fortalezasAlumnoSelect');
+      if (alumnoSelect && alumnoSelect.value) {
+        uid = alumnoSelect.value;
+        nombrePersona = alumnoSelect.options[alumnoSelect.selectedIndex].text;
+      }
+    }
+    
+    resultadoDiv.innerHTML = '<p>Cargando evaluaciones...</p>';
     
     try {
       const snapshot = await db.collection('evaluaciones')
-        .where('uid', '==', window.currentUser.uid)
+        .where('uid', '==', uid)
         .get();
       
       if (snapshot.empty) {
@@ -1403,7 +1482,7 @@ if (crearAlumnoBtn) {
       
       let html = `
         <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color:white; padding:20px; border-radius:16px; margin-bottom:20px;">
-          <h3 style="margin:0 0 10px 0;">📊 Resumen General</h3>
+          <h3 style="margin:0 0 10px 0;">📊 Resumen General de ${nombrePersona}</h3>
           <p>Tenés <strong>${evaluaciones.length}</strong> evaluaciones registradas en <strong>${Object.keys(golpesData).length}</strong> golpes diferentes.</p>
           <p>Tu promedio general ponderado es: <strong>${(golpesOrdenados.reduce((acc, [_, g]) => acc + g.promedioGeneral, 0) / golpesOrdenados.length).toFixed(1)}ª categoría</strong></p>
         </div>
