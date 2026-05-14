@@ -1,4 +1,4 @@
-const CACHE_NAME = 'padel-categorizacion-v3';
+const CACHE_NAME = 'padel-categorizacion-v4';
 const urlsToCache = [
   'index.html',
   'styles.css',
@@ -12,7 +12,6 @@ const urlsToCache = [
 ];
 
 self.addEventListener('install', event => {
-  // Forzar activación inmediata sin esperar tabs viejas
   self.skipWaiting();
   event.waitUntil(
     caches.open(CACHE_NAME)
@@ -21,7 +20,6 @@ self.addEventListener('install', event => {
 });
 
 self.addEventListener('activate', event => {
-  // Borrar todos los caches viejos
   event.waitUntil(
     caches.keys().then(keys =>
       Promise.all(
@@ -34,7 +32,18 @@ self.addEventListener('activate', event => {
 
 self.addEventListener('fetch', event => {
   event.respondWith(
-    caches.match(event.request)
-      .then(response => response || fetch(event.request))
+    fetch(event.request)
+      .then(response => {
+        // Actualizar la caché con la nueva respuesta
+        const responseClone = response.clone();
+        caches.open(CACHE_NAME).then(cache => {
+          cache.put(event.request, responseClone);
+        });
+        return response;
+      })
+      .catch(() => {
+        // Si no hay conexión, usar la caché
+        return caches.match(event.request);
+      })
   );
 });
