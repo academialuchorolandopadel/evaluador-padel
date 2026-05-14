@@ -1,4 +1,4 @@
-// ==================== APP.JS – VERSIÓN COMPLETA (GRÁFICOS + FORTALEZAS) ====================
+// ==================== APP.JS – VERSIÓN COMPLETA (GRÁFICOS + FORTALEZAS + JUGADOR POR ROL) ====================
 document.addEventListener('DOMContentLoaded', () => {
 
   const mainNav            = document.getElementById('mainNav');
@@ -28,26 +28,73 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  // ========== CONFIGURAR INTERFAZ SEGÚN ROL ==========
+  // ========== CONFIGURAR INTERFAZ SEGÚN ROL (incluye campo jugador) ==========
   function configurarInterfazSegunRol() {
     const userData = JSON.parse(localStorage.getItem('userData') || '{}');
     const rol = userData.rol || 'alumno';
     const esProfesorOFiscal = (rol === 'profesor' || rol === 'fiscal');
     
+    // Mostrar/ocultar pestañas
     const tabsProfesor = document.querySelectorAll('.solo-profesor');
     const tabsAlumno = document.querySelectorAll('.solo-alumno');
-    
-    tabsProfesor.forEach(tab => {
-      tab.style.display = esProfesorOFiscal ? '' : 'none';
-    });
-    tabsAlumno.forEach(tab => {
-      tab.style.display = esProfesorOFiscal ? 'none' : '';
-    });
+    tabsProfesor.forEach(tab => tab.style.display = esProfesorOFiscal ? '' : 'none');
+    tabsAlumno.forEach(tab => tab.style.display = esProfesorOFiscal ? 'none' : '');
     
     const adminTab = document.querySelector('.tab[data-view="admin"]');
     const nuevaPlanificacionTab = document.querySelector('.tab[data-view="nuevaPlanificacion"]');
     if (adminTab) adminTab.style.display = esProfesorOFiscal ? '' : 'none';
     if (nuevaPlanificacionTab) nuevaPlanificacionTab.style.display = esProfesorOFiscal ? '' : 'none';
+    
+    // ========== CAMPO JUGADOR SEGÚN ROL ==========
+    const jugadorDiv = document.getElementById('jugadorInfoDiv');
+    const inputNombre = document.getElementById('playerName');
+    const selectAlumnos = document.getElementById('alumnoSelectEval');
+    
+    if (esProfesorOFiscal) {
+      // Modo profesor/fiscal: mostrar select con alumnos, ocultar input
+      if (inputNombre) inputNombre.style.display = 'none';
+      if (selectAlumnos) {
+        selectAlumnos.style.display = 'block';
+        cargarAlumnosSelectEvaluacion(); // llenar el select
+      }
+      if (jugadorDiv) jugadorDiv.querySelector('label').innerHTML = 'Evaluar a:';
+    } else {
+      // Modo alumno: mostrar input con su nombre (solo lectura), ocultar select
+      if (inputNombre) {
+        inputNombre.style.display = 'block';
+        inputNombre.value = window.currentUserData?.nombre || '';
+        inputNombre.readOnly = true;
+      }
+      if (selectAlumnos) selectAlumnos.style.display = 'none';
+      if (jugadorDiv) jugadorDiv.querySelector('label').innerHTML = 'Tu nombre:';
+    }
+  }
+
+  // Función auxiliar para cargar alumnos vinculados en el select de evaluación (para profesores)
+  async function cargarAlumnosSelectEvaluacion() {
+    const select = document.getElementById('alumnoSelectEval');
+    if (!select) return;
+    select.innerHTML = '<option value="">-- Seleccionar alumno --</option>';
+    try {
+      const vinculaciones = await db.collection('vinculaciones')
+        .where('profesorUid', '==', window.currentUser.uid)
+        .get();
+      for (const doc of vinculaciones.docs) {
+        const data = doc.data();
+        const opt = document.createElement('option');
+        opt.value = data.alumnoUid;
+        opt.textContent = data.alumnoNombre || 'Alumno sin nombre';
+        select.appendChild(opt);
+      }
+      if (vinculaciones.size === 0) {
+        const opt = document.createElement('option');
+        opt.textContent = 'No hay alumnos vinculados';
+        opt.disabled = true;
+        select.appendChild(opt);
+      }
+    } catch (err) {
+      console.error('Error cargando alumnos para evaluar:', err);
+    }
   }
 
   window.aplicarModoSegunRol = aplicarModoSegunRol;
@@ -206,12 +253,29 @@ document.addEventListener('DOMContentLoaded', () => {
   async function guardarEvaluacion() {
     if (!window.currentUser) return alert('⚠️ Debés iniciar sesión para guardar.');
     if (Object.keys(evaluacionesCache).length === 0) return alert('⚠️ Diagnosticá al menos un par antes de guardar.');
-    const nombre = playerNameInput.value.trim() || window.currentUserData?.nombre || 'Sin nombre';
+    
+    let nombre;
+    const esProfesor = (window.currentUserData?.rol === 'profesor' || window.currentUserData?.rol === 'fiscal');
+    
+    if (esProfesor) {
+      const select = document.getElementById('alumnoSelectEval');
+      const selectedOption = select.options[select.selectedIndex];
+      if (!selectedOption || !selectedOption.value) {
+        return alert('⚠️ Seleccioná un alumno para evaluar.');
+      }
+      nombre = selectedOption.textContent;
+    } else {
+      nombre = window.currentUserData?.nombre || 'Sin nombre';
+    }
+    
     const evaluacion = {
-      uid: window.currentUser.uid, evaluadorUid: window.currentUser.uid,
+      uid: window.currentUser.uid,
+      evaluadorUid: window.currentUser.uid,
       evaluadorNombre: window.currentUserData?.nombre || '',
-      tipo: (window.currentUserData?.rol === 'profesor' || window.currentUserData?.rol === 'fiscal') ? 'profesor' : 'autoevaluacion',
-      jugador: nombre, golpe: golpeActual, selecciones: evaluacionesCache,
+      tipo: esProfesor ? (window.currentUserData?.rol === 'fiscal' ? 'fiscal' : 'profesor') : 'autoevaluacion',
+      jugador: nombre,
+      golpe: golpeActual,
+      selecciones: evaluacionesCache,
       fecha: window.firebase.firestore.FieldValue.serverTimestamp(),
       fechaLocal: new Date().toLocaleString()
     };
@@ -587,7 +651,15 @@ document.addEventListener('DOMContentLoaded', () => {
       if (d.catAlc <= obj)      { v = '⬆ Ascender';  asc++; }
       else if (d.catAlc > d.catActual) { v = '⬇ Descender'; desc++; }
       else                      { v = '↻ Repetir';   rep++; }
-      tabla += `<tr><td>${d.nombre}</td><td>${d.catActual}ª</td><td>${obj}ª</td><td>${d.catAlc}ª</td><td>${v}</td></tr>`;
+      tabla += `<tr><td>${d.nombre}</td>
+ 
+.*${d.catActual}ª</td>
+ 
+.*${obj}ª</td>
+ 
+.*${d.catAlc}ª</td>
+ 
+.*${v}</td></tr>`;
     }
     tabla += '</table>';
     let vg = '';
