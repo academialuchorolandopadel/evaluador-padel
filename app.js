@@ -1,4 +1,4 @@
-// ==================== APP.JS – VERSIÓN COMPLETA (GRÁFICOS + FORTALEZAS + JUGADOR POR ROL + COMPARATIVA) ====================
+// ==================== APP.JS – VERSIÓN COMPLETA (GRÁFICOS + FORTALEZAS + JUGADOR POR ROL + COMPARATIVA + CHECKLIST) ====================
 document.addEventListener('DOMContentLoaded', () => {
 
   // Referencias a elementos del DOM
@@ -120,6 +120,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (view === 'progreso')            prepararVistaProgreso().catch(console.error);
       if (view === 'fortalezas')          prepararVistaFortalezas().catch(console.error);
       if (view === 'comparativa')         prepararVistaComparativa().catch(console.error);
+      if (view === 'checklist')           prepararVistaChecklist().catch(console.error);
     }
   });
 
@@ -761,7 +762,15 @@ document.addEventListener('DOMContentLoaded', () => {
       if (d.catAlc <= obj)      { v = '⬆ Ascender';  asc++; }
       else if (d.catAlc > d.catActual) { v = '⬇ Descender'; desc++; }
       else                      { v = '↻ Repetir';   rep++; }
-      tabla += `<tr><td>${d.nombre}</td><td>${d.catActual}ª</td><td>${obj}ª</td><td>${d.catAlc}ª</td><td>${v}</td></tr>`;
+      tabla += `<tr><td>${d.nombre}</td>
+ 
+.*${d.catActual}ª</td>
+ 
+.*${obj}ª</td>
+ 
+.*${d.catAlc}ª</td>
+ 
+.*${v}</td></tr>`;
     }
     tabla += '</table>';
     let vg = '';
@@ -1710,7 +1719,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let html = '<table style="width:100%; border-collapse:collapse;">';
     for (const [parKey, parData] of Object.entries(golpeData.pares)) {
       const parSelecciones = selecciones[parKey] || {};
-      html += `<tr><td colspan="2" style="background:#ddd; padding:8px; font-weight:bold;">${parData.nombre}</td></tr>`;
+      html += `<tr><td colspan="2" style="background:#ddd; padding:8px; font-weight:bold;">${parData.nombre}${parData.nombre}</td></tr>`;
       for (const cuant of parData.cuantificadores) {
         const catAuto = parSelecciones[cuant.id] || '?';
         let catProf = null;
@@ -1733,6 +1742,175 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     html += '</table>';
     return html;
+  }
+
+  // ========== CHECKLIST TÉCNICO POR GOLPE ==========
+  const HABILIDADES_POR_GOLPE = {
+    smash: {
+        nombre: "Sobre Cabeza",
+        items: ["Plano", "Efecto lado derecho", "Efecto lado revés (bandeja)", "Víboras", "Rulo", "Gancho", "A traerla (lento)"]
+    },
+    voleaDerecha: {
+        nombre: "Volea Derecha",
+        items: ["Bloqueo", "Plana", "Slice / cortada", "Globo defensivo", "Globo de ataque", "Drop / dejada"]
+    },
+    voleaReves: {
+        nombre: "Volea Revés",
+        items: ["Bloqueo", "Plana", "Slice / cortada", "Globo defensivo", "Globo de ataque", "Drop / dejada"]
+    },
+    pegadaFondoDerecha: {
+        nombre: "Pegada de Fondo Derecha",
+        items: ["Plana", "Cortada (slice)", "Liftada (topspin)", "Globo cruzado", "Globo paralelo", "Sobrepique", "Chiquita / drop", "Tensa (a media altura)"]
+    },
+    pegadaFondoReves: {
+        nombre: "Pegada de Fondo Revés",
+        items: ["Plana", "Cortada (slice)", "Liftada (topspin)", "Globo cruzado", "Globo paralelo", "Sobrepique", "Chiquita / drop", "Tensa (a media altura)"]
+    },
+    salidaPared: {
+        nombre: "Salida de Pared",
+        items: ["Drive rasante", "Revés rasante", "Globo desde pared", "Contra pared"]
+    }
+  };
+
+  async function prepararVistaChecklist() {
+    const esProfesor = (window.currentUserData?.rol === 'profesor' || window.currentUserData?.rol === 'fiscal');
+    const contenedorAlumno = document.getElementById('checklistAlumnoContainer');
+    
+    if (esProfesor) {
+      contenedorAlumno.style.display = 'block';
+      const select = document.getElementById('checklistAlumnoSelect');
+      select.innerHTML = '<option value="">-- Seleccionar alumno --</option>';
+      try {
+        const vinculaciones = await db.collection('vinculaciones')
+          .where('profesorUid', '==', window.currentUser.uid)
+          .get();
+        for (const doc of vinculaciones.docs) {
+          const data = doc.data();
+          const opt = document.createElement('option');
+          opt.value = data.alumnoUid;
+          opt.textContent = data.alumnoNombre || 'Alumno sin nombre';
+          select.appendChild(opt);
+        }
+        if (vinculaciones.size === 0) {
+          const opt = document.createElement('option');
+          opt.textContent = 'No hay alumnos vinculados';
+          opt.disabled = true;
+          select.appendChild(opt);
+        }
+        select.addEventListener('change', () => cargarChecklist());
+      } catch (err) {
+        console.error('Error cargando alumnos para checklist:', err);
+      }
+    } else {
+      contenedorAlumno.style.display = 'none';
+    }
+    
+    const guardarBtn = document.getElementById('guardarChecklistBtn');
+    if (guardarBtn) {
+      guardarBtn.style.display = esProfesor ? 'block' : 'none';
+      guardarBtn.onclick = guardarChecklist;
+    }
+    
+    const golpeSelect = document.getElementById('checklistGolpeSelect');
+    if (golpeSelect) {
+      golpeSelect.addEventListener('change', () => cargarChecklist());
+    }
+    
+    await cargarChecklist();
+  }
+
+  async function cargarChecklist() {
+    const esProfesor = (window.currentUserData?.rol === 'profesor' || window.currentUserData?.rol === 'fiscal');
+    let alumnoUid = window.currentUser?.uid;
+    
+    if (esProfesor) {
+      const select = document.getElementById('checklistAlumnoSelect');
+      if (select && select.value) {
+        alumnoUid = select.value;
+      } else {
+        const container = document.getElementById('checklistHabilidades');
+        container.innerHTML = '<p style="color:#888;">Seleccioná un alumno para ver su checklist.</p>';
+        return;
+      }
+    }
+    
+    const golpeKey = document.getElementById('checklistGolpeSelect').value;
+    const habilidades = HABILIDADES_POR_GOLPE[golpeKey];
+    if (!habilidades) return;
+    
+    try {
+      const docRef = db.collection('checklists').doc(`${alumnoUid}_${golpeKey}`);
+      const docSnap = await docRef.get();
+      let habilidadesGuardadas = {};
+      if (docSnap.exists) {
+        habilidadesGuardadas = docSnap.data().habilidades || {};
+      }
+      
+      const container = document.getElementById('checklistHabilidades');
+      container.innerHTML = `<h3>${habilidades.nombre}</h3><div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px,1fr)); gap: 12px;">`;
+      for (const item of habilidades.items) {
+        const isChecked = habilidadesGuardadas[item] === true;
+        const disabledAttr = !esProfesor ? 'disabled' : '';
+        container.innerHTML += `
+          <label class="checklist-item" style="display: flex; align-items: center; gap: 8px; padding: 8px; background: #f9f9f9; border-radius: 8px;">
+            <input type="checkbox" value="${item}" ${isChecked ? 'checked' : ''} ${disabledAttr}>
+            <span>${item}</span>
+          </label>
+        `;
+      }
+      container.innerHTML += `</div>`;
+      
+      const mensajeDiv = document.getElementById('checklistMensaje');
+      if (mensajeDiv) mensajeDiv.innerHTML = '';
+      
+    } catch (err) {
+      console.error('Error cargando checklist:', err);
+      document.getElementById('checklistHabilidades').innerHTML = `<p style="color:red;">Error: ${err.message}</p>`;
+    }
+  }
+
+  async function guardarChecklist() {
+    const esProfesor = (window.currentUserData?.rol === 'profesor' || window.currentUserData?.rol === 'fiscal');
+    if (!esProfesor) {
+      alert('Solo los profesores pueden guardar el checklist.');
+      return;
+    }
+    
+    const select = document.getElementById('checklistAlumnoSelect');
+    if (!select || !select.value) {
+      alert('Seleccioná un alumno primero.');
+      return;
+    }
+    
+    const alumnoUid = select.value;
+    const golpeKey = document.getElementById('checklistGolpeSelect').value;
+    const habilidades = HABILIDADES_POR_GOLPE[golpeKey];
+    if (!habilidades) return;
+    
+    const checkboxes = document.querySelectorAll('#checklistHabilidades input[type="checkbox"]');
+    const habilidadesGuardadas = {};
+    checkboxes.forEach(cb => {
+      habilidadesGuardadas[cb.value] = cb.checked;
+    });
+    
+    try {
+      const docRef = db.collection('checklists').doc(`${alumnoUid}_${golpeKey}`);
+      await docRef.set({
+        alumnoUid: alumnoUid,
+        golpe: golpeKey,
+        habilidades: habilidadesGuardadas,
+        ultimaActualizacion: firebase.firestore.FieldValue.serverTimestamp(),
+        actualizadoPor: window.currentUser.uid
+      });
+      document.getElementById('checklistMensaje').innerHTML = '<p style="color:green;">✅ Checklist guardado correctamente.</p>';
+      setTimeout(() => {
+        const msg = document.getElementById('checklistMensaje');
+        if (msg) msg.innerHTML = '';
+      }, 3000);
+    } catch (err) {
+      console.error('Error guardando checklist:', err);
+      document.getElementById('checklistMensaje').innerHTML = `<p style="color:red;">❌ Error: ${err.message}</p>`;
+    }
   }
 
   // ========== EVENTOS DE BOTONES ADICIONALES ==========
@@ -1769,6 +1947,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (view === 'progreso') prepararVistaProgreso().catch(console.error);
         if (view === 'fortalezas') prepararVistaFortalezas().catch(console.error);
         if (view === 'comparativa') prepararVistaComparativa().catch(console.error);
+        if (view === 'checklist') prepararVistaChecklist().catch(console.error);
       }
     } else {
       if (golpeContent) golpeContent.innerHTML = '<p style="padding:20px; text-align:center;">Iniciá sesión para comenzar a evaluar.</p>';
