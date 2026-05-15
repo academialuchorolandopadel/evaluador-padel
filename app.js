@@ -1,4 +1,4 @@
-// ==================== APP.JS – VERSIÓN FINAL CORREGIDA (CRÍTICOS RESUELTOS) ====================
+// ==================== APP.JS – VERSIÓN COMPLETA (GRÁFICOS + FORTALEZAS + JUGADOR POR ROL + COMPARATIVA) ====================
 document.addEventListener('DOMContentLoaded', () => {
 
   // Referencias a elementos del DOM
@@ -11,7 +11,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const limpiarHistorialBtn= document.getElementById('limpiarHistorialBtn');
   const body               = document.body;
 
-  // Declaración explícita de Firestore (evita depender solo de window.db)
+  // Declaración explícita de Firestore
   const db = firebase.firestore();
 
   let golpeActual      = 'smash';
@@ -119,6 +119,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (view === 'admin')               cargarAdminUsuarios().catch(console.error);
       if (view === 'progreso')            prepararVistaProgreso().catch(console.error);
       if (view === 'fortalezas')          prepararVistaFortalezas().catch(console.error);
+      if (view === 'comparativa')         prepararVistaComparativa().catch(console.error);
     }
   });
 
@@ -267,14 +268,14 @@ document.addEventListener('DOMContentLoaded', () => {
         return alert('⚠️ Seleccioná un alumno para evaluar.');
       }
       nombre = selectedOption.textContent;
-      alumnoUid = selectedOption.value; // Guardamos el uid del alumno evaluado
+      alumnoUid = selectedOption.value;
     } else {
       nombre = window.currentUserData?.nombre || 'Sin nombre';
     }
     
     const evaluacion = {
       uid: window.currentUser.uid,
-      alumnoUid: alumnoUid,   // será null si es autoevaluación
+      alumnoUid: alumnoUid,
       evaluadorUid: window.currentUser.uid,
       evaluadorNombre: window.currentUserData?.nombre || '',
       tipo: esProfesor ? (window.currentUserData?.rol === 'fiscal' ? 'fiscal' : 'profesor') : 'autoevaluacion',
@@ -760,15 +761,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (d.catAlc <= obj)      { v = '⬆ Ascender';  asc++; }
       else if (d.catAlc > d.catActual) { v = '⬇ Descender'; desc++; }
       else                      { v = '↻ Repetir';   rep++; }
-      tabla += `<tr><td>${d.nombre}</td>
- 
-.*${d.catActual}ª</td>
- 
-.*${obj}ª</td>
- 
-.*${d.catAlc}ª</td>
- 
-.*${v}</td></tr>`;
+      tabla += `<tr><td>${d.nombre}</td><td>${d.catActual}ª</td><td>${obj}ª</td><td>${d.catAlc}ª</td><td>${v}</td></tr>`;
     }
     tabla += '</table>';
     let vg = '';
@@ -1181,11 +1174,9 @@ document.addEventListener('DOMContentLoaded', () => {
       }
 
       try {
-        // 1. Crear usuario en Firebase Auth (esto automáticamente cierra la sesión del profesor)
         const userCredential = await firebase.auth().createUserWithEmailAndPassword(email, password);
         const user = userCredential.user;
 
-        // 2. Guardar datos en Firestore
         await db.collection('usuarios').doc(user.uid).set({
           nombre: nombre,
           email: email,
@@ -1193,7 +1184,6 @@ document.addEventListener('DOMContentLoaded', () => {
           fechaRegistro: firebase.firestore.FieldValue.serverTimestamp()
         });
 
-        // 3. Crear vinculación automática con el profesor actual
         await db.collection('vinculaciones').add({
           profesorUid: window.currentUser.uid,
           alumnoUid: user.uid,
@@ -1201,19 +1191,13 @@ document.addEventListener('DOMContentLoaded', () => {
           fecha: firebase.firestore.FieldValue.serverTimestamp()
         });
 
-        // 4. Limpiar formulario y mostrar éxito
         nuevoAlumnoNombre.value = '';
         nuevoAlumnoEmail.value = '';
         nuevoAlumnoPassword.value = '';
         crearAlumnoMensaje.innerHTML = '<p style="color:green;">✅ Alumno creado correctamente.</p>';
 
-        // 5. Recargar lista de usuarios (ahora el profesor debería volver a loguearse automáticamente? No)
-        // Nota: createUserWithEmailAndPassword cambió la sesión al nuevo alumno.
-        // Para evitar cerrar sesión del profesor, necesitamos volver a autenticar al profesor inmediatamente.
-        // Pero eso requiere guardar sus credenciales, lo cual es inseguro.
-        // Mejor solución: usar Firebase Admin SDK en Cloud Function, pero como es complejo,
-        // aquí simplemente recargamos la página y el profesor deberá volver a iniciar sesión manualmente.
-        // Para mejorar UX, mostramos un mensaje claro.
+        cargarAdminUsuarios();
+
         crearAlumnoMensaje.innerHTML += '<br><strong>⚠️ La página se recargará para restaurar tu sesión de profesor.</strong>';
         setTimeout(() => {
           window.location.reload();
@@ -1582,6 +1566,175 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+  // ========== COMPARATIVA (Alumno vs Profesor) ==========
+  async function prepararVistaComparativa() {
+    const esProfesor = (window.currentUserData?.rol === 'profesor' || window.currentUserData?.rol === 'fiscal');
+    if (!esProfesor) return;
+    
+    const select = document.getElementById('comparativaAlumnoSelect');
+    if (select) {
+      select.innerHTML = '<option value="">-- Seleccionar alumno --</option>';
+      try {
+        const vinculaciones = await db.collection('vinculaciones')
+          .where('profesorUid', '==', window.currentUser.uid)
+          .get();
+        for (const doc of vinculaciones.docs) {
+          const data = doc.data();
+          const opt = document.createElement('option');
+          opt.value = data.alumnoUid;
+          opt.textContent = data.alumnoNombre || 'Alumno sin nombre';
+          select.appendChild(opt);
+        }
+        if (vinculaciones.size === 0) {
+          const opt = document.createElement('option');
+          opt.textContent = 'No hay alumnos vinculados';
+          opt.disabled = true;
+          select.appendChild(opt);
+        }
+      } catch (err) {
+        console.error('Error cargando alumnos para comparativa:', err);
+      }
+    }
+    
+    const resultadoDiv = document.getElementById('comparativaResultado');
+    if (resultadoDiv) {
+      resultadoDiv.innerHTML = '<p style="color:#888;">Seleccioná un alumno y un golpe, luego presioná "Cargar Comparativa".</p>';
+    }
+  }
+
+  async function cargarComparativa() {
+    const resultadoDiv = document.getElementById('comparativaResultado');
+    if (!resultadoDiv) return;
+    
+    const alumnoSelect = document.getElementById('comparativaAlumnoSelect');
+    const golpe = document.getElementById('comparativaGolpeSelect').value;
+    
+    if (!alumnoSelect || !alumnoSelect.value) {
+      resultadoDiv.innerHTML = '<p style="color:#888;">Seleccioná un alumno y un golpe.</p>';
+      return;
+    }
+    
+    const alumnoUid = alumnoSelect.value;
+    const alumnoNombre = alumnoSelect.options[alumnoSelect.selectedIndex].text;
+    
+    resultadoDiv.innerHTML = '<p>Cargando evaluaciones...</p>';
+    
+    try {
+      const autoEvalSnapshot = await db.collection('evaluaciones')
+        .where('uid', '==', alumnoUid)
+        .where('golpe', '==', golpe)
+        .where('tipo', '==', 'autoevaluacion')
+        .orderBy('fecha', 'desc')
+        .limit(1)
+        .get();
+      
+      const profEvalSnapshot = await db.collection('evaluaciones')
+        .where('alumnoUid', '==', alumnoUid)
+        .where('golpe', '==', golpe)
+        .where('tipo', 'in', ['profesor', 'fiscal'])
+        .orderBy('fecha', 'desc')
+        .limit(1)
+        .get();
+      
+      const autoEval = autoEvalSnapshot.empty ? null : { id: autoEvalSnapshot.docs[0].id, ...autoEvalSnapshot.docs[0].data() };
+      const profEval = profEvalSnapshot.empty ? null : { id: profEvalSnapshot.docs[0].id, ...profEvalSnapshot.docs[0].data() };
+      
+      if (!autoEval && !profEval) {
+        resultadoDiv.innerHTML = '<p>📭 No hay evaluaciones de este alumno para este golpe.</p>';
+        return;
+      }
+      
+      const golpeData = DATA.golpes[golpe];
+      if (!golpeData) {
+        resultadoDiv.innerHTML = '<p>Error: No se encontraron datos del golpe.</p>';
+        return;
+      }
+      
+      let html = `<h3>Comparativa para ${alumnoNombre} - ${golpeData.nombre}</h3>`;
+      html += `<div style="display:flex; gap:20px; overflow-x:auto;">`;
+      
+      // Columna Autoevaluación
+      html += `<div style="flex:1; background:#f5f5f5; border-radius:12px; padding:16px;">
+        <h4 style="text-align:center;">📝 Autoevaluación del Alumno</h4>`;
+      if (autoEval) {
+        html += `<p><small>Fecha: ${autoEval.fechaLocal || 'Sin fecha'}</small></p>`;
+        html += generarTablaEvaluacion(autoEval.selecciones, golpeData, profEval ? profEval.selecciones : null);
+      } else {
+        html += `<p style="color:#999; text-align:center;">No hay autoevaluación registrada.</p>`;
+      }
+      html += `</div>`;
+      
+      // Columna Evaluación del Profesor
+      html += `<div style="flex:1; background:#f5f5f5; border-radius:12px; padding:16px;">
+        <h4 style="text-align:center;">👨‍🏫 Evaluación del Profesor</h4>`;
+      if (profEval) {
+        html += `<p><small>Fecha: ${profEval.fechaLocal || 'Sin fecha'}</small></p>`;
+        html += generarTablaEvaluacion(profEval.selecciones, golpeData, autoEval ? autoEval.selecciones : null);
+      } else {
+        html += `<p style="color:#999; text-align:center;">No hay evaluación del profesor.</p>`;
+      }
+      html += `</div>`;
+      
+      html += `</div>`;
+      
+      resultadoDiv.innerHTML = html;
+      
+      const evaluarBtn = document.getElementById('evaluarDesdeComparativaBtn');
+      if (evaluarBtn) {
+        if (!profEval) {
+          evaluarBtn.style.display = 'inline-block';
+          evaluarBtn.onclick = () => {
+            const selectEval = document.getElementById('alumnoSelectEval');
+            if (selectEval) {
+              for (let i = 0; i < selectEval.options.length; i++) {
+                if (selectEval.options[i].value === alumnoUid) {
+                  selectEval.selectedIndex = i;
+                  break;
+                }
+              }
+            }
+            document.querySelector('.tab[data-view="evaluacion"]').click();
+          };
+        } else {
+          evaluarBtn.style.display = 'none';
+        }
+      }
+      
+    } catch (err) {
+      console.error('Error cargando comparativa:', err);
+      resultadoDiv.innerHTML = `<p style="color:red;">❌ Error: ${err.message}</p>`;
+    }
+  }
+  
+  function generarTablaEvaluacion(selecciones, golpeData, otraSeleccion = null) {
+    let html = '<table style="width:100%; border-collapse:collapse;">';
+    for (const [parKey, parData] of Object.entries(golpeData.pares)) {
+      const parSelecciones = selecciones[parKey] || {};
+      html += `<tr><td colspan="2" style="background:#ddd; padding:8px; font-weight:bold;">${parData.nombre}</td></tr>`;
+      for (const cuant of parData.cuantificadores) {
+        const catAuto = parSelecciones[cuant.id] || '?';
+        let catProf = null;
+        let diferencia = '';
+        if (otraSeleccion && otraSeleccion[parKey] && otraSeleccion[parKey][cuant.id] !== undefined) {
+          catProf = otraSeleccion[parKey][cuant.id];
+          if (catAuto !== catProf) {
+            diferencia = ` <span style="color:red;">(dif: ${Math.abs(catAuto - catProf)}ª)</span>`;
+          }
+        }
+        html += `<tr style="border-bottom:1px solid #eee;">
+          <td style="padding:8px;">${cuant.nombre}</td>
+          <td style="padding:8px; text-align:center;">
+            <span class="cat-badge cat-${catAuto}">${catAuto}ª</span>
+            ${catProf ? `<span style="margin:0 8px;">→</span> <span class="cat-badge cat-${catProf}">${catProf}ª</span>` : ''}
+            ${diferencia}
+          </td>
+        </tr>`;
+      }
+    }
+    html += '</table>';
+    return html;
+  }
+
   // ========== EVENTOS DE BOTONES ADICIONALES ==========
   const actualizarGraficoBtn = document.getElementById('actualizarGraficoBtn');
   if (actualizarGraficoBtn) {
@@ -1591,6 +1744,11 @@ document.addEventListener('DOMContentLoaded', () => {
   const analizarFortalezasBtn = document.getElementById('analizarFortalezasBtn');
   if (analizarFortalezasBtn) {
     analizarFortalezasBtn.addEventListener('click', analizarFortalezasDebilidades);
+  }
+
+  const cargarComparativaBtn = document.getElementById('cargarComparativaBtn');
+  if (cargarComparativaBtn) {
+    cargarComparativaBtn.addEventListener('click', cargarComparativa);
   }
 
   // ========== INICIALIZAR APLICACIÓN ==========
@@ -1610,6 +1768,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (view === 'admin') cargarAdminUsuarios().catch(console.error);
         if (view === 'progreso') prepararVistaProgreso().catch(console.error);
         if (view === 'fortalezas') prepararVistaFortalezas().catch(console.error);
+        if (view === 'comparativa') prepararVistaComparativa().catch(console.error);
       }
     } else {
       if (golpeContent) golpeContent.innerHTML = '<p style="padding:20px; text-align:center;">Iniciá sesión para comenzar a evaluar.</p>';
