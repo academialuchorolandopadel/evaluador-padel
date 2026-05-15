@@ -73,6 +73,7 @@
                 <span class="tab active" data-view="evaluacion">Evaluación</span>
                 <span class="tab" data-view="progreso">📈 Progreso</span>
                 <span class="tab" data-view="fortalezas">💪 Fortalezas</span>
+                <span class="tab solo-profesor" data-view="comparativa" style="display:none;">📊 Comparativa</span>
                 <span class="tab solo-alumno" data-view="planificaciones" style="display:none;">📋 Planificaciones</span>
                 <span class="tab solo-profesor" data-view="nuevaPlanificacion" style="display:none;">➕ Nueva Planif.</span>
                 <span class="tab solo-profesor" data-view="entrenamiento" style="display:none;">Entrenamiento</span>
@@ -178,6 +179,31 @@
             </div>
             <div id="fortalezasResultado" style="margin-top:24px;">
                 <p style="color:#888;">Presioná "Analizar" para ver un informe personalizado basado en tus evaluaciones.</p>
+            </div>
+        </div>
+
+        <!-- Vista Comparativa (Alumno vs Profesor) -->
+        <div id="comparativaView" class="view">
+            <h2>📊 Comparativa: Alumno vs Profesor</h2>
+            <div class="comparativa-filtros">
+                <div id="comparativaAlumnoContainer" style="margin-bottom:16px;">
+                    <label style="font-weight:600;">Alumno:</label>
+                    <select id="comparativaAlumnoSelect"></select>
+                </div>
+                <div style="margin-bottom:16px;">
+                    <label style="font-weight:600;">Golpe:</label>
+                    <select id="comparativaGolpeSelect">
+                        <option value="smash">🏐 Sobre Cabeza</option>
+                        <option value="volea">🏸 Volea</option>
+                        <option value="pegadaFondo">🎯 Pegada de Fondo</option>
+                        <option value="salidaPared">🧱 Salida de Pared</option>
+                    </select>
+                </div>
+                <button id="cargarComparativaBtn" class="btn-primary">🔍 Cargar Comparativa</button>
+                <button id="evaluarDesdeComparativaBtn" class="btn-secondary" style="display:none;">✏️ Evaluar a este alumno</button>
+            </div>
+            <div id="comparativaResultado" style="margin-top:24px;">
+                <p style="color:#888;">Seleccioná un alumno y un golpe, luego presioná "Cargar Comparativa".</p>
             </div>
         </div>
 
