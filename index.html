@@ -74,6 +74,7 @@
                 <span class="tab" data-view="progreso">📈 Progreso</span>
                 <span class="tab" data-view="fortalezas">💪 Fortalezas</span>
                 <span class="tab solo-profesor" data-view="comparativa" style="display:none;">📊 Comparativa</span>
+                <span class="tab" data-view="checklist">📋 Checklist Técnico</span>
                 <span class="tab solo-alumno" data-view="planificaciones" style="display:none;">📋 Planificaciones</span>
                 <span class="tab solo-profesor" data-view="nuevaPlanificacion" style="display:none;">➕ Nueva Planif.</span>
                 <span class="tab solo-profesor" data-view="entrenamiento" style="display:none;">Entrenamiento</span>
@@ -182,7 +183,7 @@
             </div>
         </div>
 
-        <!-- Vista Comparativa (Alumno vs Profesor) -->
+        <!-- Vista Comparativa -->
         <div id="comparativaView" class="view">
             <h2>📊 Comparativa: Alumno vs Profesor</h2>
             <div class="comparativa-filtros">
@@ -205,6 +206,31 @@
             <div id="comparativaResultado" style="margin-top:24px;">
                 <p style="color:#888;">Seleccioná un alumno y un golpe, luego presioná "Cargar Comparativa".</p>
             </div>
+        </div>
+
+        <!-- Vista Checklist Técnico -->
+        <div id="checklistView" class="view">
+            <h2>📋 Checklist Técnico por Golpe</h2>
+            <div id="checklistAlumnoContainer" style="margin-bottom:16px; display:none;">
+                <label style="font-weight:600;">Alumno:</label>
+                <select id="checklistAlumnoSelect"></select>
+            </div>
+            <div style="margin-bottom:16px;">
+                <label style="font-weight:600;">Golpe:</label>
+                <select id="checklistGolpeSelect">
+                    <option value="smash">🏐 Sobre Cabeza</option>
+                    <option value="voleaDerecha">🏸 Volea Derecha</option>
+                    <option value="voleaReves">🏸 Volea Revés</option>
+                    <option value="pegadaFondoDerecha">🎯 Pegada de Fondo Derecha</option>
+                    <option value="pegadaFondoReves">🎯 Pegada de Fondo Revés</option>
+                    <option value="salidaPared">🧱 Salida de Pared</option>
+                </select>
+            </div>
+            <div id="checklistHabilidades" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px,1fr)); gap: 12px; background: #fff; padding: 20px; border-radius: 12px; margin-top: 10px;"></div>
+            <div style="margin-top: 20px;">
+                <button id="guardarChecklistBtn" class="btn-primary" style="display:none;">💾 Guardar Checklist</button>
+            </div>
+            <div id="checklistMensaje" style="margin-top: 16px;"></div>
         </div>
 
         <!-- Vista Entrenamiento -->
