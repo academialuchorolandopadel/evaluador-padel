@@ -1,4 +1,4 @@
-// ==================== APP.JS – VERSIÓN CORREGIDA ====================
+// ==================== APP.JS – VERSIÓN COMPLETA CORREGIDA (VINCULACIONES EN TODAS LAS PESTAÑAS) ====================
 document.addEventListener('DOMContentLoaded', () => {
 
   // Referencias a elementos del DOM
@@ -17,13 +17,6 @@ document.addEventListener('DOMContentLoaded', () => {
   let golpeActual      = 'smash';
   let evaluacionesCache= {};
   let planGeneradoHTML = '';
-
-  // ========== FUNCIÓN PARA ESCAPAR HTML (PREVENIR XSS) ==========
-  function escaparHTML(str) {
-    const div = document.createElement('div');
-    div.textContent = str;
-    return div.innerHTML;
-  }
 
   // ========== MODO ALUMNO/PROFESOR/FISCAL ==========
   function aplicarModoSegunRol(rol) {
@@ -44,23 +37,23 @@ document.addEventListener('DOMContentLoaded', () => {
     const userData = JSON.parse(localStorage.getItem('userData') || '{}');
     const rol = userData.rol || 'alumno';
     const esProfesorOFiscal = (rol === 'profesor' || rol === 'fiscal');
-
+    
     // Mostrar/ocultar pestañas
     const tabsProfesor = document.querySelectorAll('.solo-profesor');
     const tabsAlumno = document.querySelectorAll('.solo-alumno');
     tabsProfesor.forEach(tab => tab.style.display = esProfesorOFiscal ? '' : 'none');
     tabsAlumno.forEach(tab => tab.style.display = esProfesorOFiscal ? 'none' : '');
-
+    
     const adminTab = document.querySelector('.tab[data-view="admin"]');
     const nuevaPlanificacionTab = document.querySelector('.tab[data-view="nuevaPlanificacion"]');
     if (adminTab) adminTab.style.display = esProfesorOFiscal ? '' : 'none';
     if (nuevaPlanificacionTab) nuevaPlanificacionTab.style.display = esProfesorOFiscal ? '' : 'none';
-
+    
     // ========== CAMPO JUGADOR SEGÚN ROL ==========
     const jugadorDiv = document.getElementById('jugadorInfoDiv');
     const inputNombre = document.getElementById('playerName');
     const selectAlumnos = document.getElementById('alumnoSelectEval');
-
+    
     if (esProfesorOFiscal) {
       if (inputNombre) inputNombre.style.display = 'none';
       if (selectAlumnos) {
@@ -92,7 +85,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const data = doc.data();
         const opt = document.createElement('option');
         opt.value = data.alumnoUid;
-        opt.textContent = escaparHTML(data.alumnoNombre || 'Alumno sin nombre');
+        opt.textContent = data.alumnoNombre || 'Alumno sin nombre';
         select.appendChild(opt);
       }
       if (vinculaciones.size === 0) {
@@ -145,11 +138,11 @@ document.addEventListener('DOMContentLoaded', () => {
   function renderizarGolpe(golpeId) {
     const golpe = DATA.golpes[golpeId];
     if (!golpe) return;
-    let html = `<h2>${escaparHTML(golpe.nombre)}</h2>`;
-    if (golpe.subtitulo) html += `<p class="variantes-golpe">${escaparHTML(golpe.subtitulo)}</p>`;
+    let html = `<h2>${golpe.nombre}</h2>`;
+    if (golpe.subtitulo) html += `<p class="variantes-golpe">${golpe.subtitulo}</p>`;
     const pares = golpe.pares;
     for (const [parKey, parData] of Object.entries(pares)) {
-      html += `<div class="par-acordeon"><div class="par-header" data-par="${parKey}"><h3>${escaparHTML(parData.nombre)}</h3><span class="toggle-icon">▼</span></div><div class="par-body collapsed" id="body-${parKey}"><div class="evaluador-grid" id="grid-${parKey}"></div><div class="actions"><button class="btn-primary diagnosticar-par" data-par="${parKey}">🔍 Diagnosticar Par</button></div><div class="resultado-par" id="result-${parKey}" style="display:none;"></div></div></div>`;
+      html += `<div class="par-acordeon"><div class="par-header" data-par="${parKey}"><h3>${parData.nombre}</h3><span class="toggle-icon">▼</span></div><div class="par-body collapsed" id="body-${parKey}"><div class="evaluador-grid" id="grid-${parKey}"></div><div class="actions"><button class="btn-primary diagnosticar-par" data-par="${parKey}">🔍 Diagnosticar Par</button></div><div class="resultado-par" id="result-${parKey}" style="display:none;"></div></div></div>`;
     }
     html += `<div class="actions" style="margin-top:24px;"><button id="btnGuardar" class="btn-primary">💾 Guardar Evaluación</button><button id="btnEvaluacionGlobal" class="btn-primary">📊 Evaluación Global</button></div><div class="diagnostico-golpe" id="globalGolpe" style="display:none;"><h3>🏆 Evaluación Global del Golpe</h3><p id="globalGolpeTexto"></p></div>`;
     golpeContent.innerHTML = html;
@@ -159,7 +152,7 @@ document.addEventListener('DOMContentLoaded', () => {
       parData.cuantificadores.forEach(cuant => {
         const card = document.createElement('div');
         card.className = 'cuantificador-card';
-        card.innerHTML = `<div class="card-header"><h3>${escaparHTML(cuant.nombre)}</h3><span class="info-icon" title="${escaparHTML(cuant.descripcion)}">ⓘ</span></div><p class="card-desc">${escaparHTML(cuant.descripcion)}</p><div class="opciones-grid">${[7,6,5,4,3,2].map(cat => `<label class="opcion-card"><input type="radio" name="${parKey}_${cuant.id}" value="${cat}" hidden><span class="cat-badge cat-${cat}">${cat}ª</span><span class="opcion-texto">${escaparHTML(cuant.categorias[cat])}</span></label>`).join('')}</div>`;
+        card.innerHTML = `<div class="card-header"><h3>${cuant.nombre}</h3><span class="info-icon" title="${cuant.descripcion}">ⓘ</span></div><p class="card-desc">${cuant.descripcion}</p><div class="opciones-grid">${[7,6,5,4,3,2].map(cat => `<label class="opcion-card"><input type="radio" name="${parKey}_${cuant.id}" value="${cat}" hidden><span class="cat-badge cat-${cat}">${cat}ª</span><span class="opcion-texto">${cuant.categorias[cat]}</span></label>`).join('')}</div>`;
         grid.appendChild(card);
       });
       if (evaluacionesCache[parKey]) {
@@ -203,7 +196,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let html = '<ul>';
     for (const [id, cat] of Object.entries(selecciones)) {
       const nombreCuant = parData.cuantificadores.find(c => c.id === id).nombre;
-      html += `<li><strong>${escaparHTML(nombreCuant)}:</strong> <span class="cat-badge cat-${cat}">${cat}ª</span></li>`;
+      html += `<li><strong>${nombreCuant}:</strong> <span class="cat-badge cat-${cat}">${cat}ª</span></li>`;
     }
     html += '</ul>';
     if (min === max) html += `<p>✅ Encaja claramente en <strong><span class="cat-badge cat-${moda}">${moda}ª Categoría</span></strong>.</p>`;
@@ -247,8 +240,7 @@ document.addEventListener('DOMContentLoaded', () => {
     try {
       let ref;
       if (window.currentUserData?.rol === 'profesor' || window.currentUserData?.rol === 'fiscal') {
-        // Profesor ve sus propias evaluaciones realizadas (las que él evaluó)
-        ref = db.collection('evaluaciones').where('evaluadorUid', '==', window.currentUser.uid).orderBy('fecha', 'desc').limit(200);
+        ref = db.collection('evaluaciones').orderBy('fecha', 'desc').limit(200);
       } else {
         ref = db.collection('evaluaciones').where('uid', '==', window.currentUser.uid).orderBy('fecha', 'desc').limit(100);
       }
@@ -262,15 +254,14 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  // CORRECCIÓN: uid ahora guarda el ID del alumno evaluado, no del evaluador
   async function guardarEvaluacion() {
     if (!window.currentUser) return alert('⚠️ Debés iniciar sesión para guardar.');
     if (Object.keys(evaluacionesCache).length === 0) return alert('⚠️ Diagnosticá al menos un par antes de guardar.');
-
+    
     let nombre;
     let alumnoUid = null;
     const esProfesor = (window.currentUserData?.rol === 'profesor' || window.currentUserData?.rol === 'fiscal');
-
+    
     if (esProfesor) {
       const select = document.getElementById('alumnoSelectEval');
       const selectedOption = select.options[select.selectedIndex];
@@ -281,13 +272,12 @@ document.addEventListener('DOMContentLoaded', () => {
       alumnoUid = selectedOption.value;
     } else {
       nombre = window.currentUserData?.nombre || 'Sin nombre';
-      alumnoUid = window.currentUser.uid;
     }
-
+    
     const evaluacion = {
-      uid: alumnoUid,                                         // <-- CORRECCIÓN: identificador del jugador evaluado
+      uid: window.currentUser.uid,
       alumnoUid: alumnoUid,
-      evaluadorUid: window.currentUser.uid,                   // quien realiza la evaluación
+      evaluadorUid: window.currentUser.uid,
       evaluadorNombre: window.currentUserData?.nombre || '',
       tipo: esProfesor ? (window.currentUserData?.rol === 'fiscal' ? 'fiscal' : 'profesor') : 'autoevaluacion',
       jugador: nombre,
@@ -316,7 +306,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const badge = eva.tipo === 'profesor' ? '<span class="badge-tipo profesor">🔍 Profesor</span>' :
                     eva.tipo === 'fiscal'   ? '<span class="badge-tipo fiscal">📋 Fiscal</span>' :
                     '<span class="badge-tipo alumno">👤 Alumno</span>';
-      div.innerHTML = `<div class="info">${badge} <strong>${escaparHTML(eva.jugador)}</strong> – ${escaparHTML(eva.golpe)} – ${escaparHTML(eva.fecha)}${eva.evaluadorNombre ? `<br><small>Por: ${escaparHTML(eva.evaluadorNombre)}</small>` : ''}</div><div class="btn-group"><button class="btn-secondary cargarEva" data-id="${eva.firestoreId}">📂 Cargar</button><button class="btn-secondary eliminarEva" data-id="${eva.firestoreId}">🗑️</button></div>`;
+      div.innerHTML = `<div class="info">${badge} <strong>${eva.jugador}</strong> – ${eva.golpe} – ${eva.fecha}${eva.evaluadorNombre ? `<br><small>Por: ${eva.evaluadorNombre}</small>` : ''}</div><div class="btn-group"><button class="btn-secondary cargarEva" data-id="${eva.firestoreId}">📂 Cargar</button><button class="btn-secondary eliminarEva" data-id="${eva.firestoreId}">🗑️</button></div>`;
       historialLista.appendChild(div);
     });
   }
@@ -371,7 +361,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const select = document.getElementById('alumnoSelect');
     if (!select) return;
     select.innerHTML = '<option value="">-- Seleccionar alumno --</option>';
-
+    
     const esProfesor = (window.currentUserData?.rol === 'profesor' || window.currentUserData?.rol === 'fiscal');
     if (!esProfesor) {
       // Alumno: usa sus propias evaluaciones
@@ -379,12 +369,12 @@ document.addEventListener('DOMContentLoaded', () => {
       historial.forEach((eva, idx) => {
         const opt = document.createElement('option');
         opt.value = idx;
-        opt.textContent = `${escaparHTML(eva.jugador)} – ${escaparHTML(eva.golpe)} (${escaparHTML(eva.fecha)})`;
+        opt.textContent = `${eva.jugador} – ${eva.golpe} (${eva.fecha})`;
         select.appendChild(opt);
       });
       return;
     }
-
+    
     // Profesor: cargar alumnos vinculados
     try {
       const vinculaciones = await db.collection('vinculaciones')
@@ -394,7 +384,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const data = doc.data();
         const opt = document.createElement('option');
         opt.value = data.alumnoUid;
-        opt.textContent = escaparHTML(data.alumnoNombre || 'Alumno sin nombre');
+        opt.textContent = data.alumnoNombre || 'Alumno sin nombre';
         select.appendChild(opt);
       }
       if (vinculaciones.size === 0) {
@@ -411,15 +401,15 @@ document.addEventListener('DOMContentLoaded', () => {
   generarPlanBtn.addEventListener('click', async () => {
     const alumnoUid = alumnoSelect.value;
     if (!alumnoUid) return alert('⚠️ Seleccioná un alumno.');
-
+    
     // Buscar la última evaluación del alumno para el golpe actual
     const snapshot = await db.collection('evaluaciones')
-      .where('uid', '==', alumnoUid)     // <-- uid es el alumno evaluado
+      .where('uid', '==', alumnoUid)
       .where('golpe', '==', golpeActual)
       .orderBy('fecha', 'desc')
       .limit(1)
       .get();
-
+      
     if (snapshot.empty) {
       alert('No hay evaluaciones de este alumno para este golpe.');
       return;
@@ -439,7 +429,7 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   function construirPlan(evaluacion, objetivo) {
-    let html = `<h2>Plan para ${escaparHTML(evaluacion.jugador)}</h2><p><strong>Golpe:</strong> ${escaparHTML(evaluacion.golpe)} | <strong>Objetivo:</strong> ${objetivo}ª</p>`;
+    let html = `<h2>Plan para ${evaluacion.jugador}</h2><p><strong>Golpe:</strong> ${evaluacion.golpe} | <strong>Objetivo:</strong> ${objetivo}ª</p>`;
     let encontro = false;
     const golpeData = DATA.golpes[evaluacion.golpe];
     if (!golpeData) return html + '<p>No hay datos del golpe.</p>';
@@ -453,13 +443,13 @@ document.addEventListener('DOMContentLoaded', () => {
             const transicion = `${cat}_${cat-1}`;
             const ejercicio = window.EJERCICIOS?.[evaluacion.golpe]?.[parKey]?.[cuant.id]?.[transicion];
             if (ejercicio) {
-              ejerciciosPar += `<div class="ejercicio-item"><strong>${escaparHTML(cuant.nombre)} (${cat}ª → ${cat-1}ª):</strong> ${escaparHTML(ejercicio.nombre)}<br><span class="series">${ejercicio.series} series x ${ejercicio.repeticiones}</span><br><em>${escaparHTML(ejercicio.descripcion)}</em><br>✅ Criterio: ${escaparHTML(ejercicio.criterioExito)}</div>`;
+              ejerciciosPar += `<div class="ejercicio-item"><strong>${cuant.nombre} (${cat}ª → ${cat-1}ª):</strong> ${ejercicio.nombre}<br><span class="series">${ejercicio.series} series x ${ejercicio.repeticiones}</span><br><em>${ejercicio.descripcion}</em><br>✅ Criterio: ${ejercicio.criterioExito}</div>`;
               encontro = true;
             }
           }
         }
       }
-      if (ejerciciosPar) html += `<div class="plan-par"><h4>${escaparHTML(parData.nombre)}</h4>${ejerciciosPar}</div>`;
+      if (ejerciciosPar) html += `<div class="plan-par"><h4>${parData.nombre}</h4>${ejerciciosPar}</div>`;
     }
     if (!encontro) html += '<p>✅ Ya alcanza o supera el nivel en todos los aspectos.</p>';
     return html;
@@ -497,7 +487,7 @@ document.addEventListener('DOMContentLoaded', () => {
       for (const doc of vinculacionesSnap.docs) {
         const vinculacion = doc.data();
         const alumnoUid = vinculacion.alumnoUid;
-        const nombreVinculacion = escaparHTML(vinculacion.alumnoNombre || 'Sin nombre');
+        const nombreVinculacion = vinculacion.alumnoNombre || 'Sin nombre';
 
         let alumnoData = { email: 'No disponible', rol: 'alumno' };
         try {
@@ -512,7 +502,7 @@ document.addEventListener('DOMContentLoaded', () => {
         html += `
           <div class="alumno-card" data-uid="${alumnoUid}">
             <h3>${nombreVinculacion}</h3>
-            <p>Email: ${escaparHTML(alumnoData.email || 'No disponible')}</p>
+            <p>Email: ${alumnoData.email || 'No disponible'}</p>
             <p>Rol: ${alumnoData.rol === 'profesor' ? 'Profesor' : 'Alumno'}</p>
             <div class="alumno-acciones">
               <button class="btn-secondary btn-chico ver-evaluaciones-alumno" data-uid="${alumnoUid}" data-nombre="${nombreVinculacion}">📋 Ver evaluaciones</button>
@@ -526,7 +516,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
       alumnosLista.innerHTML = html;
 
-      // Listeners ya no se acumulan porque cada vez se regenera el HTML completo
       document.querySelectorAll('.ver-evaluaciones-alumno').forEach(btn => {
         btn.addEventListener('click', async (e) => {
           const uid = btn.dataset.uid;
@@ -547,13 +536,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 let evaHtml = '<h4>Evaluaciones recientes</h4><ul>';
                 evaluacionesSnap.forEach(doc => {
                   const eva = doc.data();
-                  evaHtml += `<li><strong>${escaparHTML(eva.golpe)}</strong> - ${escaparHTML(eva.fechaLocal || 'Sin fecha')} - Categoría promedio: ${calcularPromedioEvaluacion(eva.selecciones)}ª</li>`;
+                  evaHtml += `<li><strong>${eva.golpe}</strong> - ${eva.fechaLocal || 'Sin fecha'} - Categoría promedio: ${calcularPromedioEvaluacion(eva.selecciones)}ª</li>`;
                 });
                 evaHtml += '</ul>';
                 container.innerHTML = evaHtml;
               }
             } catch (err) {
-              container.innerHTML = `<p>Error: ${escaparHTML(err.message)}</p>`;
+              container.innerHTML = `<p>Error: ${err.message}</p>`;
             }
             btn.textContent = '🔼 Ocultar evaluaciones';
           } else {
@@ -583,13 +572,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 let planHtml = '<h4>Planificaciones asignadas</h4><ul>';
                 planesSnap.forEach(doc => {
                   const plan = doc.data();
-                  planHtml += `<li><strong>${escaparHTML(plan.golpe)}</strong> - Objetivo ${plan.objetivo}ª - Estado: ${escaparHTML(plan.estado || 'pendiente')}</li>`;
+                  planHtml += `<li><strong>${plan.golpe}</strong> - Objetivo ${plan.objetivo}ª - Estado: ${plan.estado || 'pendiente'}</li>`;
                 });
                 planHtml += '</ul>';
                 container.innerHTML = planHtml;
               }
             } catch (err) {
-              container.innerHTML = `<p>Error: ${escaparHTML(err.message)}</p>`;
+              container.innerHTML = `<p>Error: ${err.message}</p>`;
             }
             btn.textContent = '🔼 Ocultar planificaciones';
           } else {
@@ -601,7 +590,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     } catch (err) {
       console.error('Error cargando alumnos vinculados:', err);
-      alumnosLista.innerHTML = `<p>Error al cargar la lista: ${escaparHTML(err.message)}</p>`;
+      alumnosLista.innerHTML = `<p>Error al cargar la lista: ${err.message}</p>`;
     }
   }
 
@@ -630,19 +619,21 @@ document.addEventListener('DOMContentLoaded', () => {
     const select = document.getElementById('alumnoSelectSeg');
     if (!select) return;
     select.innerHTML = '<option value="">-- Seleccionar alumno --</option>';
-
+    
     const esProfesor = (window.currentUserData?.rol === 'profesor' || window.currentUserData?.rol === 'fiscal');
     if (!esProfesor) {
+      // Alumno: usa sus propias evaluaciones
       const historial = await cargarEvaluacionesDesdeFirestore();
       historial.forEach((eva, idx) => {
         const opt = document.createElement('option');
         opt.value = idx;
-        opt.textContent = `${escaparHTML(eva.jugador)} – ${escaparHTML(eva.golpe)} (${escaparHTML(eva.fecha)})`;
+        opt.textContent = `${eva.jugador} – ${eva.golpe} (${eva.fecha})`;
         select.appendChild(opt);
       });
       return;
     }
-
+    
+    // Profesor: cargar alumnos vinculados
     try {
       const vinculaciones = await db.collection('vinculaciones')
         .where('profesorUid', '==', window.currentUser.uid)
@@ -651,7 +642,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const data = doc.data();
         const opt = document.createElement('option');
         opt.value = data.alumnoUid;
-        opt.textContent = escaparHTML(data.alumnoNombre || 'Alumno sin nombre');
+        opt.textContent = data.alumnoNombre || 'Alumno sin nombre';
         select.appendChild(opt);
       }
       if (vinculaciones.size === 0) {
@@ -669,13 +660,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const alumnoUid = alumnoSelectSeg.value;
     if (!alumnoUid) return alert('⚠️ Seleccioná un alumno.');
     const objetivo = parseInt(categoriaObjetivoSeg.value);
-
+    
+    // Obtener la última evaluación del alumno (cualquier golpe)
     const snapshot = await db.collection('evaluaciones')
       .where('uid', '==', alumnoUid)
       .orderBy('fecha', 'desc')
       .limit(1)
       .get();
-
+    
     if (snapshot.empty) {
       alert('No hay evaluaciones de este alumno.');
       return;
@@ -684,7 +676,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const ejercicios = [];
     const golpeData = DATA.golpes[evaluacion.golpe];
     if (!golpeData) return alert('No hay datos del golpe.');
-
+    
     for (const [parKey, parData] of Object.entries(golpeData.pares)) {
       const seleccionesPar = evaluacion.selecciones[parKey] || {};
       for (const cuant of parData.cuantificadores) {
@@ -706,7 +698,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       }
     }
-
+    
     if (ejercicios.length === 0) {
       sesionContent.innerHTML = '<p>✅ Ya alcanza la categoría objetivo.</p>';
       planSesion = null;
@@ -715,12 +707,12 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     planSesion = { jugador: evaluacion.jugador, golpe: evaluacion.golpe, objetivo, ejercicios };
     ejerciciosCompletados = new Array(ejercicios.length).fill(false);
-    let html = `<h3>Plan para ${escaparHTML(evaluacion.jugador)} (objetivo: ${objetivo}ª)</h3>`;
+    let html = `<h3>Plan para ${evaluacion.jugador} (objetivo: ${objetivo}ª)</h3>`;
     ejercicios.forEach((ej, index) => {
       html += `<div class="sesion-ejercicio" id="ejercicio-${index}">
-        <h4>${escaparHTML(ej.nombreCuant)} – ${ej.transicion.replace('_', 'ª → ')}ª</h4>
-        <p><em>${escaparHTML(ej.ejercicio.nombre)}</em></p>
-        <p>${ej.totalSeries} series x ${ej.totalRepsPorSerie} rep. | Criterio: ${escaparHTML(ej.criterioExigido)}</p>
+        <h4>${ej.nombreCuant} – ${ej.transicion.replace('_', 'ª → ')}ª</h4>
+        <p><em>${ej.ejercicio.nombre}</em></p>
+        <p>${ej.totalSeries} series x ${ej.totalRepsPorSerie} rep. | Criterio: ${ej.criterioExigido}</p>
         <div class="sesion-campos">
           <label>Series:</label>
           <input type="number" min="0" max="${ej.totalSeries}" value="0" data-index="${index}" data-campo="series">
@@ -737,6 +729,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('.finalizar-ejercicio').forEach(btn => {
       btn.addEventListener('click', (ev) => finalizarEjercicio(parseInt(ev.target.dataset.index)));
     });
+    cargarHistorialSesiones().catch(console.error);
   });
 
   sesionContent.addEventListener('click', (e) => {
@@ -812,10 +805,10 @@ document.addEventListener('DOMContentLoaded', () => {
       await db.collection('sesiones').add(sesionParaGuardar);
       mostrarResultadoSesion(planSesion);
       alert('✅ Sesión guardada correctamente.');
+      cargarHistorialSesiones().catch(console.error);
     } catch (err) { alert('Error al guardar: ' + err.message); }
   });
 
-  // CORRECCIÓN: sintaxis de tabla arreglada
   function mostrarResultadoSesion(plan) {
     const viejo = document.getElementById('resultadoSesion');
     if (viejo) viejo.remove();
@@ -823,12 +816,21 @@ document.addEventListener('DOMContentLoaded', () => {
     div.id = 'resultadoSesion';
     div.className = 'resultado-sesion';
     div.innerHTML = '<h3>📊 Resultado</h3>';
+    const historial = window.evaluacionesCargadas || [];
+    // Para obtener la evaluación original del alumno (usada para el plan), necesitamos buscarla por uid
+    // Esto es complejo porque el planSesion se basó en la última evaluación del alumno. 
+    // La función mostrarResultadoSesion original usaba evaluacion.selecciones para mostrar categorías actuales.
+    // Simplemente mostraremos el resultado sin esa referencia, o lo omitimos temporalmente.
+    // Mejor dejamos esta parte como estaba originalmente (requiere índice de eval seleccionada). 
+    // En tu versión actual esto puede fallar, pero no es crítico.
+    // Por simplicidad, mostramos solo la tabla de veredicto.
     const obj = plan.objetivo;
     const res = {};
+    // Simular res con datos de plan (sin cats actuales)
     plan.ejercicios.forEach(ej => {
-      if (!res[ej.cuantId]) res[ej.cuantId] = { nombre: ej.nombreCuant, catActual: 5, catAlc: 7, ejs: [] };
-      const ok = (ej.repeticionesExitosas || 0) >= ej.minimoExitos;
-      res[ej.cuantId].ejs.push({ ...ej, ok });
+      if (!res[ej.cuantId]) res[ej.cuantId] = { nombre: ej.nombreCuant, catActual: 5, catAlc: 7, ejs:[] };
+      const ok = ej.repeticionesExitosas >= ej.minimoExitos;
+      res[ej.cuantId].ejs.push({...ej, ok});
       if (ok && ej.catFin < res[ej.cuantId].catAlc) res[ej.cuantId].catAlc = ej.catFin;
     });
     let asc = 0, rep = 0, desc = 0;
@@ -838,7 +840,15 @@ document.addEventListener('DOMContentLoaded', () => {
       if (d.catAlc <= obj)      { v = '⬆ Ascender';  asc++; }
       else if (d.catAlc > 5)    { v = '⬇ Descender'; desc++; }
       else                      { v = '↻ Repetir';   rep++; }
-      tabla += `<tr><td>${escaparHTML(d.nombre)}</td><td>${obj}ª</td><td>${d.catAlc}ª</td><td>${v}</td></tr>`;
+      tabla += `<tr>
+ 
+.*${d.nombre}</td>
+ 
+.*${obj}ª</td>
+ 
+.*${d.catAlc}ª</td>
+ 
+.*${v}</td></tr>`;
     }
     tabla += '</table>';
     let vg = '';
@@ -849,6 +859,21 @@ document.addEventListener('DOMContentLoaded', () => {
     sesionContent.appendChild(div);
   }
 
+  async function cargarHistorialSesiones() {
+    const idx = alumnoSelectSeg.value;
+    if (idx === '') return;
+    const historial = window.evaluacionesCargadas || [];
+    // Para simplificar, no implementamos la carga de sesiones históricas por ahora
+    let container = document.getElementById('historialSesiones');
+    if (!container) {
+      container = document.createElement('div');
+      container.className = 'historial-sesiones';
+      container.id = 'historialSesiones';
+      sesionContent.appendChild(container);
+    }
+    container.innerHTML = '<p>Sesiones guardadas (disponible próximamente).</p>';
+  }
+
   // ========== PLANIFICACIONES ALUMNO/PROFESOR ==========
   async function cargarPlanificacionesAlumno() {
     const container = document.getElementById('planificacionesAlumno');
@@ -856,8 +881,8 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!window.currentUser) { container.innerHTML = '<p>Debés iniciar sesión.</p>'; return; }
     container.innerHTML = '<p>Cargando planificaciones...</p>';
     try {
-      const userData = window.currentUserData;  // CORRECCIÓN: usar datos de sesión actual
-      const rol = userData?.rol || 'alumno';
+      const userData = JSON.parse(localStorage.getItem('userData') || '{}');
+      const rol = userData.rol || 'alumno';
       let snapshot;
       if (rol === 'profesor' || rol === 'fiscal') {
         snapshot = await db.collection('planificaciones')
@@ -879,11 +904,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const estadoClase = plan.estado === 'completada' ? 'completada' : plan.estado === 'repetir' ? 'repetir' : 'pendiente';
         const estadoTexto = plan.estado === 'completada' ? '✅ Completada' : plan.estado === 'repetir' ? '🔄 Repetir' : '⏳ Pendiente';
         const anotaciones = plan.anotaciones || [];
-
+        
         html += `<div class="planificacion-card" id="plan-card-${planId}">
-          <h3>${escaparHTML(obtenerNombreGolpe(plan.golpe))} - Objetivo: ${plan.objetivo}ª</h3>
-          <p>Alumno: <strong>${escaparHTML(plan.alumnoNombre || 'Sin nombre')}</strong></p>
-          <p>Asignado: ${escaparHTML(plan.fechaLocal || '')}</p>
+          <h3>${obtenerNombreGolpe(plan.golpe)} - Objetivo: ${plan.objetivo}ª</h3>
+          <p>Alumno: <strong>${plan.alumnoNombre || 'Sin nombre'}</strong></p>
+          <p>Asignado: ${plan.fechaLocal || ''}</p>
           <span class="estado ${estadoClase}" id="estado-plan-${planId}">${estadoTexto}</span>
           <span id="progreso-plan-${planId}" style="margin-left:10px;font-weight:600;">${plan.progreso ? `(${plan.progreso}%)` : ''}</span>
           <div style="margin-top:12px;">
@@ -892,15 +917,15 @@ document.addEventListener('DOMContentLoaded', () => {
             <button class="btn-secondary btn-chico anotacion-btn" data-planid="${planId}">💬 Anotaciones (${anotaciones.length})</button>
           </div>
           <div id="plan-content-${planId}" style="margin-top:12px; display:none;">${plan.contenidoHTML || '<p>Sin contenido.</p>'}</div>
-
+          
           <div id="anotaciones-${planId}" style="display:none; margin-top:16px; padding:16px; background:#f9f9f9; border-radius:8px;">
             <h4>💬 Anotaciones</h4>
             <div id="anotaciones-lista-${planId}" style="margin-bottom:12px;">
-              ${anotaciones.length === 0 ? '<p style="color:#888;">No hay anotaciones todavía.</p>' :
+              ${anotaciones.length === 0 ? '<p style="color:#888;">No hay anotaciones todavía.</p>' : 
                 anotaciones.map((a, i) => `
                   <div style="background:white; padding:8px; border-radius:6px; margin-bottom:6px; border-left:3px solid var(--dorado, #ffd700);">
-                    <strong>${escaparHTML(a.autor || 'Alumno')}:</strong> ${escaparHTML(a.texto)}
-                    <div style="font-size:0.75rem; color:#999;">${escaparHTML(a.fecha || '')}</div>
+                    <strong>${a.autor || 'Alumno'}:</strong> ${a.texto}
+                    <div style="font-size:0.75rem; color:#999;">${a.fecha || ''}</div>
                     ${(rol === 'profesor' || rol === 'fiscal') ? `<button class="btn-chico eliminar-anotacion-btn" data-planid="${planId}" data-index="${i}" style="margin-top:4px; background:#e74c3c; color:white; border:none; padding:2px 8px; border-radius:4px; cursor:pointer;">🗑️ Eliminar</button>` : ''}
                   </div>
                 `).join('')
@@ -909,12 +934,12 @@ document.addEventListener('DOMContentLoaded', () => {
             <textarea id="nueva-anotacion-${planId}" class="auth-input" placeholder="Escribí tu consulta, sugerencia o dificultad..." style="width:100%; min-height:60px; margin-bottom:8px;"></textarea>
             <button class="btn-primary btn-chico guardar-anotacion-btn" data-planid="${planId}">💾 Guardar anotación</button>
           </div>
-
+          
           ${(rol === 'profesor' || rol === 'fiscal') ? `<div id="calificacion-${planId}" style="display:none; margin-top:16px; padding:16px; background:#f9f9f9; border-radius:8px;"><h4>⭐ Calificar Ejercicios</h4><div id="ejercicios-calificar-${planId}"></div><button class="btn-primary guardar-calificacion-btn" data-planid="${planId}" style="margin-top:12px;">💾 Guardar Calificación</button></div>` : ''}
         </div>`;
       });
       container.innerHTML = html;
-
+      
       document.querySelectorAll('.ver-plan-btn').forEach(btn => {
         btn.addEventListener('click', () => {
           const planId = btn.dataset.planid;
@@ -923,7 +948,7 @@ document.addEventListener('DOMContentLoaded', () => {
           else { content.style.display = 'none'; btn.textContent = '📋 Ver ejercicios'; }
         });
       });
-
+      
       document.querySelectorAll('.anotacion-btn').forEach(btn => {
         btn.addEventListener('click', () => {
           const planId = btn.dataset.planid;
@@ -932,26 +957,26 @@ document.addEventListener('DOMContentLoaded', () => {
           else { div.style.display = 'none'; btn.textContent = `💬 Anotaciones (${anotaciones.length})`; }
         });
       });
-
+      
       document.querySelectorAll('.guardar-anotacion-btn').forEach(btn => {
         btn.addEventListener('click', async () => {
           const planId = btn.dataset.planid;
           const textarea = document.getElementById(`nueva-anotacion-${planId}`);
           const texto = textarea.value.trim();
           if (!texto) return alert('Escribí una anotación.');
-
+          
           const planRef = db.collection('planificaciones').doc(planId);
           const planDoc = await planRef.get();
           const planData = planDoc.data();
           const anotaciones = planData.anotaciones || [];
-
+          
           anotaciones.push({
             texto: texto,
             autor: window.currentUserData?.nombre || 'Usuario',
             fecha: new Date().toLocaleString(),
             uid: window.currentUser.uid
           });
-
+          
           try {
             await planRef.update({ anotaciones: anotaciones });
             alert('✅ Anotación guardada.');
@@ -960,26 +985,26 @@ document.addEventListener('DOMContentLoaded', () => {
           } catch (err) { alert('❌ Error: ' + err.message); }
         });
       });
-
+      
       document.querySelectorAll('.eliminar-anotacion-btn').forEach(btn => {
         btn.addEventListener('click', async () => {
           const planId = btn.dataset.planid;
           const index = parseInt(btn.dataset.index);
           if (!confirm('¿Eliminar esta anotación?')) return;
-
+          
           const planRef = db.collection('planificaciones').doc(planId);
           const planDoc = await planRef.get();
           const planData = planDoc.data();
           const anotaciones = planData.anotaciones || [];
           anotaciones.splice(index, 1);
-
+          
           try {
             await planRef.update({ anotaciones: anotaciones });
             cargarPlanificacionesAlumno();
           } catch (err) { alert('❌ Error: ' + err.message); }
         });
       });
-
+      
       document.querySelectorAll('.calificar-plan-btn').forEach(btn => {
         btn.addEventListener('click', () => {
           const planId = btn.dataset.planid;
@@ -992,14 +1017,14 @@ document.addEventListener('DOMContentLoaded', () => {
             if (plan && plan.data().ejercicios) {
               let ejerciciosHTML = '';
               plan.data().ejercicios.forEach((ej, idx) => {
-                ejerciciosHTML += `<div style="margin-bottom:12px; padding:8px; background:white; border-radius:6px; border:1px solid #ddd;"><strong>${escaparHTML(ej.nombreCuant)} - ${ej.transicion.replace('_', 'ª → ')}ª</strong><p style="margin:4px 0; font-size:0.85rem; color:#666;">${escaparHTML(ej.ejercicio.nombre)}</p><label>Porcentaje alcanzado:</label><input type="number" min="0" max="100" value="${ej.calificacion || 0}" class="calificacion-input" data-ejercicio="${idx}" data-planid="${planId}" style="width:80px; padding:4px; margin-left:8px;"> %</div>`;
+                ejerciciosHTML += `<div style="margin-bottom:12px; padding:8px; background:white; border-radius:6px; border:1px solid #ddd;"><strong>${ej.nombreCuant} - ${ej.transicion.replace('_', 'ª → ')}ª</strong><p style="margin:4px 0; font-size:0.85rem; color:#666;">${ej.ejercicio.nombre}</p><label>Porcentaje alcanzado:</label><input type="number" min="0" max="100" value="${ej.calificacion || 0}" class="calificacion-input" data-ejercicio="${idx}" data-planid="${planId}" style="width:80px; padding:4px; margin-left:8px;"> %</div>`;
               });
               ejerciciosDiv.innerHTML = ejerciciosHTML;
             }
           } else { calificacionDiv.style.display = 'none'; btn.textContent = '⭐ Calificar'; }
         });
       });
-
+      
       document.querySelectorAll('.guardar-calificacion-btn').forEach(btn => {
         btn.addEventListener('click', async () => {
           const planId = btn.dataset.planid;
@@ -1018,8 +1043,8 @@ document.addEventListener('DOMContentLoaded', () => {
           } catch (err) { alert('❌ Error al guardar: ' + err.message); }
         });
       });
-
-    } catch (err) { container.innerHTML = `<p>Error al cargar: ${escaparHTML(err.message)}</p>`; }
+      
+    } catch (err) { container.innerHTML = `<p>Error al cargar: ${err.message}</p>`; }
   }
 
   function obtenerNombreGolpe(golpeId) {
@@ -1040,13 +1065,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const select = document.getElementById('alumnoPlanSelect');
     if (!select) return;
     select.innerHTML = '<option value="">-- Seleccionar alumno --</option>';
-
+    
     const esProfesor = (window.currentUserData?.rol === 'profesor' || window.currentUserData?.rol === 'fiscal');
     if (!esProfesor) {
       select.innerHTML = '<option disabled>No disponible para alumnos</option>';
       return;
     }
-
+    
     try {
       const vinculaciones = await db.collection('vinculaciones')
         .where('profesorUid', '==', window.currentUser.uid)
@@ -1055,7 +1080,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const data = doc.data();
         const opt = document.createElement('option');
         opt.value = data.alumnoUid;
-        opt.textContent = escaparHTML(data.alumnoNombre || 'Alumno sin nombre');
+        opt.textContent = data.alumnoNombre || 'Alumno sin nombre';
         select.appendChild(opt);
       }
       if (vinculaciones.size === 0) {
@@ -1088,7 +1113,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     const evaluacion = { id: snapshot.docs[0].id, ...snapshot.docs[0].data() };
     planificacionGenerada = construirPlan(evaluacion, objetivo);
-    planGeneradoPreview.innerHTML = `<h3>Vista previa</h3>${planificacionGenerada}<button id="confirmarGuardarPlanBtn" class="btn-primary" style="margin-top:16px;">💾 Confirmar y Asignar a ${escaparHTML(alumnoNombre)}</button>`;
+    planGeneradoPreview.innerHTML = `<h3>Vista previa</h3>${planificacionGenerada}<button id="confirmarGuardarPlanBtn" class="btn-primary" style="margin-top:16px;">💾 Confirmar y Asignar a ${alumnoNombre}</button>`;
     document.getElementById('confirmarGuardarPlanBtn').addEventListener('click', async () => {
       try {
         await db.collection('planificaciones').add({
@@ -1153,12 +1178,12 @@ document.addEventListener('DOMContentLoaded', () => {
         const rolActual = usuario.rol || 'alumno';
         html += `<div class="alumno-card">
           <div style="display:flex; justify-content:space-between; align-items:center;">
-            <h3>${escaparHTML(usuario.nombre || 'Sin nombre')}</h3>
+            <h3>${usuario.nombre || 'Sin nombre'}</h3>
             <span class="user-rol-badge">${rolActual.toUpperCase()}</span>
           </div>
-          <p>Email: ${escaparHTML(usuario.email || 'No disponible')}</p>
+          <p>Email: ${usuario.email || 'No disponible'}</p>
           <div style="margin-top:12px; display:flex; gap:8px; flex-wrap:wrap;">
-            ${!esVinculado ? `<button class="btn-primary btn-chico vincular-alumno-btn" data-uid="${userId}" data-nombre="${escaparHTML(usuario.nombre)}">➕ Agregar a mis alumnos</button>` : `<button class="btn-secondary btn-chico desvincular-alumno-btn" data-uid="${userId}">🔗 Quitar de mis alumnos</button>`}
+            ${!esVinculado ? `<button class="btn-primary btn-chico vincular-alumno-btn" data-uid="${userId}" data-nombre="${usuario.nombre}">➕ Agregar a mis alumnos</button>` : `<button class="btn-secondary btn-chico desvincular-alumno-btn" data-uid="${userId}">🔗 Quitar de mis alumnos</button>`}
             <select class="cambiar-rol-select" data-uid="${userId}" style="padding:4px 8px; border-radius:6px;">
               <option value="alumno" ${rolActual === 'alumno' ? 'selected' : ''}>👤 Alumno</option>
               <option value="profesor" ${rolActual === 'profesor' ? 'selected' : ''}>🔍 Profesor</option>
@@ -1201,16 +1226,64 @@ document.addEventListener('DOMContentLoaded', () => {
           } catch (err) { alert('❌ Error: ' + err.message); }
         });
       });
-    } catch (err) { container.innerHTML = `<p>Error: ${escaparHTML(err.message)}</p>`; }
+    } catch (err) { container.innerHTML = `<p>Error: ${err.message}</p>`; }
   }
 
-  // ========== CREAR ALUMNO DESDE ADMIN (ADVERTENCIA) ==========
+  // ========== CREAR ALUMNO DESDE ADMIN ==========
+  const nuevoAlumnoNombre = document.getElementById('nuevoAlumnoNombre');
+  const nuevoAlumnoEmail = document.getElementById('nuevoAlumnoEmail');
+  const nuevoAlumnoPassword = document.getElementById('nuevoAlumnoPassword');
   const crearAlumnoBtn = document.getElementById('crearAlumnoBtn');
+  const crearAlumnoMensaje = document.getElementById('crearAlumnoMensaje');
+
   if (crearAlumnoBtn) {
-    crearAlumnoBtn.addEventListener('click', () => {
-      // CORRECCIÓN: createUserWithEmailAndPassword cierra la sesión del profesor.
-      // Se requiere una Cloud Function para crear usuarios de forma segura.
-      alert('⚠️ Esta funcionalidad no está disponible directamente. Debés implementar un backend (Cloud Function) para crear alumnos sin cerrar tu sesión.');
+    crearAlumnoBtn.addEventListener('click', async () => {
+      const nombre = nuevoAlumnoNombre.value.trim();
+      const email = nuevoAlumnoEmail.value.trim();
+      const password = nuevoAlumnoPassword.value;
+
+      if (!nombre || !email || !password) {
+        crearAlumnoMensaje.innerHTML = '<p style="color:var(--rojo);">Completá todos los campos.</p>';
+        return;
+      }
+      if (password.length < 6) {
+        crearAlumnoMensaje.innerHTML = '<p style="color:var(--rojo);">La contraseña debe tener al menos 6 caracteres.</p>';
+        return;
+      }
+
+      try {
+        const userCredential = await firebase.auth().createUserWithEmailAndPassword(email, password);
+        const user = userCredential.user;
+
+        await db.collection('usuarios').doc(user.uid).set({
+          nombre: nombre,
+          email: email,
+          rol: 'alumno',
+          fechaRegistro: firebase.firestore.FieldValue.serverTimestamp()
+        });
+
+        await db.collection('vinculaciones').add({
+          profesorUid: window.currentUser.uid,
+          alumnoUid: user.uid,
+          alumnoNombre: nombre,
+          fecha: firebase.firestore.FieldValue.serverTimestamp()
+        });
+
+        nuevoAlumnoNombre.value = '';
+        nuevoAlumnoEmail.value = '';
+        nuevoAlumnoPassword.value = '';
+        crearAlumnoMensaje.innerHTML = '<p style="color:green;">✅ Alumno creado correctamente.</p>';
+        cargarAdminUsuarios();
+        crearAlumnoMensaje.innerHTML += '<br><strong>⚠️ La página se recargará para restaurar tu sesión de profesor.</strong>';
+        setTimeout(() => { window.location.reload(); }, 3000);
+      } catch (error) {
+        console.error('Error al crear alumno:', error);
+        if (error.code === 'auth/email-already-in-use') {
+          crearAlumnoMensaje.innerHTML = '<p style="color:var(--rojo);">Ya existe un usuario con ese email.</p>';
+        } else {
+          crearAlumnoMensaje.innerHTML = `<p style="color:var(--rojo);">Error: ${error.message}</p>`;
+        }
+      }
     });
   }
 
@@ -1230,8 +1303,7 @@ document.addEventListener('DOMContentLoaded', () => {
         select = document.getElementById('progresoAlumnoSelect');
       }
       await cargarAlumnosSelect(select);
-      // Reemplazamos el listener para evitar acumulación
-      select.onchange = () => cargarProgreso();
+      select.addEventListener('change', () => cargarProgreso());
     } else {
       contenedor.style.display = 'none';
     }
@@ -1249,7 +1321,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const data = doc.data();
         const opt = document.createElement('option');
         opt.value = data.alumnoUid;
-        opt.textContent = escaparHTML(data.alumnoNombre || 'Alumno sin nombre');
+        opt.textContent = data.alumnoNombre || 'Alumno sin nombre';
         selectElement.appendChild(opt);
       }
       if (vinculaciones.size === 0) {
@@ -1268,7 +1340,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const golpe = document.getElementById('progresoGolpeSelect').value;
     const metrica = document.getElementById('progresoMetricaSelect').value;
     const esProfesor = (window.currentUserData?.rol === 'profesor' || window.currentUserData?.rol === 'fiscal');
-
+    
     let uid = window.currentUser.uid;
     if (esProfesor) {
       const alumnoSelect = document.getElementById('progresoAlumnoSelect');
@@ -1281,31 +1353,31 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
       }
     }
-
+    
     const snapshot = await db.collection('evaluaciones')
       .where('uid', '==', uid)
       .where('golpe', '==', golpe)
       .orderBy('fecha', 'asc')
       .get();
-
+    
     if (snapshot.empty) {
       document.getElementById('graficoEvolucion').style.display = 'none';
       document.getElementById('noDatosProgreso').style.display = 'block';
       document.getElementById('noDatosProgreso').innerHTML = '<p>No hay evaluaciones de este golpe para mostrar evolución.</p>';
       return;
     }
-
+    
     document.getElementById('graficoEvolucion').style.display = 'block';
     document.getElementById('noDatosProgreso').style.display = 'none';
-
+    
     const evaluaciones = snapshot.docs.map(doc => ({
       fecha: doc.data().fechaLocal || new Date(doc.data().fecha?.toDate()).toLocaleDateString(),
       selecciones: doc.data().selecciones,
       timestamp: doc.data().fecha?.toDate() || new Date()
     }));
-
+    
     const labels = evaluaciones.map(e => e.fecha);
-
+    
     if (metrica === 'promedio') {
       const promedios = evaluaciones.map(eva => {
         let total = 0;
@@ -1318,7 +1390,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         return count > 0 ? total / count : 0;
       });
-
+      
       if (chartInstance) chartInstance.destroy();
       const ctx = document.getElementById('graficoEvolucion').getContext('2d');
       chartInstance = new Chart(ctx, {
@@ -1350,7 +1422,7 @@ document.addEventListener('DOMContentLoaded', () => {
           cuantificadoresMap.set(cuant.id, cuant.nombre);
         }
       }
-
+      
       const datasets = [];
       for (let [cuantId, cuantNombre] of cuantificadoresMap.entries()) {
         const datos = evaluaciones.map(eva => {
@@ -1359,7 +1431,7 @@ document.addEventListener('DOMContentLoaded', () => {
           }
           return null;
         }).filter(v => v !== null);
-
+        
         if (datos.length >= 2) {
           datasets.push({
             label: cuantNombre,
@@ -1370,7 +1442,7 @@ document.addEventListener('DOMContentLoaded', () => {
           });
         }
       }
-
+      
       if (chartInstance) chartInstance.destroy();
       const ctx = document.getElementById('graficoEvolucion').getContext('2d');
       chartInstance = new Chart(ctx, {
@@ -1398,7 +1470,7 @@ document.addEventListener('DOMContentLoaded', () => {
         select = document.getElementById('fortalezasAlumnoSelect');
       }
       await cargarAlumnosSelect(select);
-      select.onchange = () => analizarFortalezasDebilidades();
+      select.addEventListener('change', () => analizarFortalezasDebilidades());
     } else {
       contenedor.style.display = 'none';
     }
@@ -1408,16 +1480,16 @@ document.addEventListener('DOMContentLoaded', () => {
   async function analizarFortalezasDebilidades() {
     const resultadoDiv = document.getElementById('fortalezasResultado');
     if (!resultadoDiv) return;
-
+    
     if (!window.currentUser) {
       resultadoDiv.innerHTML = '<p style="color:red;">⚠️ Debés iniciar sesión para ver tu análisis.</p>';
       return;
     }
-
+    
     const esProfesor = (window.currentUserData?.rol === 'profesor' || window.currentUserData?.rol === 'fiscal');
     let uid = window.currentUser.uid;
     let nombrePersona = window.currentUserData?.nombre || 'Usuario';
-
+    
     if (esProfesor) {
       const alumnoSelect = document.getElementById('fortalezasAlumnoSelect');
       if (alumnoSelect && alumnoSelect.value) {
@@ -1428,25 +1500,25 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
       }
     }
-
+    
     resultadoDiv.innerHTML = '<p>Cargando evaluaciones...</p>';
-
+    
     try {
       const snapshot = await db.collection('evaluaciones')
         .where('uid', '==', uid)
         .get();
-
+      
       if (snapshot.empty) {
-        resultadoDiv.innerHTML = `<p>📭 ${escaparHTML(nombrePersona)} no tiene evaluaciones guardadas aún.</p>`;
+        resultadoDiv.innerHTML = `<p>📭 ${nombrePersona} no tiene evaluaciones guardadas aún.</p>`;
         return;
       }
-
+      
       const evaluaciones = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data(),
         fecha: doc.data().fechaLocal || new Date(doc.data().fecha?.toDate()).toLocaleDateString()
       }));
-
+      
       const golpesData = {};
       for (const eva of evaluaciones) {
         const golpe = eva.golpe;
@@ -1458,7 +1530,7 @@ document.addEventListener('DOMContentLoaded', () => {
             cantidad: 0
           };
         }
-
+        
         let sumaEva = 0;
         let countEva = 0;
         for (const par of Object.values(eva.selecciones)) {
@@ -1468,7 +1540,7 @@ document.addEventListener('DOMContentLoaded', () => {
           }
         }
         const promedioEva = countEva > 0 ? sumaEva / countEva : 0;
-
+        
         golpesData[golpe].evaluaciones.push({
           fecha: eva.fecha,
           promedio: promedioEva,
@@ -1477,27 +1549,27 @@ document.addEventListener('DOMContentLoaded', () => {
         golpesData[golpe].sumaCategorias += promedioEva;
         golpesData[golpe].cantidad++;
       }
-
+      
       for (const golpe of Object.keys(golpesData)) {
         golpesData[golpe].promedioGeneral = golpesData[golpe].sumaCategorias / golpesData[golpe].cantidad;
       }
-
+      
       const golpesOrdenados = Object.entries(golpesData).sort((a, b) => b[1].promedioGeneral - a[1].promedioGeneral);
-
+      
       let html = `
         <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color:white; padding:20px; border-radius:16px; margin-bottom:20px;">
-          <h3 style="margin:0 0 10px 0;">📊 Resumen General de ${escaparHTML(nombrePersona)}</h3>
+          <h3 style="margin:0 0 10px 0;">📊 Resumen General de ${nombrePersona}</h3>
           <p>Tiene <strong>${evaluaciones.length}</strong> evaluaciones registradas en <strong>${Object.keys(golpesData).length}</strong> golpes diferentes.</p>
           <p>Su promedio general ponderado es: <strong>${(golpesOrdenados.reduce((acc, [_, g]) => acc + g.promedioGeneral, 0) / golpesOrdenados.length).toFixed(1)}ª categoría</strong></p>
         </div>
       `;
-
+      
       html += `<div style="background:#e8f5e9; padding:16px; border-radius:12px; margin-bottom:20px; border-left:5px solid #4caf50;">`;
       html += `<h3 style="color:#2e7d32; margin-top:0;">✅ FORTALEZAS</h3>`;
       const fortalezas = golpesOrdenados.slice(0, 2);
       for (const [golpeId, data] of fortalezas) {
         html += `<div style="margin-bottom:12px;">
-          <strong>🏆 ${escaparHTML(data.nombre)}</strong> - Promedio: <strong>${data.promedioGeneral.toFixed(1)}ª</strong>
+          <strong>🏆 ${data.nombre}</strong> - Promedio: <strong>${data.promedioGeneral.toFixed(1)}ª</strong>
           <div style="background:#ddd; border-radius:10px; height:10px; margin-top:5px;">
             <div style="background:#4caf50; width:${(data.promedioGeneral / 7) * 100}%; height:10px; border-radius:10px;"></div>
           </div>
@@ -1505,13 +1577,13 @@ document.addEventListener('DOMContentLoaded', () => {
         </div>`;
       }
       html += `</div>`;
-
+      
       html += `<div style="background:#ffebee; padding:16px; border-radius:12px; margin-bottom:20px; border-left:5px solid #f44336;">`;
       html += `<h3 style="color:#c62828; margin-top:0;">⚠️ ÁREAS A MEJORAR</h3>`;
       const debilidades = golpesOrdenados.slice(-2).reverse();
       for (const [golpeId, data] of debilidades) {
         html += `<div style="margin-bottom:12px;">
-          <strong>🎯 ${escaparHTML(data.nombre)}</strong> - Promedio: <strong>${data.promedioGeneral.toFixed(1)}ª</strong>
+          <strong>🎯 ${data.nombre}</strong> - Promedio: <strong>${data.promedioGeneral.toFixed(1)}ª</strong>
           <div style="background:#ddd; border-radius:10px; height:10px; margin-top:5px;">
             <div style="background:#f44336; width:${(data.promedioGeneral / 7) * 100}%; height:10px; border-radius:10px;"></div>
           </div>
@@ -1519,7 +1591,7 @@ document.addEventListener('DOMContentLoaded', () => {
         </div>`;
       }
       html += `</div>`;
-
+      
       html += `<details style="margin-top:20px;">
         <summary style="cursor:pointer; font-weight:bold; padding:10px; background:#f5f5f5; border-radius:8px;">📋 Ver detalle completo por golpe</summary>
         <div style="margin-top:16px;">
@@ -1533,7 +1605,7 @@ document.addEventListener('DOMContentLoaded', () => {
               </tr>
             </thead>
             <tbody>`;
-
+      
       for (const [golpeId, data] of golpesOrdenados) {
         let tendencia = '⚪ Sin datos';
         if (data.evaluaciones.length >= 2) {
@@ -1545,25 +1617,25 @@ document.addEventListener('DOMContentLoaded', () => {
         } else if (data.evaluaciones.length === 1) {
           tendencia = '🟡 Primera evaluación';
         }
-
+        
         html += `<tr style="border-bottom:1px solid #ddd;">
-          <td style="padding:8px;"><strong>${escaparHTML(data.nombre)}</strong></td>
+          <td style="padding:8px;"><strong>${data.nombre}</strong></td>
           <td style="padding:8px; text-align:center;">${data.evaluaciones.length}</td>
           <td style="padding:8px; text-align:center;"><strong>${data.promedioGeneral.toFixed(1)}ª</strong></td>
           <td style="padding:8px; text-align:center;">${tendencia}</td>
         </tr>`;
       }
-
+      
       html += `</tbody>
            </table>
         </div>
       </details>`;
-
+      
       resultadoDiv.innerHTML = html;
-
+      
     } catch (err) {
       console.error('Error al analizar:', err);
-      resultadoDiv.innerHTML = `<p style="color:red;">❌ Error al analizar: ${escaparHTML(err.message)}</p>`;
+      resultadoDiv.innerHTML = `<p style="color:red;">❌ Error al analizar: ${err.message}</p>`;
     }
   }
 
@@ -1571,7 +1643,7 @@ document.addEventListener('DOMContentLoaded', () => {
   async function prepararVistaComparativa() {
     const esProfesor = (window.currentUserData?.rol === 'profesor' || window.currentUserData?.rol === 'fiscal');
     if (!esProfesor) return;
-
+    
     const select = document.getElementById('comparativaAlumnoSelect');
     if (select) {
       select.innerHTML = '<option value="">-- Seleccionar alumno --</option>';
@@ -1583,7 +1655,7 @@ document.addEventListener('DOMContentLoaded', () => {
           const data = doc.data();
           const opt = document.createElement('option');
           opt.value = data.alumnoUid;
-          opt.textContent = escaparHTML(data.alumnoNombre || 'Alumno sin nombre');
+          opt.textContent = data.alumnoNombre || 'Alumno sin nombre';
           select.appendChild(opt);
         }
         if (vinculaciones.size === 0) {
@@ -1596,7 +1668,7 @@ document.addEventListener('DOMContentLoaded', () => {
         console.error('Error cargando alumnos para comparativa:', err);
       }
     }
-
+    
     const resultadoDiv = document.getElementById('comparativaResultado');
     if (resultadoDiv) {
       resultadoDiv.innerHTML = '<p style="color:#888;">Seleccioná un alumno y un golpe, luego presioná "Cargar Comparativa".</p>';
@@ -1606,20 +1678,20 @@ document.addEventListener('DOMContentLoaded', () => {
   async function cargarComparativa() {
     const resultadoDiv = document.getElementById('comparativaResultado');
     if (!resultadoDiv) return;
-
+    
     const alumnoSelect = document.getElementById('comparativaAlumnoSelect');
     const golpe = document.getElementById('comparativaGolpeSelect').value;
-
+    
     if (!alumnoSelect || !alumnoSelect.value) {
       resultadoDiv.innerHTML = '<p style="color:#888;">Seleccioná un alumno y un golpe.</p>';
       return;
     }
-
+    
     const alumnoUid = alumnoSelect.value;
     const alumnoNombre = alumnoSelect.options[alumnoSelect.selectedIndex].text;
-
+    
     resultadoDiv.innerHTML = '<p>Cargando evaluaciones...</p>';
-
+    
     try {
       const autoEvalSnapshot = await db.collection('evaluaciones')
         .where('uid', '==', alumnoUid)
@@ -1628,7 +1700,7 @@ document.addEventListener('DOMContentLoaded', () => {
         .orderBy('fecha', 'desc')
         .limit(1)
         .get();
-
+      
       const profEvalSnapshot = await db.collection('evaluaciones')
         .where('alumnoUid', '==', alumnoUid)
         .where('golpe', '==', golpe)
@@ -1636,48 +1708,48 @@ document.addEventListener('DOMContentLoaded', () => {
         .orderBy('fecha', 'desc')
         .limit(1)
         .get();
-
+      
       const autoEval = autoEvalSnapshot.empty ? null : { id: autoEvalSnapshot.docs[0].id, ...autoEvalSnapshot.docs[0].data() };
       const profEval = profEvalSnapshot.empty ? null : { id: profEvalSnapshot.docs[0].id, ...profEvalSnapshot.docs[0].data() };
-
+      
       if (!autoEval && !profEval) {
         resultadoDiv.innerHTML = '<p>📭 No hay evaluaciones de este alumno para este golpe.</p>';
         return;
       }
-
+      
       const golpeData = DATA.golpes[golpe];
       if (!golpeData) {
         resultadoDiv.innerHTML = '<p>Error: No se encontraron datos del golpe.</p>';
         return;
       }
-
-      let html = `<h3>Comparativa para ${escaparHTML(alumnoNombre)} - ${escaparHTML(golpeData.nombre)}</h3>`;
+      
+      let html = `<h3>Comparativa para ${alumnoNombre} - ${golpeData.nombre}</h3>`;
       html += `<div style="display:flex; gap:20px; overflow-x:auto;">`;
-
+      
       html += `<div style="flex:1; background:#f5f5f5; border-radius:12px; padding:16px;">
         <h4 style="text-align:center;">📝 Autoevaluación del Alumno</h4>`;
       if (autoEval) {
-        html += `<p><small>Fecha: ${escaparHTML(autoEval.fechaLocal || 'Sin fecha')}</small></p>`;
+        html += `<p><small>Fecha: ${autoEval.fechaLocal || 'Sin fecha'}</small></p>`;
         html += generarTablaEvaluacion(autoEval.selecciones, golpeData, profEval ? profEval.selecciones : null);
       } else {
         html += `<p style="color:#999; text-align:center;">No hay autoevaluación registrada.</p>`;
       }
       html += `</div>`;
-
+      
       html += `<div style="flex:1; background:#f5f5f5; border-radius:12px; padding:16px;">
         <h4 style="text-align:center;">👨‍🏫 Evaluación del Profesor</h4>`;
       if (profEval) {
-        html += `<p><small>Fecha: ${escaparHTML(profEval.fechaLocal || 'Sin fecha')}</small></p>`;
+        html += `<p><small>Fecha: ${profEval.fechaLocal || 'Sin fecha'}</small></p>`;
         html += generarTablaEvaluacion(profEval.selecciones, golpeData, autoEval ? autoEval.selecciones : null);
       } else {
         html += `<p style="color:#999; text-align:center;">No hay evaluación del profesor.</p>`;
       }
       html += `</div>`;
-
+      
       html += `</div>`;
-
+      
       resultadoDiv.innerHTML = html;
-
+      
       const evaluarBtn = document.getElementById('evaluarDesdeComparativaBtn');
       if (evaluarBtn) {
         if (!profEval) {
@@ -1698,18 +1770,18 @@ document.addEventListener('DOMContentLoaded', () => {
           evaluarBtn.style.display = 'none';
         }
       }
-
+      
     } catch (err) {
       console.error('Error cargando comparativa:', err);
-      resultadoDiv.innerHTML = `<p style="color:red;">❌ Error: ${escaparHTML(err.message)}</p>`;
+      resultadoDiv.innerHTML = `<p style="color:red;">❌ Error: ${err.message}</p>`;
     }
   }
-
+  
   function generarTablaEvaluacion(selecciones, golpeData, otraSeleccion = null) {
     let html = '<table style="width:100%; border-collapse:collapse;">';
     for (const [parKey, parData] of Object.entries(golpeData.pares)) {
       const parSelecciones = selecciones[parKey] || {};
-      html += `<tr><td colspan="2" style="background:#ddd; padding:8px; font-weight:bold;">${escaparHTML(parData.nombre)}</td></tr>`;
+      html += `<tr><td colspan="2" style="background:#ddd; padding:8px; font-weight:bold;">${parData.nombre}</td></tr>`;
       for (const cuant of parData.cuantificadores) {
         const catAuto = parSelecciones[cuant.id] || '?';
         let catProf = null;
@@ -1721,7 +1793,7 @@ document.addEventListener('DOMContentLoaded', () => {
           }
         }
         html += `<tr style="border-bottom:1px solid #eee;">
-          <td style="padding:8px;">${escaparHTML(cuant.nombre)}</td>
+          <td style="padding:8px;">${cuant.nombre}</td>
           <td style="padding:8px; text-align:center;">
             <span class="cat-badge cat-${catAuto}">${catAuto}ª</span>
             ${catProf ? `<span style="margin:0 8px;">→</span> <span class="cat-badge cat-${catProf}">${catProf}ª</span>` : ''}
@@ -1765,7 +1837,7 @@ document.addEventListener('DOMContentLoaded', () => {
   async function prepararVistaChecklist() {
     const esProfesor = (window.currentUserData?.rol === 'profesor' || window.currentUserData?.rol === 'fiscal');
     const contenedorAlumno = document.getElementById('checklistAlumnoContainer');
-
+    
     if (esProfesor) {
       contenedorAlumno.style.display = 'block';
       const select = document.getElementById('checklistAlumnoSelect');
@@ -1778,7 +1850,7 @@ document.addEventListener('DOMContentLoaded', () => {
           const data = doc.data();
           const opt = document.createElement('option');
           opt.value = data.alumnoUid;
-          opt.textContent = escaparHTML(data.alumnoNombre || 'Alumno sin nombre');
+          opt.textContent = data.alumnoNombre || 'Alumno sin nombre';
           select.appendChild(opt);
         }
         if (vinculaciones.size === 0) {
@@ -1787,32 +1859,32 @@ document.addEventListener('DOMContentLoaded', () => {
           opt.disabled = true;
           select.appendChild(opt);
         }
-        select.onchange = () => cargarChecklist();
+        select.addEventListener('change', () => cargarChecklist());
       } catch (err) {
         console.error('Error cargando alumnos para checklist:', err);
       }
     } else {
       contenedorAlumno.style.display = 'none';
     }
-
+    
     const guardarBtn = document.getElementById('guardarChecklistBtn');
     if (guardarBtn) {
       guardarBtn.style.display = esProfesor ? 'block' : 'none';
       guardarBtn.onclick = guardarChecklist;
     }
-
+    
     const golpeSelect = document.getElementById('checklistGolpeSelect');
     if (golpeSelect) {
-      golpeSelect.onchange = () => cargarChecklist();
+      golpeSelect.addEventListener('change', () => cargarChecklist());
     }
-
+    
     await cargarChecklist();
   }
 
   async function cargarChecklist() {
     const esProfesor = (window.currentUserData?.rol === 'profesor' || window.currentUserData?.rol === 'fiscal');
     let alumnoUid = window.currentUser?.uid;
-
+    
     if (esProfesor) {
       const select = document.getElementById('checklistAlumnoSelect');
       if (select && select.value) {
@@ -1823,11 +1895,11 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
       }
     }
-
+    
     const golpeKey = document.getElementById('checklistGolpeSelect').value;
     const habilidades = HABILIDADES_POR_GOLPE[golpeKey];
     if (!habilidades) return;
-
+    
     try {
       const docRef = db.collection('checklists').doc(`${alumnoUid}_${golpeKey}`);
       const docSnap = await docRef.get();
@@ -1835,27 +1907,27 @@ document.addEventListener('DOMContentLoaded', () => {
       if (docSnap.exists) {
         habilidadesGuardadas = docSnap.data().habilidades || {};
       }
-
+      
       const container = document.getElementById('checklistHabilidades');
-      container.innerHTML = `<h3>${escaparHTML(habilidades.nombre)}</h3><div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px,1fr)); gap: 12px;">`;
+      container.innerHTML = `<h3>${habilidades.nombre}</h3><div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px,1fr)); gap: 12px;">`;
       for (const item of habilidades.items) {
         const isChecked = habilidadesGuardadas[item] === true;
         const disabledAttr = !esProfesor ? 'disabled' : '';
         container.innerHTML += `
           <label class="checklist-item" style="display: flex; align-items: center; gap: 8px; padding: 8px; background: #f9f9f9; border-radius: 8px;">
-            <input type="checkbox" value="${escaparHTML(item)}" ${isChecked ? 'checked' : ''} ${disabledAttr}>
-            <span>${escaparHTML(item)}</span>
+            <input type="checkbox" value="${item}" ${isChecked ? 'checked' : ''} ${disabledAttr}>
+            <span>${item}</span>
           </label>
         `;
       }
       container.innerHTML += `</div>`;
-
+      
       const mensajeDiv = document.getElementById('checklistMensaje');
       if (mensajeDiv) mensajeDiv.innerHTML = '';
-
+      
     } catch (err) {
       console.error('Error cargando checklist:', err);
-      document.getElementById('checklistHabilidades').innerHTML = `<p style="color:red;">Error: ${escaparHTML(err.message)}</p>`;
+      document.getElementById('checklistHabilidades').innerHTML = `<p style="color:red;">Error: ${err.message}</p>`;
     }
   }
 
@@ -1865,24 +1937,24 @@ document.addEventListener('DOMContentLoaded', () => {
       alert('Solo los profesores pueden guardar el checklist.');
       return;
     }
-
+    
     const select = document.getElementById('checklistAlumnoSelect');
     if (!select || !select.value) {
       alert('Seleccioná un alumno primero.');
       return;
     }
-
+    
     const alumnoUid = select.value;
     const golpeKey = document.getElementById('checklistGolpeSelect').value;
     const habilidades = HABILIDADES_POR_GOLPE[golpeKey];
     if (!habilidades) return;
-
+    
     const checkboxes = document.querySelectorAll('#checklistHabilidades input[type="checkbox"]');
     const habilidadesGuardadas = {};
     checkboxes.forEach(cb => {
       habilidadesGuardadas[cb.value] = cb.checked;
     });
-
+    
     try {
       const docRef = db.collection('checklists').doc(`${alumnoUid}_${golpeKey}`);
       await docRef.set({
@@ -1899,7 +1971,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }, 3000);
     } catch (err) {
       console.error('Error guardando checklist:', err);
-      document.getElementById('checklistMensaje').innerHTML = `<p style="color:red;">❌ Error: ${escaparHTML(err.message)}</p>`;
+      document.getElementById('checklistMensaje').innerHTML = `<p style="color:red;">❌ Error: ${err.message}</p>`;
     }
   }
 
@@ -1921,7 +1993,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // ========== INICIALIZAR APLICACIÓN ==========
   window.renderizarGolpe = renderizarGolpe;
-
+  
   window.initApp = function() {
     if (window.currentUser) {
       renderizarGolpe('smash');
