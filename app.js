@@ -1,5 +1,8 @@
-// ==================== APP.JS – VERSIÓN FINAL CORREGIDA (CONSULTAS POR alumnoUid) ====================
+// ==================== APP.JS – VERSIÓN FINAL CON LOGS Y CORRECCIÓN DE CONSULTAS ====================
 document.addEventListener('DOMContentLoaded', () => {
+
+  // Función global para logs visibles en pantalla
+  window.logToScreen = window.logToScreen || ((msg) => console.log(msg));
 
   // Referencias a elementos del DOM
   const mainNav            = document.getElementById('mainNav');
@@ -272,7 +275,7 @@ document.addEventListener('DOMContentLoaded', () => {
       alumnoUid = selectedOption.value;
     } else {
       nombre = window.currentUserData?.nombre || 'Sin nombre';
-      alumnoUid = window.currentUser.uid; // autoevaluación
+      alumnoUid = window.currentUser.uid;
     }
     
     const evaluacion = {
@@ -293,7 +296,6 @@ document.addEventListener('DOMContentLoaded', () => {
       alert('✅ Evaluación guardada correctamente.');
     } catch (err) { alert('❌ Error al guardar: ' + err.message); }
   }
-
   // ========== HISTORIAL ==========
   async function cargarHistorial() {
     if (!window.currentUser) { historialLista.innerHTML = '<p>Iniciá sesión para ver tu historial.</p>'; return; }
@@ -398,29 +400,35 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   generarPlanBtn.addEventListener('click', async () => {
+    window.logToScreen('🔘 Botón Generar Plan clickeado');
     const alumnoUid = alumnoSelect.value;
-    if (!alumnoUid) return alert('⚠️ Seleccioná un alumno.');
-    
+    window.logToScreen(`Alumno UID: ${alumnoUid}`);
+    if (!alumnoUid) { alert('⚠️ Seleccioná un alumno.'); return; }
     const golpeSelect = document.getElementById('golpeEntrenamientoSelect');
     const golpe = golpeSelect ? golpeSelect.value : 'smash';
-    
-    // CORREGIDO: usar alumnoUid en lugar de uid
-    const snapshot = await db.collection('evaluaciones')
-      .where('alumnoUid', '==', alumnoUid)
-      .where('golpe', '==', golpe)
-      .orderBy('fecha', 'desc')
-      .limit(1)
-      .get();
-      
-    if (snapshot.empty) {
-      alert(`No hay evaluaciones de este alumno para el golpe "${golpe}".`);
-      return;
+    window.logToScreen(`Golpe: ${golpe}`);
+    try {
+      const snapshot = await db.collection('evaluaciones')
+        .where('alumnoUid', '==', alumnoUid)
+        .where('golpe', '==', golpe)
+        .orderBy('fecha', 'desc')
+        .limit(1)
+        .get();
+      window.logToScreen(`Evaluaciones encontradas: ${snapshot.size}`);
+      if (snapshot.empty) {
+        alert(`No hay evaluaciones de este alumno para el golpe "${golpe}".`);
+        return;
+      }
+      const evaluacion = { id: snapshot.docs[0].id, ...snapshot.docs[0].data() };
+      const objetivo = parseInt(categoriaObjetivo.value);
+      planGeneradoHTML = construirPlan(evaluacion, objetivo);
+      planEntrenamiento.innerHTML = planGeneradoHTML;
+      descargarPlanBtn.style.display = 'inline-block';
+      window.logToScreen('✅ Plan generado correctamente');
+    } catch (err) {
+      window.logToScreen(`❌ Error: ${err.message}`);
+      alert('Error al generar plan: ' + err.message);
     }
-    const evaluacion = { id: snapshot.docs[0].id, ...snapshot.docs[0].data() };
-    const objetivo = parseInt(categoriaObjetivo.value);
-    planGeneradoHTML = construirPlan(evaluacion, objetivo);
-    planEntrenamiento.innerHTML = planGeneradoHTML;
-    descargarPlanBtn.style.display = 'inline-block';
   });
 
   descargarPlanBtn.addEventListener('click', () => {
@@ -487,9 +495,7 @@ document.addEventListener('DOMContentLoaded', () => {
         let alumnoData = { email: 'No disponible', rol: 'alumno' };
         try {
           const alumnoDoc = await db.collection('usuarios').doc(alumnoUid).get();
-          if (alumnoDoc.exists) {
-            alumnoData = alumnoDoc.data();
-          }
+          if (alumnoDoc.exists) alumnoData = alumnoDoc.data();
         } catch (err) { console.warn(err); }
         html += `
           <div class="alumno-card" data-uid="${alumnoUid}">
@@ -507,7 +513,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       alumnosLista.innerHTML = html;
       document.querySelectorAll('.ver-evaluaciones-alumno').forEach(btn => {
-        btn.addEventListener('click', async (e) => {
+        btn.addEventListener('click', async () => {
           const uid = btn.dataset.uid;
           const container = document.getElementById(`evaluaciones-${uid}`);
           if (container.style.display === 'none') {
@@ -530,9 +536,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 evaHtml += '</ul>';
                 container.innerHTML = evaHtml;
               }
-            } catch (err) {
-              container.innerHTML = `<p>Error: ${err.message}</p>`;
-            }
+            } catch (err) { container.innerHTML = `<p>Error: ${err.message}</p>`; }
             btn.textContent = '🔼 Ocultar evaluaciones';
           } else {
             container.style.display = 'none';
@@ -541,7 +545,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
       });
       document.querySelectorAll('.ver-planificaciones-alumno').forEach(btn => {
-        btn.addEventListener('click', async (e) => {
+        btn.addEventListener('click', async () => {
           const uid = btn.dataset.uid;
           const container = document.getElementById(`planificaciones-${uid}`);
           if (container.style.display === 'none') {
@@ -564,9 +568,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 planHtml += '</ul>';
                 container.innerHTML = planHtml;
               }
-            } catch (err) {
-              container.innerHTML = `<p>Error: ${err.message}</p>`;
-            }
+            } catch (err) { container.innerHTML = `<p>Error: ${err.message}</p>`; }
             btn.textContent = '🔼 Ocultar planificaciones';
           } else {
             container.style.display = 'none';
@@ -628,9 +630,7 @@ document.addEventListener('DOMContentLoaded', () => {
         opt.disabled = true;
         select.appendChild(opt);
       }
-    } catch (err) {
-      console.error('Error cargando alumnos para seguimiento:', err);
-    }
+    } catch (err) { console.error(err); }
   }
 
   cargarPlanSegBtn.addEventListener('click', async () => {
@@ -639,16 +639,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const objetivo = parseInt(categoriaObjetivoSeg.value);
     const golpeSelect = document.getElementById('golpeSeguimientoSelect');
     const golpeFiltro = golpeSelect && golpeSelect.value ? golpeSelect.value : null;
-    
-    // CORREGIDO: usar alumnoUid en lugar de uid
     let query = db.collection('evaluaciones').where('alumnoUid', '==', alumnoUid);
     if (golpeFiltro) query = query.where('golpe', '==', golpeFiltro);
     const snapshot = await query.orderBy('fecha', 'desc').limit(1).get();
-    
-    if (snapshot.empty) {
-      alert('No hay evaluaciones de este alumno.');
-      return;
-    }
+    if (snapshot.empty) { alert('No hay evaluaciones de este alumno.'); return; }
     const evaluacion = { id: snapshot.docs[0].id, ...snapshot.docs[0].data() };
     const ejercicios = [];
     const golpeData = DATA.golpes[evaluacion.golpe];
@@ -689,10 +683,8 @@ document.addEventListener('DOMContentLoaded', () => {
         <p><em>${ej.ejercicio.nombre}</em></p>
         <p>${ej.totalSeries} series x ${ej.totalRepsPorSerie} rep. | Criterio: ${ej.criterioExigido}</p>
         <div class="sesion-campos">
-          <label>Series:</label>
-          <input type="number" min="0" max="${ej.totalSeries}" value="0" data-index="${index}" data-campo="series">
-          <label>Éxitos:</label>
-          <input type="number" min="0" max="${ej.totalSeries * ej.totalRepsPorSerie}" value="0" data-index="${index}" data-campo="exitosas">
+          <label>Series:</label><input type="number" min="0" max="${ej.totalSeries}" value="0" data-index="${index}" data-campo="series">
+          <label>Éxitos:</label><input type="number" min="0" max="${ej.totalSeries * ej.totalRepsPorSerie}" value="0" data-index="${index}" data-campo="exitosas">
           <button class="btn-primary btn-chico finalizar-ejercicio" data-index="${index}">✔ Finalizar</button>
           <button class="btn-secondary btn-chico corregir-ejercicio" data-index="${index}" style="display:none;">✏️ Corregir</button>
           <span class="completado-msg" style="display:none;">✅ Completado</span>
@@ -808,16 +800,16 @@ document.addEventListener('DOMContentLoaded', () => {
       else if (d.catAlc > 5) { v = '⬇ Descender'; desc++; }
       else { v = '↻ Repetir'; rep++; }
       tabla += `<tr>
- 
+  
 .*${d.nombre}</td>
- 
+  
 .*${obj}ª</td>
- 
+  
 .*${d.catAlc}ª</td>
- 
+  
 .*${v}</td></tr>`;
     }
-    tabla += '</table>';
+    tabla += '<tr>';
     let vg = '';
     if (desc > 0) vg = '<span class="veredicto descenso">⬇ DESCENDER</span>';
     else if (rep > 0) vg = '<span class="veredicto repetir">↻ REPETIR</span>';
@@ -901,7 +893,6 @@ document.addEventListener('DOMContentLoaded', () => {
         </div>`;
       });
       container.innerHTML = html;
-      // event listeners para anotaciones y calificaciones (similar a código anterior)
       document.querySelectorAll('.ver-plan-btn').forEach(btn => {
         btn.addEventListener('click', () => {
           const planId = btn.dataset.planid;
@@ -1039,18 +1030,16 @@ document.addEventListener('DOMContentLoaded', () => {
         select.appendChild(opt);
       }
     } catch (err) {
-      console.error('Error cargando alumnos para planificación:', err);
+      console.error(err);
       select.innerHTML = '<option disabled>Error al cargar alumnos</option>';
     }
   }
-
   generarYGuardarPlanBtn.addEventListener('click', async () => {
     const alumnoUid = alumnoPlanSelect.value;
     const alumnoNombre = alumnoPlanSelect.options[alumnoPlanSelect.selectedIndex]?.text.replace('👤 ', '') || '';
     const golpe = golpePlanSelect.value;
     const objetivo = parseInt(categoriaObjetivoPlan.value);
     if (!alumnoUid) return alert('⚠️ Seleccioná un alumno.');
-    // CORREGIDO: usar alumnoUid en lugar de uid
     const snapshot = await db.collection('evaluaciones')
       .where('alumnoUid', '==', alumnoUid)
       .where('golpe', '==', golpe)
@@ -1143,7 +1132,6 @@ document.addEventListener('DOMContentLoaded', () => {
         </div>`;
       });
       container.innerHTML = html;
-      // event listeners para vinculación
       document.querySelectorAll('.vincular-alumno-btn').forEach(btn => {
         btn.addEventListener('click', async () => {
           try {
@@ -1274,9 +1262,7 @@ document.addEventListener('DOMContentLoaded', () => {
         opt.disabled = true;
         selectElement.appendChild(opt);
       }
-    } catch (err) {
-      console.error('Error cargando alumnos para selector:', err);
-    }
+    } catch (err) { console.error(err); }
   }
 
   async function cargarProgreso() {
@@ -1287,17 +1273,14 @@ document.addEventListener('DOMContentLoaded', () => {
     let uid = window.currentUser.uid;
     if (esProfesor) {
       const alumnoSelect = document.getElementById('progresoAlumnoSelect');
-      if (alumnoSelect && alumnoSelect.value) {
-        uid = alumnoSelect.value;
-      } else {
+      if (alumnoSelect && alumnoSelect.value) uid = alumnoSelect.value;
+      else {
         document.getElementById('graficoEvolucion').style.display = 'none';
         document.getElementById('noDatosProgreso').style.display = 'block';
         document.getElementById('noDatosProgreso').innerHTML = '<p>Seleccioná un alumno para ver su progreso.</p>';
         return;
       }
     }
-    // Nota: para progreso se debe usar 'uid' porque el progreso es del alumno evaluado (autoevaluaciones)
-    // Aquí uid ya es alumnoUid (o el propio usuario). Correcto.
     const snapshot = await db.collection('evaluaciones')
       .where('uid', '==', uid)
       .where('golpe', '==', golpe)
@@ -1306,7 +1289,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (snapshot.empty) {
       document.getElementById('graficoEvolucion').style.display = 'none';
       document.getElementById('noDatosProgreso').style.display = 'block';
-      document.getElementById('noDatosProgreso').innerHTML = '<p>No hay evaluaciones de este golpe para mostrar evolución.</p>';
+      document.getElementById('noDatosProgreso').innerHTML = '<p>No hay evaluaciones de este golpe.</p>';
       return;
     }
     document.getElementById('graficoEvolucion').style.display = 'block';
@@ -1390,7 +1373,7 @@ document.addEventListener('DOMContentLoaded', () => {
         uid = alumnoSelect.value;
         nombrePersona = alumnoSelect.options[alumnoSelect.selectedIndex].text;
       } else {
-        resultadoDiv.innerHTML = '<p style="color:#888;">Seleccioná un alumno para ver su análisis de fortalezas.</p>';
+        resultadoDiv.innerHTML = '<p style="color:#888;">Seleccioná un alumno para ver su análisis.</p>';
         return;
       }
     }
@@ -1398,7 +1381,7 @@ document.addEventListener('DOMContentLoaded', () => {
     try {
       const snapshot = await db.collection('evaluaciones').where('uid', '==', uid).get();
       if (snapshot.empty) {
-        resultadoDiv.innerHTML = `<p>📭 ${nombrePersona} no tiene evaluaciones guardadas aún.</p>`;
+        resultadoDiv.innerHTML = `<p>📭 ${nombrePersona} no tiene evaluaciones guardadas.</p>`;
         return;
       }
       const evaluaciones = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data(), fecha: doc.data().fechaLocal || new Date(doc.data().fecha?.toDate()).toLocaleDateString() }));
@@ -1418,41 +1401,32 @@ document.addEventListener('DOMContentLoaded', () => {
       const golpesOrdenados = Object.entries(golpesData).sort((a, b) => b[1].promedioGeneral - a[1].promedioGeneral);
       let html = `<div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color:white; padding:20px; border-radius:16px; margin-bottom:20px;">
           <h3 style="margin:0 0 10px 0;">📊 Resumen General de ${nombrePersona}</h3>
-          <p>Tiene <strong>${evaluaciones.length}</strong> evaluaciones registradas en <strong>${Object.keys(golpesData).length}</strong> golpes diferentes.</p>
-          <p>Su promedio general ponderado es: <strong>${(golpesOrdenados.reduce((acc, [_, g]) => acc + g.promedioGeneral, 0) / golpesOrdenados.length).toFixed(1)}ª categoría</strong></p>
+          <p>Tiene <strong>${evaluaciones.length}</strong> evaluaciones en <strong>${Object.keys(golpesData).length}</strong> golpes.</p>
+          <p>Promedio general: <strong>${(golpesOrdenados.reduce((acc, [_, g]) => acc + g.promedioGeneral, 0) / golpesOrdenados.length).toFixed(1)}ª</strong></p>
         </div>`;
-      html += `<div style="background:#e8f5e9; padding:16px; border-radius:12px; margin-bottom:20px; border-left:5px solid #4caf50;"><h3 style="color:#2e7d32; margin-top:0;">✅ FORTALEZAS</h3>`;
-      const fortalezas = golpesOrdenados.slice(0, 2);
-      for (const [golpeId, data] of fortalezas) {
-        html += `<div style="margin-bottom:12px;"><strong>🏆 ${data.nombre}</strong> - Promedio: <strong>${data.promedioGeneral.toFixed(1)}ª</strong>
-          <div style="background:#ddd; border-radius:10px; height:10px; margin-top:5px;"><div style="background:#4caf50; width:${(data.promedioGeneral / 7) * 100}%; height:10px; border-radius:10px;"></div></div>
-          <p style="font-size:0.85rem; margin:5px 0 0 0;">${data.evaluaciones.length} evaluación(es) - Última: ${data.evaluaciones[data.evaluaciones.length-1]?.fecha || 'N/A'}</p></div>`;
+      html += `<div style="background:#e8f5e9; padding:16px; border-radius:12px; margin-bottom:20px; border-left:5px solid #4caf50;"><h3>✅ FORTALEZAS</h3>`;
+      for (const [golpeId, data] of golpesOrdenados.slice(0, 2)) {
+        html += `<div><strong>🏆 ${data.nombre}</strong> - Promedio: <strong>${data.promedioGeneral.toFixed(1)}ª</strong><div style="background:#ddd; border-radius:10px; height:10px; margin-top:5px;"><div style="background:#4caf50; width:${(data.promedioGeneral / 7) * 100}%; height:10px; border-radius:10px;"></div></div><p>${data.evaluaciones.length} eva(s) - Última: ${data.evaluaciones[data.evaluaciones.length-1]?.fecha || 'N/A'}</p></div>`;
       }
-      html += `</div><div style="background:#ffebee; padding:16px; border-radius:12px; margin-bottom:20px; border-left:5px solid #f44336;"><h3 style="color:#c62828; margin-top:0;">⚠️ ÁREAS A MEJORAR</h3>`;
-      const debilidades = golpesOrdenados.slice(-2).reverse();
-      for (const [golpeId, data] of debilidades) {
-        html += `<div style="margin-bottom:12px;"><strong>🎯 ${data.nombre}</strong> - Promedio: <strong>${data.promedioGeneral.toFixed(1)}ª</strong>
-          <div style="background:#ddd; border-radius:10px; height:10px; margin-top:5px;"><div style="background:#f44336; width:${(data.promedioGeneral / 7) * 100}%; height:10px; border-radius:10px;"></div></div>
-          <p style="font-size:0.85rem; margin:5px 0 0 0;">${data.evaluaciones.length} evaluación(es) - Última: ${data.evaluaciones[data.evaluaciones.length-1]?.fecha || 'N/A'}</p></div>`;
+      html += `</div><div style="background:#ffebee; padding:16px; border-radius:12px; margin-bottom:20px; border-left:5px solid #f44336;"><h3>⚠️ ÁREAS A MEJORAR</h3>`;
+      for (const [golpeId, data] of golpesOrdenados.slice(-2).reverse()) {
+        html += `<div><strong>🎯 ${data.nombre}</strong> - Promedio: <strong>${data.promedioGeneral.toFixed(1)}ª</strong><div style="background:#ddd; border-radius:10px; height:10px; margin-top:5px;"><div style="background:#f44336; width:${(data.promedioGeneral / 7) * 100}%; height:10px; border-radius:10px;"></div></div><p>${data.evaluaciones.length} eva(s) - Última: ${data.evaluaciones[data.evaluaciones.length-1]?.fecha || 'N/A'}</p></div>`;
       }
-      html += `</div><details style="margin-top:20px;"><summary style="cursor:pointer; font-weight:bold; padding:10px; background:#f5f5f5; border-radius:8px;">📋 Ver detalle completo por golpe</summary>
-        <div style="margin-top:16px;"><table style="width:100%; border-collapse:collapse;"><thead><tr style="background:#333; color:white;"><th style="padding:8px; text-align:left;">Golpe</th><th style="padding:8px; text-align:center;">Evaluaciones</th><th style="padding:8px; text-align:center;">Promedio</th><th style="padding:8px; text-align:center;">Tendencia</th></tr></thead><tbody>`;
+      html += `</div><details><summary>📋 Detalle completo</summary><table style="width:100%; border-collapse:collapse;"><thead><tr style="background:#333; color:white;"><th>Golpe</th><th>Evaluaciones</th><th>Promedio</th><th>Tendencia</th></tr></thead><tbody>`;
       for (const [golpeId, data] of golpesOrdenados) {
         let tendencia = '⚪ Sin datos';
         if (data.evaluaciones.length >= 2) {
           const primera = data.evaluaciones[0].promedio;
           const ultima = data.evaluaciones[data.evaluaciones.length-1].promedio;
-          if (ultima > primera) tendencia = '🟢 Mejorando';
-          else if (ultima < primera) tendencia = '🔴 Bajando';
-          else tendencia = '🟡 Estable';
+          tendencia = ultima > primera ? '🟢 Mejorando' : ultima < primera ? '🔴 Bajando' : '🟡 Estable';
         } else if (data.evaluaciones.length === 1) tendencia = '🟡 Primera evaluación';
-        html += `<tr style="border-bottom:1px solid #ddd;"><td style="padding:8px;"><strong>${data.nombre}</strong></td><td style="padding:8px; text-align:center;">${data.evaluaciones.length}</td><td style="padding:8px; text-align:center;"><strong>${data.promedioGeneral.toFixed(1)}ª</strong></td><td style="padding:8px; text-align:center;">${tendencia}</td></tr>`;
+        html += `<tr><td><strong>${data.nombre}</strong></td><td style="text-align:center;">${data.evaluaciones.length}</td><td style="text-align:center;"><strong>${data.promedioGeneral.toFixed(1)}ª</strong></td><td style="text-align:center;">${tendencia}</td></tr>`;
       }
-      html += `</tbody></table></div></details>`;
+      html += `</tbody></table></details>`;
       resultadoDiv.innerHTML = html;
     } catch (err) {
       console.error(err);
-      resultadoDiv.innerHTML = `<p style="color:red;">❌ Error al analizar: ${err.message}</p>`;
+      resultadoDiv.innerHTML = `<p style="color:red;">❌ Error: ${err.message}</p>`;
     }
   }
 
@@ -1464,9 +1438,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (select) {
       select.innerHTML = '<option value="">-- Seleccionar alumno --</option>';
       try {
-        const vinculaciones = await db.collection('vinculaciones')
-          .where('profesorUid', '==', window.currentUser.uid)
-          .get();
+        const vinculaciones = await db.collection('vinculaciones').where('profesorUid', '==', window.currentUser.uid).get();
         for (const doc of vinculaciones.docs) {
           const data = doc.data();
           const opt = document.createElement('option');
@@ -1483,7 +1455,7 @@ document.addEventListener('DOMContentLoaded', () => {
       } catch (err) { console.error(err); }
     }
     const resultadoDiv = document.getElementById('comparativaResultado');
-    if (resultadoDiv) resultadoDiv.innerHTML = '<p style="color:#888;">Seleccioná un alumno y un golpe, luego presioná "Cargar Comparativa".</p>';
+    if (resultadoDiv) resultadoDiv.innerHTML = '<p>Seleccioná alumno y golpe, luego presioná "Cargar Comparativa".</p>';
   }
 
   async function cargarComparativa() {
@@ -1492,12 +1464,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const alumnoSelect = document.getElementById('comparativaAlumnoSelect');
     const golpe = document.getElementById('comparativaGolpeSelect').value;
     if (!alumnoSelect || !alumnoSelect.value) {
-      resultadoDiv.innerHTML = '<p style="color:#888;">Seleccioná un alumno y un golpe.</p>';
+      resultadoDiv.innerHTML = '<p>Seleccioná un alumno y un golpe.</p>';
       return;
     }
     const alumnoUid = alumnoSelect.value;
     const alumnoNombre = alumnoSelect.options[alumnoSelect.selectedIndex].text;
-    resultadoDiv.innerHTML = '<p>Cargando evaluaciones...</p>';
+    resultadoDiv.innerHTML = '<p>Cargando...</p>';
     try {
       const autoEvalSnapshot = await db.collection('evaluaciones')
         .where('uid', '==', alumnoUid)
@@ -1513,32 +1485,28 @@ document.addEventListener('DOMContentLoaded', () => {
         .orderBy('fecha', 'desc')
         .limit(1)
         .get();
-      const autoEval = autoEvalSnapshot.empty ? null : { id: autoEvalSnapshot.docs[0].id, ...autoEvalSnapshot.docs[0].data() };
-      const profEval = profEvalSnapshot.empty ? null : { id: profEvalSnapshot.docs[0].id, ...profEvalSnapshot.docs[0].data() };
+      const autoEval = autoEvalSnapshot.empty ? null : autoEvalSnapshot.docs[0].data();
+      const profEval = profEvalSnapshot.empty ? null : profEvalSnapshot.docs[0].data();
       if (!autoEval && !profEval) {
-        resultadoDiv.innerHTML = '<p>📭 No hay evaluaciones de este alumno para este golpe.</p>';
+        resultadoDiv.innerHTML = '<p>No hay evaluaciones de este alumno para este golpe.</p>';
         return;
       }
       const golpeData = DATA.golpes[golpe];
       if (!golpeData) {
-        resultadoDiv.innerHTML = '<p>Error: No se encontraron datos del golpe.</p>';
+        resultadoDiv.innerHTML = '<p>Error: datos del golpe no encontrados.</p>';
         return;
       }
       let html = `<h3>Comparativa para ${alumnoNombre} - ${golpeData.nombre}</h3><div style="display:flex; gap:20px; overflow-x:auto;">`;
-      html += `<div style="flex:1; background:#f5f5f5; border-radius:12px; padding:16px;"><h4 style="text-align:center;">📝 Autoevaluación del Alumno</h4>`;
+      html += `<div style="flex:1; background:#f5f5f5; border-radius:12px; padding:16px;"><h4>📝 Autoevaluación</h4>`;
       if (autoEval) {
         html += `<p><small>Fecha: ${autoEval.fechaLocal || 'Sin fecha'}</small></p>`;
         html += generarTablaEvaluacion(autoEval.selecciones, golpeData, profEval ? profEval.selecciones : null);
-      } else {
-        html += `<p style="color:#999; text-align:center;">No hay autoevaluación registrada.</p>`;
-      }
-      html += `</div><div style="flex:1; background:#f5f5f5; border-radius:12px; padding:16px;"><h4 style="text-align:center;">👨‍🏫 Evaluación del Profesor</h4>`;
+      } else { html += '<p>No hay autoevaluación.</p>'; }
+      html += `</div><div style="flex:1; background:#f5f5f5; border-radius:12px; padding:16px;"><h4>👨‍🏫 Evaluación del Profesor</h4>`;
       if (profEval) {
         html += `<p><small>Fecha: ${profEval.fechaLocal || 'Sin fecha'}</small></p>`;
         html += generarTablaEvaluacion(profEval.selecciones, golpeData, autoEval ? autoEval.selecciones : null);
-      } else {
-        html += `<p style="color:#999; text-align:center;">No hay evaluación del profesor.</p>`;
-      }
+      } else { html += '<p>No hay evaluación del profesor.</p>'; }
       html += `</div></div>`;
       resultadoDiv.innerHTML = html;
       const evaluarBtn = document.getElementById('evaluarDesdeComparativaBtn');
@@ -1554,9 +1522,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             document.querySelector('.tab[data-view="evaluacion"]').click();
           };
-        } else {
-          evaluarBtn.style.display = 'none';
-        }
+        } else { evaluarBtn.style.display = 'none'; }
       }
     } catch (err) {
       console.error(err);
@@ -1564,7 +1530,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  // ========== GENERAR TABLA EVALUACIÓN (CORREGIDO – SIN DUPLICADO) ==========
   function generarTablaEvaluacion(selecciones, golpeData, otraSeleccion = null) {
     let html = '<table style="width:100%; border-collapse:collapse;">';
     for (const [parKey, parData] of Object.entries(golpeData.pares)) {
@@ -1572,20 +1537,12 @@ document.addEventListener('DOMContentLoaded', () => {
       html += `<tr><td colspan="2" style="background:#ddd; padding:8px; font-weight:bold;">${parData.nombre}</td></tr>`;
       for (const cuant of parData.cuantificadores) {
         const catAuto = parSelecciones[cuant.id] || '?';
-        let catProf = null;
-        let diferencia = '';
+        let catProf = null, diferencia = '';
         if (otraSeleccion && otraSeleccion[parKey] && otraSeleccion[parKey][cuant.id] !== undefined) {
           catProf = otraSeleccion[parKey][cuant.id];
           if (catAuto !== catProf) diferencia = ` <span style="color:red;">(dif: ${Math.abs(catAuto - catProf)}ª)</span>`;
         }
-        html += `<tr style="border-bottom:1px solid #eee;">
-          <td style="padding:8px;">${cuant.nombre}</td>
-          <td style="padding:8px; text-align:center;">
-            <span class="cat-badge cat-${catAuto}">${catAuto}ª</span>
-            ${catProf ? `<span style="margin:0 8px;">→</span> <span class="cat-badge cat-${catProf}">${catProf}ª</span>` : ''}
-            ${diferencia}
-          </td>
-        </tr>`;
+        html += `<tr><td>${cuant.nombre}</td><td><span class="cat-badge cat-${catAuto}">${catAuto}ª</span>${catProf ? ` → <span class="cat-badge cat-${catProf}">${catProf}ª</span>` : ''}${diferencia}</td></tr>`;
       }
     }
     html += '</table>';
@@ -1610,9 +1567,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const select = document.getElementById('checklistAlumnoSelect');
       select.innerHTML = '<option value="">-- Seleccionar alumno --</option>';
       try {
-        const vinculaciones = await db.collection('vinculaciones')
-          .where('profesorUid', '==', window.currentUser.uid)
-          .get();
+        const vinculaciones = await db.collection('vinculaciones').where('profesorUid', '==', window.currentUser.uid).get();
         for (const doc of vinculaciones.docs) {
           const data = doc.data();
           const opt = document.createElement('option');
@@ -1646,11 +1601,9 @@ document.addEventListener('DOMContentLoaded', () => {
     let alumnoUid = window.currentUser?.uid;
     if (esProfesor) {
       const select = document.getElementById('checklistAlumnoSelect');
-      if (select && select.value) {
-        alumnoUid = select.value;
-      } else {
-        const container = document.getElementById('checklistHabilidades');
-        container.innerHTML = '<p style="color:#888;">Seleccioná un alumno para ver su checklist.</p>';
+      if (select && select.value) alumnoUid = select.value;
+      else {
+        document.getElementById('checklistHabilidades').innerHTML = '<p>Seleccioná un alumno.</p>';
         return;
       }
     }
@@ -1660,17 +1613,13 @@ document.addEventListener('DOMContentLoaded', () => {
     try {
       const docRef = db.collection('checklists').doc(`${alumnoUid}_${golpeKey}`);
       const docSnap = await docRef.get();
-      let habilidadesGuardadas = {};
-      if (docSnap.exists) habilidadesGuardadas = docSnap.data().habilidades || {};
+      let habilidadesGuardadas = docSnap.exists ? docSnap.data().habilidades || {} : {};
       const container = document.getElementById('checklistHabilidades');
       container.innerHTML = `<h3>${habilidades.nombre}</h3><div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px,1fr)); gap: 12px;">`;
       for (const item of habilidades.items) {
         const isChecked = habilidadesGuardadas[item] === true;
         const disabledAttr = !esProfesor ? 'disabled' : '';
-        container.innerHTML += `<label class="checklist-item" style="display: flex; align-items: center; gap: 8px; padding: 8px; background: #f9f9f9; border-radius: 8px;">
-            <input type="checkbox" value="${item}" ${isChecked ? 'checked' : ''} ${disabledAttr}>
-            <span>${item}</span>
-          </label>`;
+        container.innerHTML += `<label><input type="checkbox" value="${item}" ${isChecked ? 'checked' : ''} ${disabledAttr}> ${item}</label>`;
       }
       container.innerHTML += `</div>`;
       document.getElementById('checklistMensaje').innerHTML = '';
@@ -1682,9 +1631,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   async function guardarChecklist() {
     const esProfesor = (window.currentUserData?.rol === 'profesor' || window.currentUserData?.rol === 'fiscal');
-    if (!esProfesor) { alert('Solo los profesores pueden guardar el checklist.'); return; }
+    if (!esProfesor) { alert('Solo profesores pueden guardar.'); return; }
     const select = document.getElementById('checklistAlumnoSelect');
-    if (!select || !select.value) { alert('Seleccioná un alumno primero.'); return; }
+    if (!select || !select.value) { alert('Seleccioná un alumno.'); return; }
     const alumnoUid = select.value;
     const golpeKey = document.getElementById('checklistGolpeSelect').value;
     const habilidades = HABILIDADES_POR_GOLPE[golpeKey];
@@ -1693,14 +1642,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const habilidadesGuardadas = {};
     checkboxes.forEach(cb => { habilidadesGuardadas[cb.value] = cb.checked; });
     try {
-      const docRef = db.collection('checklists').doc(`${alumnoUid}_${golpeKey}`);
-      await docRef.set({
+      await db.collection('checklists').doc(`${alumnoUid}_${golpeKey}`).set({
         alumnoUid, golpe: golpeKey, habilidades: habilidadesGuardadas,
         ultimaActualizacion: firebase.firestore.FieldValue.serverTimestamp(),
         actualizadoPor: window.currentUser.uid
       });
-      document.getElementById('checklistMensaje').innerHTML = '<p style="color:green;">✅ Checklist guardado correctamente.</p>';
-      setTimeout(() => { const msg = document.getElementById('checklistMensaje'); if (msg) msg.innerHTML = ''; }, 3000);
+      document.getElementById('checklistMensaje').innerHTML = '<p style="color:green;">✅ Checklist guardado.</p>';
+      setTimeout(() => { document.getElementById('checklistMensaje').innerHTML = ''; }, 3000);
     } catch (err) {
       console.error(err);
       document.getElementById('checklistMensaje').innerHTML = `<p style="color:red;">❌ Error: ${err.message}</p>`;
