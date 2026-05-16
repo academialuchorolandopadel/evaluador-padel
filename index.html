@@ -358,19 +358,34 @@
         <p>Sistema de Categorización y Planificación – Academia Lucho Rolando</p>
     </footer>
 
+    <!-- Área de logs visible para depuración (se puede eliminar después) -->
+    <div id="debugLog" style="position: fixed; bottom: 0; left: 0; right: 0; background: #000; color: #0f0; font-family: monospace; font-size: 12px; max-height: 150px; overflow-y: auto; padding: 8px; z-index: 9999; border-top: 2px solid #0f0; display: none;">
+        <strong>🪲 LOGS:</strong><br>
+    </div>
+    <button id="toggleDebugBtn" style="position: fixed; bottom: 5px; right: 5px; background: #000; color: #0f0; border: 1px solid #0f0; border-radius: 4px; z-index: 10000;">Mostrar logs</button>
+
     <script src="data.js"></script>
     <script src="ejercicios.js"></script>
     <script src="auth-ui.js"></script>
     <script src="app.js"></script>
 
     <script>
-        if ('serviceWorker' in navigator && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('sw.js')
-                    .then(r => console.log('SW registrado:', r.scope))
-                    .catch(e => console.warn('SW no disponible:', e.message));
-            });
-        }
+        // Mostrar/ocultar logs
+        const debugDiv = document.getElementById('debugLog');
+        document.getElementById('toggleDebugBtn').addEventListener('click', () => {
+            if (debugDiv.style.display === 'none') debugDiv.style.display = 'block';
+            else debugDiv.style.display = 'none';
+        });
+        window.logToScreen = function(msg) {
+            const debugDiv = document.getElementById('debugLog');
+            if (debugDiv) {
+                const line = document.createElement('div');
+                line.textContent = new Date().toLocaleTimeString() + ' - ' + msg;
+                debugDiv.appendChild(line);
+                debugDiv.scrollTop = debugDiv.scrollHeight;
+            }
+            console.log(msg);
+        };
     </script>
 </body>
 </html>
