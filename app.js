@@ -1,4 +1,4 @@
-// ==================== APP.JS – VERSIÓN COMPLETA CORREGIDA (VINCULACIONES EN TODAS LAS PESTAÑAS) ====================
+// ==================== APP.JS – VERSIÓN COMPLETA CORREGIDA (ENTRENAMIENTO, SEGUIMIENTO Y NUEVA PLANIFICACIÓN CON SELECTORES DE GOLPE) ====================
 document.addEventListener('DOMContentLoaded', () => {
 
   // Referencias a elementos del DOM
@@ -292,7 +292,6 @@ document.addEventListener('DOMContentLoaded', () => {
       alert('✅ Evaluación guardada correctamente.');
     } catch (err) { alert('❌ Error al guardar: ' + err.message); }
   }
-
   // ========== HISTORIAL ==========
   async function cargarHistorial() {
     if (!window.currentUser) { historialLista.innerHTML = '<p>Iniciá sesión para ver tu historial.</p>'; return; }
@@ -402,16 +401,18 @@ document.addEventListener('DOMContentLoaded', () => {
     const alumnoUid = alumnoSelect.value;
     if (!alumnoUid) return alert('⚠️ Seleccioná un alumno.');
     
-    // Buscar la última evaluación del alumno para el golpe actual
+    const golpeSelect = document.getElementById('golpeEntrenamientoSelect');
+    const golpe = golpeSelect ? golpeSelect.value : 'smash';
+    
     const snapshot = await db.collection('evaluaciones')
       .where('uid', '==', alumnoUid)
-      .where('golpe', '==', golpeActual)
+      .where('golpe', '==', golpe)
       .orderBy('fecha', 'desc')
       .limit(1)
       .get();
       
     if (snapshot.empty) {
-      alert('No hay evaluaciones de este alumno para este golpe.');
+      alert(`No hay evaluaciones de este alumno para el golpe "${golpe}".`);
       return;
     }
     const evaluacion = { id: snapshot.docs[0].id, ...snapshot.docs[0].data() };
@@ -661,12 +662,15 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!alumnoUid) return alert('⚠️ Seleccioná un alumno.');
     const objetivo = parseInt(categoriaObjetivoSeg.value);
     
-    // Obtener la última evaluación del alumno (cualquier golpe)
-    const snapshot = await db.collection('evaluaciones')
-      .where('uid', '==', alumnoUid)
-      .orderBy('fecha', 'desc')
-      .limit(1)
-      .get();
+    // Obtener la última evaluación del alumno (opcionalmente filtrar por golpe)
+    const golpeSelect = document.getElementById('golpeSeguimientoSelect');
+    const golpeFiltro = golpeSelect && golpeSelect.value ? golpeSelect.value : null;
+    
+    let query = db.collection('evaluaciones').where('uid', '==', alumnoUid);
+    if (golpeFiltro) {
+      query = query.where('golpe', '==', golpeFiltro);
+    }
+    const snapshot = await query.orderBy('fecha', 'desc').limit(1).get();
     
     if (snapshot.empty) {
       alert('No hay evaluaciones de este alumno.');
@@ -821,12 +825,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // Esto es complejo porque el planSesion se basó en la última evaluación del alumno. 
     // La función mostrarResultadoSesion original usaba evaluacion.selecciones para mostrar categorías actuales.
     // Simplemente mostraremos el resultado sin esa referencia, o lo omitimos temporalmente.
-    // Mejor dejamos esta parte como estaba originalmente (requiere índice de eval seleccionada). 
-    // En tu versión actual esto puede fallar, pero no es crítico.
-    // Por simplicidad, mostramos solo la tabla de veredicto.
     const obj = plan.objetivo;
     const res = {};
-    // Simular res con datos de plan (sin cats actuales)
     plan.ejercicios.forEach(ej => {
       if (!res[ej.cuantId]) res[ej.cuantId] = { nombre: ej.nombreCuant, catActual: 5, catAlc: 7, ejs:[] };
       const ok = ej.repeticionesExitosas >= ej.minimoExitos;
@@ -1094,7 +1094,6 @@ document.addEventListener('DOMContentLoaded', () => {
       select.innerHTML = '<option disabled>Error al cargar alumnos</option>';
     }
   }
-
   generarYGuardarPlanBtn.addEventListener('click', async () => {
     const alumnoUid = alumnoPlanSelect.value;
     const alumnoNombre = alumnoPlanSelect.options[alumnoPlanSelect.selectedIndex]?.text.replace('👤 ', '') || '';
@@ -1602,7 +1601,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 <th style="padding:8px; text-align:center;">Evaluaciones</th>
                 <th style="padding:8px; text-align:center;">Promedio</th>
                 <th style="padding:8px; text-align:center;">Tendencia</th>
-              </tr>
+              </table>
             </thead>
             <tbody>`;
       
@@ -1781,7 +1780,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let html = '<table style="width:100%; border-collapse:collapse;">';
     for (const [parKey, parData] of Object.entries(golpeData.pares)) {
       const parSelecciones = selecciones[parKey] || {};
-      html += `<tr><td colspan="2" style="background:#ddd; padding:8px; font-weight:bold;">${parData.nombre}</td></tr>`;
+      html += `<tr><td colspan="2" style="background:#ddd; padding:8px; font-weight:bold;">${parData.nombre}${parData.nombre}</td></tr>`;
       for (const cuant of parData.cuantificadores) {
         const catAuto = parSelecciones[cuant.id] || '?';
         let catProf = null;
