@@ -1,4 +1,4 @@
-// ==================== APP.JS – VERSIÓN COMPLETA CORREGIDA (CRÍTICOS RESUELTOS) ====================
+// ==================== APP.JS – VERSIÓN FINAL CORREGIDA (CONSULTAS POR alumnoUid) ====================
 document.addEventListener('DOMContentLoaded', () => {
 
   // Referencias a elementos del DOM
@@ -272,8 +272,7 @@ document.addEventListener('DOMContentLoaded', () => {
       alumnoUid = selectedOption.value;
     } else {
       nombre = window.currentUserData?.nombre || 'Sin nombre';
-      // CORRECCIÓN CRÍTICA: en autoevaluación, alumnoUid debe ser el propio uid del alumno
-      alumnoUid = window.currentUser.uid;
+      alumnoUid = window.currentUser.uid; // autoevaluación
     }
     
     const evaluacion = {
@@ -405,8 +404,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const golpeSelect = document.getElementById('golpeEntrenamientoSelect');
     const golpe = golpeSelect ? golpeSelect.value : 'smash';
     
+    // CORREGIDO: usar alumnoUid en lugar de uid
     const snapshot = await db.collection('evaluaciones')
-      .where('uid', '==', alumnoUid)
+      .where('alumnoUid', '==', alumnoUid)
       .where('golpe', '==', golpe)
       .orderBy('fecha', 'desc')
       .limit(1)
@@ -639,9 +639,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const objetivo = parseInt(categoriaObjetivoSeg.value);
     const golpeSelect = document.getElementById('golpeSeguimientoSelect');
     const golpeFiltro = golpeSelect && golpeSelect.value ? golpeSelect.value : null;
-    let query = db.collection('evaluaciones').where('uid', '==', alumnoUid);
+    
+    // CORREGIDO: usar alumnoUid en lugar de uid
+    let query = db.collection('evaluaciones').where('alumnoUid', '==', alumnoUid);
     if (golpeFiltro) query = query.where('golpe', '==', golpeFiltro);
     const snapshot = await query.orderBy('fecha', 'desc').limit(1).get();
+    
     if (snapshot.empty) {
       alert('No hay evaluaciones de este alumno.');
       return;
@@ -804,7 +807,15 @@ document.addEventListener('DOMContentLoaded', () => {
       if (d.catAlc <= obj) { v = '⬆ Ascender'; asc++; }
       else if (d.catAlc > 5) { v = '⬇ Descender'; desc++; }
       else { v = '↻ Repetir'; rep++; }
-      tabla += `<tr><td>${d.nombre}</td><td>${obj}ª</td><td>${d.catAlc}ª</td><td>${v}</td></tr>`;
+      tabla += `<tr>
+ 
+.*${d.nombre}</td>
+ 
+.*${obj}ª</td>
+ 
+.*${d.catAlc}ª</td>
+ 
+.*${v}</td></tr>`;
     }
     tabla += '</table>';
     let vg = '';
@@ -1039,8 +1050,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const golpe = golpePlanSelect.value;
     const objetivo = parseInt(categoriaObjetivoPlan.value);
     if (!alumnoUid) return alert('⚠️ Seleccioná un alumno.');
+    // CORREGIDO: usar alumnoUid en lugar de uid
     const snapshot = await db.collection('evaluaciones')
-      .where('uid', '==', alumnoUid)
+      .where('alumnoUid', '==', alumnoUid)
       .where('golpe', '==', golpe)
       .orderBy('fecha', 'desc')
       .limit(1)
@@ -1284,6 +1296,8 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
       }
     }
+    // Nota: para progreso se debe usar 'uid' porque el progreso es del alumno evaluado (autoevaluaciones)
+    // Aquí uid ya es alumnoUid (o el propio usuario). Correcto.
     const snapshot = await db.collection('evaluaciones')
       .where('uid', '==', uid)
       .where('golpe', '==', golpe)
