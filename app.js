@@ -1250,22 +1250,19 @@ document.addEventListener('DOMContentLoaded', () => {
       }
 
       try {
-        // CORRECCIÓN #4: usar Cloud Function en lugar de createUserWithEmailAndPassword
-        const crearAlumnoFn = firebase.functions().httpsCallable('crearAlumno');
-        const result = await crearAlumnoFn({ nombre, email, password });
-        const nuevoUid = result.data.uid;
+        const userCredential = await firebase.auth().createUserWithEmailAndPassword(email, password);
+        const user = userCredential.user;
 
-        // Crear documento en usuarios
-        await db.collection('usuarios').doc(nuevoUid).set({
+        await db.collection('usuarios').doc(user.uid).set({
           nombre: nombre,
           email: email,
           rol: 'alumno',
           fechaRegistro: firebase.firestore.FieldValue.serverTimestamp()
         });
-        // Crear vinculación
+
         await db.collection('vinculaciones').add({
           profesorUid: window.currentUser.uid,
-          alumnoUid: nuevoUid,
+          alumnoUid: user.uid,
           alumnoNombre: nombre,
           fecha: firebase.firestore.FieldValue.serverTimestamp()
         });
@@ -1275,9 +1272,15 @@ document.addEventListener('DOMContentLoaded', () => {
         nuevoAlumnoPassword.value = '';
         crearAlumnoMensaje.innerHTML = '<p style="color:green;">✅ Alumno creado correctamente.</p>';
         cargarAdminUsuarios();
+        crearAlumnoMensaje.innerHTML += '<br><strong>⚠️ La página se recargará para restaurar tu sesión de profesor.</strong>';
+        setTimeout(() => { window.location.reload(); }, 3000);
       } catch (error) {
         console.error(error);
-        crearAlumnoMensaje.innerHTML = `<p style="color:var(--rojo);">Error: ${error.message}</p>`;
+        if (error.code === 'auth/email-already-in-use') {
+          crearAlumnoMensaje.innerHTML = '<p style="color:var(--rojo);">Ya existe un usuario con ese email.</p>';
+        } else {
+          crearAlumnoMensaje.innerHTML = `<p style="color:var(--rojo);">Error: ${error.message}</p>`;
+        }
       }
     });
   }
