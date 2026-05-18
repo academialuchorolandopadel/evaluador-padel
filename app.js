@@ -562,10 +562,26 @@ document.addEventListener('DOMContentLoaded', () => {
                 let evaHtml = '<h4>Evaluaciones recientes</h4><ul>';
                 evaluacionesSnap.forEach(doc => {
                   const eva = doc.data();
-                  evaHtml += `<li><strong>${eva.golpe}</strong> - ${eva.fechaLocal || 'Sin fecha'} - Categoría promedio: ${calcularPromedioEvaluacion(eva.selecciones)}ª</li>`;
+                  evaHtml += `<li style="display:flex; justify-content:space-between; align-items:center; padding:6px 0; border-bottom:1px solid #eee;">
+                    <span><strong>${eva.golpe}</strong> - ${eva.fechaLocal || 'Sin fecha'} - Promedio: ${calcularPromedioEvaluacion(eva.selecciones)}ª</span>
+                    <button class="btn-chico eliminar-eva-alumno" data-id="${doc.id}" style="background:#e74c3c; color:white; border:none; padding:3px 8px; border-radius:4px; cursor:pointer; flex-shrink:0; margin-left:8px;">🗑️</button>
+                  </li>`;
                 });
                 evaHtml += '</ul>';
                 container.innerHTML = evaHtml;
+
+                // Agregar listeners para eliminar evaluaciones
+                container.querySelectorAll('.eliminar-eva-alumno').forEach(btn => {
+                  btn.addEventListener('click', async (e) => {
+                    e.stopPropagation();
+                    if (!confirm('¿Eliminar esta evaluación?')) return;
+                    try {
+                      await db.collection('evaluaciones').doc(btn.dataset.id).delete();
+                      window.evaluacionesCargadas = null;
+                      btn.closest('li').remove();
+                    } catch (err) { alert('Error: ' + err.message); }
+                  });
+                });
               }
             } catch (err) { container.innerHTML = `<p>Error: ${err.message}</p>`; }
             btn.textContent = '🔼 Ocultar evaluaciones';
@@ -594,10 +610,25 @@ document.addEventListener('DOMContentLoaded', () => {
                 let planHtml = '<h4>Planificaciones asignadas</h4><ul>';
                 planesSnap.forEach(doc => {
                   const plan = doc.data();
-                  planHtml += `<li><strong>${plan.golpe}</strong> - Objetivo ${plan.objetivo}ª - Estado: ${plan.estado || 'pendiente'}</li>`;
+                  planHtml += `<li style="display:flex; justify-content:space-between; align-items:center; padding:6px 0; border-bottom:1px solid #eee;">
+                    <span><strong>${plan.golpe}</strong> - Objetivo ${plan.objetivo}ª - Estado: ${plan.estado || 'pendiente'}</span>
+                    <button class="btn-chico eliminar-plan-alumno" data-id="${doc.id}" style="background:#e74c3c; color:white; border:none; padding:3px 8px; border-radius:4px; cursor:pointer; flex-shrink:0; margin-left:8px;">🗑️</button>
+                  </li>`;
                 });
                 planHtml += '</ul>';
                 container.innerHTML = planHtml;
+
+                // Agregar listeners para eliminar planificaciones
+                container.querySelectorAll('.eliminar-plan-alumno').forEach(btn => {
+                  btn.addEventListener('click', async (e) => {
+                    e.stopPropagation();
+                    if (!confirm('¿Eliminar esta planificación?')) return;
+                    try {
+                      await db.collection('planificaciones').doc(btn.dataset.id).delete();
+                      btn.closest('li').remove();
+                    } catch (err) { alert('Error: ' + err.message); }
+                  });
+                });
               }
             } catch (err) { container.innerHTML = `<p>Error: ${err.message}</p>`; }
             btn.textContent = '🔼 Ocultar planificaciones';
