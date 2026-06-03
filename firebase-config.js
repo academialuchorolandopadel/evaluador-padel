@@ -1,6 +1,5 @@
 // ==================== FIREBASE CONFIG (V8 Namespace) ====================
-// Reemplazá los valores con los de tu proyecto Firebase si cambian
-const firebaseConfig = {
+window.firebaseConfig = {
   apiKey: "AIzaSyDwDKdpIabK15uolzjBxvjuppGK34cjbf0",
   authDomain: "academia-categorizacion.firebaseapp.com",
   projectId: "academia-categorizacion",
@@ -10,19 +9,18 @@ const firebaseConfig = {
 };
 
 // Inicializar Firebase (API namespace v8)
-firebase.initializeApp(firebaseConfig);
+firebase.initializeApp(window.firebaseConfig);
 
 // Referencias globales
 window.auth = firebase.auth();
 window.db   = firebase.firestore();
-window.firebase = firebase;   // ← Necesario para usar serverTimestamp en app.js
+window.firebase = firebase;
 
 // Persistencia offline con manejo de errores (múltiples pestañas)
 window.db.enablePersistence({ synchronizeTabs: true })
   .catch(err => {
     if (err.code === 'failed-precondition') {
-      console.warn('⚠️ Múltiples pestañas abiertas. La persistencia offline funciona solo en una.');
-      // Opcional: mostrar un aviso al usuario
+      console.warn('⚠️ Múltiples pestañas abiertas.');
       const aviso = document.createElement('div');
       aviso.className = 'aviso-offline';
       aviso.textContent = '⚠️ Tienes varias pestañas abiertas. Cierra las demás para guardar datos offline.';
