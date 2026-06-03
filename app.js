@@ -2,6 +2,7 @@
 document.addEventListener('DOMContentLoaded', () => {
 
   window.logToScreen = window.logToScreen || ((msg) => console.log(msg));
+  window.evaluacionesCargadas = window.evaluacionesCargadas ?? null;
 
   const mainNav            = document.getElementById('mainNav');
   const views              = document.querySelectorAll('.view');
@@ -159,7 +160,7 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   function renderizarGolpe(golpeId) {
-    const golpe = DATA.golpes[golpeId];
+    const golpe = window.DATA.golpes[golpeId];
     if (!golpe) return;
     let html = `<h2>${golpe.nombre}</h2>`;
     if (golpe.subtitulo) html += `<p class="variantes-golpe">${golpe.subtitulo}</p>`;
@@ -201,7 +202,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function diagnosticarPar(parKey) {
-    const golpe = DATA.golpes[golpeActual];
+    const golpe = window.DATA.golpes[golpeActual];
     const parData = golpe.pares[parKey];
     const selecciones = {};
     let completo = true;
@@ -240,7 +241,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function evaluarGolpeCompleto() {
-    const golpe = DATA.golpes[golpeActual];
+    const golpe = window.DATA.golpes[golpeActual];
     const keys = Object.keys(golpe.pares);
     const modas = [];
     for (const parKey of keys) {
@@ -427,7 +428,7 @@ document.addEventListener('DOMContentLoaded', () => {
   function construirPlan(evaluacion, objetivo) {
     let html = `<h2>Plan para ${evaluacion.jugador}</h2><p><strong>Golpe:</strong> ${evaluacion.golpe} | <strong>Objetivo:</strong> ${objetivo}ª</p>`;
     let encontro = false;
-    const golpeData = DATA.golpes[evaluacion.golpe];
+    const golpeData = window.DATA.golpes[evaluacion.golpe];
     if (!golpeData) return html + '<p>No hay datos del golpe.</p>';
     for (const [parKey, parData] of Object.entries(golpeData.pares)) {
       const seleccionesPar = evaluacion.selecciones[parKey] || {};
@@ -680,7 +681,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (snapshot.empty) { alert('No hay evaluaciones de este alumno.'); return; }
     const evaluacion = { id: snapshot.docs[0].id, ...snapshot.docs[0].data() };
     const ejercicios = [];
-    const golpeData = DATA.golpes[evaluacion.golpe];
+    const golpeData = window.DATA.golpes[evaluacion.golpe];
     if (!golpeData) return alert('No hay datos del golpe.');
     for (const [parKey, parData] of Object.entries(golpeData.pares)) {
       const seleccionesPar = evaluacion.selecciones[parKey] || {};
@@ -1076,7 +1077,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function extraerEjerciciosDePlan(evaluacion, objetivo) {
     const ejercicios = [];
-    const golpeData = DATA.golpes[evaluacion.golpe];
+    const golpeData = window.DATA.golpes[evaluacion.golpe];
     if (!golpeData) return ejercicios;
     for (const [parKey, parData] of Object.entries(golpeData.pares)) {
       const seleccionesPar = evaluacion.selecciones[parKey] || {};
@@ -1203,7 +1204,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
       try {
         // Crear una instancia secundaria de Firebase que no afecta la sesión del profesor
-        secondaryApp = firebase.initializeApp(firebaseConfig, `secondary_${Date.now()}`);
+        secondaryApp = firebase.initializeApp(window.firebaseConfig, `secondary_${Date.now()}`);
         const secondaryAuth = secondaryApp.auth();
 
         // Crear el usuario en Firebase Auth usando la instancia secundaria
@@ -1341,7 +1342,7 @@ document.addEventListener('DOMContentLoaded', () => {
         options: { responsive: true, scales: { y: { min: 2, max: 7, title: { display: true, text: 'Categoría' } } }, plugins: { tooltip: { callbacks: { label: (ctx) => `${ctx.raw.toFixed(1)}ª categoría` } } } }
       });
     } else if (metrica === 'cuantificadores') {
-      const golpeData = DATA.golpes[golpe];
+      const golpeData = window.DATA.golpes[golpe];
       if (!golpeData) return;
       const cuantificadoresMap = new Map();
       for (const par of Object.values(golpeData.pares))
@@ -1479,7 +1480,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const autoEval = autoEvalSnapshot.empty ? null : autoEvalSnapshot.docs[0].data();
       const profEval = profEvalSnapshot.empty ? null : profEvalSnapshot.docs[0].data();
       if (!autoEval && !profEval) { resultadoDiv.innerHTML = '<p>No hay evaluaciones de este alumno para este golpe.</p>'; return; }
-      const golpeData = DATA.golpes[golpe];
+      const golpeData = window.DATA.golpes[golpe];
       if (!golpeData) { resultadoDiv.innerHTML = '<p>Error: datos del golpe no encontrados.</p>'; return; }
       let html = `<h3>Comparativa para ${alumnoNombre} - ${golpeData.nombre}</h3><div style="display:flex;gap:20px;overflow-x:auto;">`;
       html += `<div style="flex:1;background:#f5f5f5;border-radius:12px;padding:16px;"><h4>📝 Autoevaluación</h4>`;
@@ -1781,7 +1782,7 @@ document.addEventListener('DOMContentLoaded', () => {
               ${generarCategoriaHTML('fondo')}
             </div>
             <div id="manual-golpe-pared" class="manual-golpe-content" style="display:none;">
-              ${generarCategoriaHTML('pared')}
+        ${generarCategoriaHTML('pared')}
             </div>
           </div>
         </div>
@@ -1789,4 +1790,236 @@ document.addEventListener('DOMContentLoaded', () => {
       </div>
 
       <style>
-        .manu
+        .manual-wrapper { max-width: 900px; margin: 0 auto; padding: 16px; }
+        .manual-hero { background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%); color: white; padding: 32px; border-radius: 16px; margin-bottom: 24px; text-align: center; }
+        .manual-hero h1 { margin: 0 0 8px 0; font-size: 1.6rem; }
+        .manual-subtitulo { margin: 0; color: #aac4ff; font-size: 0.9rem; }
+        .manual-seccion { background: white; border-radius: 12px; margin-bottom: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); overflow: hidden; border: 1px solid #eee; }
+        .manual-seccion-header { display: flex; justify-content: space-between; align-items: center; padding: 18px 20px; cursor: pointer; background: #f8f9fa; transition: background 0.2s; }
+        .manual-seccion-header:hover { background: #e9ecef; }
+        .manual-seccion-header h2 { margin: 0; font-size: 1.1rem; }
+        .manual-seccion-body { padding: 20px; border-top: 1px solid #eee; }
+        .manual-seccion-body.collapsed { display: none; }
+        .manual-highlight { background: #fff3cd; border-left: 4px solid #ffc107; padding: 12px 16px; border-radius: 0 8px 8px 0; margin: 16px 0; }
+        .manual-golpes-grid { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 16px; }
+        .manual-golpe-chip { background: #e8f4fd; border: 2px solid #3498db; border-radius: 20px; padding: 6px 16px; font-weight: 600; font-size: 0.9rem; }
+        .manual-cuant-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 16px; margin-top: 16px; }
+        .manual-cuant-card { background: #f8f9fa; border-radius: 10px; padding: 16px; border-top: 4px solid #3498db; }
+        .cuant-numero { width: 32px; height: 32px; background: #3498db; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; margin-bottom: 10px; }
+        .manual-cuant-card h4 { margin: 0 0 8px 0; font-size: 0.95rem; }
+        .manual-cuant-card p { margin: 0; font-size: 0.85rem; color: #555; }
+        .manual-zonas { display: flex; gap: 8px; margin-top: 12px; }
+        .zona { flex: 1; padding: 12px; border-radius: 8px; text-align: center; font-size: 0.85rem; line-height: 1.4; }
+        .zona-a { background: #fff3e0; border: 2px solid #ff9800; }
+        .zona-b { background: #e8f5e9; border: 2px solid #4caf50; }
+        .zona-c { background: #e3f2fd; border: 2px solid #2196f3; }
+        .manual-par-box { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 16px 0; }
+        .par-box-item { background: #f8f9fa; border-radius: 10px; padding: 16px; border-left: 4px solid #9b59b6; }
+        .par-badge { background: #9b59b6; color: white; padding: 2px 10px; border-radius: 12px; font-size: 0.8rem; font-weight: bold; display: inline-block; margin-bottom: 8px; }
+        .par-box-item h4 { margin: 0 0 8px 0; font-size: 0.95rem; }
+        .par-box-item p { margin: 0; font-size: 0.85rem; color: #555; }
+        .manual-golpe-tabs { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 20px; }
+        .manual-golpe-tab { padding: 8px 16px; border: 2px solid #ddd; border-radius: 20px; background: white; cursor: pointer; font-size: 0.9rem; transition: all 0.2s; }
+        .manual-golpe-tab.active, .manual-golpe-tab:hover { background: #2c3e50; color: white; border-color: #2c3e50; }
+        .manual-cat-card { border-radius: 10px; margin-bottom: 12px; overflow: hidden; border: 1px solid #e0e0e0; }
+        .manual-cat-header { display: flex; align-items: center; gap: 12px; padding: 14px 16px; cursor: pointer; transition: background 0.2s; }
+        .manual-cat-header:hover { filter: brightness(0.95); }
+        .manual-cat-body { padding: 16px; background: white; border-top: 1px solid #eee; display: none; }
+        .manual-cat-body.open { display: block; }
+        .cat-color-7 { background: #f8d7da; }
+        .cat-color-6 { background: #fff3cd; }
+        .cat-color-5 { background: #d1ecf1; }
+        .cat-color-4 { background: #d4edda; }
+        .cat-color-3 { background: #cce5ff; }
+        .cat-color-2 { background: #e2d9f3; }
+        .cat-titulo { font-weight: bold; font-size: 1rem; }
+        .cat-subtitulo { font-size: 0.8rem; color: #555; margin-left: auto; }
+        .cat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        .cat-item h5 { margin: 0 0 4px 0; font-size: 0.85rem; color: #2c3e50; border-bottom: 1px solid #eee; padding-bottom: 4px; }
+        .cat-item p { margin: 0; font-size: 0.82rem; color: #444; line-height: 1.5; }
+        .cat-par { background: #f8f9fa; border-radius: 8px; padding: 10px 12px; margin-top: 12px; border-left: 3px solid #6c757d; font-size: 0.83rem; color: #444; }
+        .cat-par strong { color: #2c3e50; }
+        @media (max-width: 600px) {
+          .manual-zonas { flex-direction: column; }
+          .manual-par-box { grid-template-columns: 1fr; }
+          .cat-grid { grid-template-columns: 1fr; }
+        }
+      </style>
+    `;
+  }
+
+  const MANUAL_CATEGORIAS = {
+    smash: {
+      nombre: 'Smash (Sobre Cabeza)',
+      categorias: {
+        7: { nombre: '7ª Categoría', aptitud: 'Pega plano. Muy ocasionalmente con sidespin, más por defecto que por efectividad.', direccion: 'No dirige volitivamente a dos paredes ni a pared de fondo.', velocidad: 'Sin variación. No tiene criterio para seleccionar el cambio de velocidad.', factor: 'Continuidad: cada 4 golpes erra 3.', par: 'Pega el smash generalmente plano, sin dirigir ni intentar sacarla. Velocidad casi siempre igual. Escasa actitud de desplazamiento vertical hacia la red después de impactar.' },
+        6: { nombre: '6ª Categoría', aptitud: 'Pega con sidespin además de plano.', direccion: 'Intenta buscar dos paredes tanto plano como sidespin (sin lograrlo en alto porcentaje). Pega plano para traerla por pared de fondo (bajo porcentaje).', velocidad: 'Cambia velocidad solo por tipo de golpe. El sidespin es más lento que el plano. No siempre acierta la elección.', factor: 'Continuidad: cada 5 golpes 2 son malos. Los errores se dan al intentar cosas que puede imaginar pero no ejecutar.', par: 'Pega plano y con sidespin. Cambia velocidad por tipo de golpe. Su desplazamiento hacia la red es discontinuo y no siempre eficiente.' },
+        5: { nombre: '5ª Categoría', aptitud: 'Impacta plano y con sidespin de un lado. Eventualmente busca sidespin contrario (resultado incierto).', direccion: 'Busca las dos paredes. Dirige a los alambres e intenta sacarla de la cancha (no con buenos resultados).', velocidad: 'Logra variación de velocidad con limitaciones, tanto con sidespin como plano.', factor: 'Continuidad: cada 6 golpes 2 son malos. Error por apurar la definición.', par: 'Puede impactar plano o sidespin con igual habilidad. Dirige a paredes, alambres, etc. Cambia velocidades con buena continuidad. Sus desplazamientos tienen dinámica pero no logra cierres rápidos y eficientes.' },
+        4: { nombre: '4ª Categoría', aptitud: 'Pega con sidespin siempre del mismo lado, y también plano.', direccion: 'Conscientemente busca las paredes eligiendo según conveniencia. Intenta sacar la pelota. Con sidespin busca las dos paredes.', velocidad: 'Cambia velocidad por tipo de golpe (sidespin más lento). Cambia el impulso para traerla (plano).', factor: 'Continuidad: ante inseguridad elige continuar flojo asegurando el tanto. De 6 golpes erra 1.', par: 'Pega con sidespin o plano según conveniencia. Cambia velocidad por tipo. Busca dos paredes con sidespin y logra sacarla. Sus movimientos tienden a la red pero no eficientemente aún.' },
+        3: { nombre: '3ª Categoría', aptitud: 'Impacta plano y con sidespin logrando con mucha eficiencia el resultado buscado.', direccion: 'Busca con facilidad las dos paredes eligiendo a voluntad cuál pegar primero. Dirige a alambres e intenta sacarla con éxito. Busca también el cuerpo del rival.', velocidad: 'Cambia velocidades indistintamente por golpe o por impulso, tanto plano como sidespin.', factor: 'Continuidad: gran salto. Es raro que erre un smash desde Zona II. De 7 golpes erra 1.', par: 'Impacta plano o sidespin de ambos lados. Dirige a ángulos buscados, dos paredes, alambre, cambiando velocidades. Desplazamientos mucho más dinámicos logrando cierre de red con gran eficiencia.' },
+        2: { nombre: '2ª Categoría', aptitud: 'Pega plano y sidespin indistintamente de ambos lados con gran maestría. Pega tanto desde Zona II como Zona III con igual resultado.', direccion: 'Varía dirección a discreción sin dificultad. Saca por alambres o pared de fondo aún cuando la pelota no le queda cómoda. Busca con intención el cuerpo del rival.', velocidad: 'Cambia de velocidad según conveniencia siendo totalmente criterioso. Cuando impacta a traerla se destaca por la eficiencia. Al cambiar velocidad es un gran estratega.', factor: 'Continuidad: de 8 o 9 golpes a 1. No se arriesgan pelotas porque sí, siempre construye el tanto.', par: 'Gran estratega. Pega plano o sidespin según conveniencia desde Zona III. Construye el tanto para definir en el momento adecuado. Excelente lectura de juego. Sus desplazamientos verticales y horizontales son óptimos; superarlo con rasantes es muy difícil.' }
+      }
+    },
+    volea: {
+      nombre: 'Volea',
+      categorias: {
+        7: { nombre: '7ª Categoría', aptitud: 'Bloquea en Zona I tanto de drive como de revés. Puede intentar pegar plano de revés. Voleas con escasa profundidad y alto margen de error.', direccion: 'No posee capacidad de direccionamiento.', velocidad: 'La velocidad depende de la pelota que viene, no de la voluntad del jugador.', factor: 'Profundidad: prácticamente imposible que busque volitivamente la profundidad. Puede salir profunda o no. Característica: volea desde Zona II por deficiente lectura.', par: 'Volea de bloqueo sin direccionamiento ni manejo de velocidad. No maneja profundidad. Se queda parado o retrocede por carencia de desplazamiento.' },
+        6: { nombre: '6ª Categoría', aptitud: 'Bloquea tanto de drive como de revés usando la fuerza del rival.', direccion: 'Intenta buscar los alambres como alternativa de complicación (no lo consigue en gran porcentaje). Con slice de revés suele buscar el medio. En volea alta la angula como si fuese smash.', velocidad: 'Intenta realizar cambios de velocidad frecuentemente pero sin resultados óptimos.', factor: 'Profundidad: busca conscientemente pelotas profundas pero no lo logra la mayoría de las veces.', par: 'Mayoritariamente volea bloqueando. La volea alta la impacta plana. No mantiene posición, comienza a intentar cerrar horizontalmente la red sin lograrlo generalmente.' },
+        5: { nombre: '5ª Categoría', aptitud: 'Impacta con slice tanto de drive como de revés cuando desee. El globo de volea se utiliza con fines de ataque (sin ser eficiente en la mayoría de los casos). La volea alta se pega con mucho slice.', direccion: 'Busca alambres e intenta pelotas profundas tanto de drive como de revés. En volea alta dirige al medio variando su velocidad.', velocidad: 'Comienza a utilizar cambios de velocidad tanto de drive como de revés (plano y slice).', factor: 'Profundidad: trata de que la pelota pique en Zona III pero no lo logra en gran mayoría.', par: 'Puede impactar con slice de drive y revés al igual que la volea alta. El globo se juega con finalidad de ganar la red en ataque. Busca angular a alambres, intenta cambiar velocidades. Desplazamiento vertical más rápido pero el horizontal no es adecuado para cerrar la red.' },
+        4: { nombre: '4ª Categoría', aptitud: 'Bloquea solo cuando la pelota viene con gran velocidad y está a muy corta distancia. El globo de volea lo utiliza de forma defensiva. La volea alta en Zona II se impacta plano y con potencia.', direccion: 'Angula la pelota y busca los alambres. De revés impacta con slice buscando el medio. La volea alta la angula como un smash.', velocidad: 'Busca deliberadamente diferentes ángulos, cambiando la velocidad de impulso de la pelota.', factor: 'Profundidad: busca conscientemente pelotas profundas pero no lo logra en la totalidad de las veces.', par: 'Bloquea solo con potencia del rival. Globo de volea defensivo. Angula y busca alambres. Cambia velocidad según conveniencia. Utiliza desplazamientos verticales y horizontales con muy buen resultado.' },
+        3: { nombre: '3ª Categoría', aptitud: 'Impacta con slice de drive y revés cuando desea. El globo de volea se utiliza con fines de ataque con buenos resultados. La volea alta es impactada con muy buen slice.', direccion: 'Pegando plano puede direccionar para que vuelva al mismo campo. Con slice dirige a ángulos y alambres. En volea alta la dirige en gran porcentaje al medio.', velocidad: 'Usa mucho el cambio de velocidad, jugando a voluntad la pelota corta con mucho slice. Tira corta a picar en Zona I.', factor: 'Profundidad: juega profundo tanto plano como slice, sobretodo slice. Un 50% pican en Zona III.', par: 'Impacta con slice de drive y revés igual que la volea alta. El globo en actitud firme de ataque. Busca angulares a alambres e incluso trae la pelota a su campo. Tira corta para picar en Zona I. Impacta buscando profundidad. Todo con desplazamientos vertical y horizontal rápidos y eficaces.' },
+        2: { nombre: '2ª Categoría', aptitud: 'Pega plano y con slice tanto de drive como de revés sin dificultad alguna. Tanto desde Zona I como Zona II con la misma eficacia.', direccion: 'Habilidad y capacidad para direccionar tanto de revés como de drive hacia alambres, angularla o al cuerpo del rival.', velocidad: 'A voluntad del jugador teniendo en cuenta posición de sus rivales para ganar el tanto. Ejecuta drop con muy buenos resultados.', factor: 'Profundidad: de 8 o 9 golpes, 1 no es profundo.', par: 'No existe dificultad alguna al impactar, tanto de drive como de revés con slice o plano, desde Zona I o Zona II con igual eficiencia, incluso a traerla a su campo. Direcciona según conveniencia. La volea alta es de alta efectividad con slice y profundidad. Cierra de forma efectiva la red con movimientos horizontales y verticales.' }
+      }
+    },
+    fondo: {
+      nombre: 'Pegada de Fondo',
+      categorias: {
+        7: { nombre: '7ª Categoría', aptitud: 'Golpea plano de drive. Levanta en globo de revés. Algunos pueden pegar con slice de drive por deficiencia técnica.', direccion: 'Sin direccionamiento de drive ni de revés. Los tiros paralelos tienen alto porcentaje de error.', velocidad: 'Siempre fuerte con pocos cambios de velocidad, más por defecto que por voluntad.', factor: 'Error: grande, 4/1.', par: 'Pega plano y levanta de revés sin lugar definido. Siempre la misma velocidad, fuerte de drive. No realiza movimientos de posicionamiento hasta que se confirma que la pelota pasó a los rivales; entonces avanza sin llegar a la red.' },
+        6: { nombre: '6ª Categoría', aptitud: 'Pega plano y fuerte de drive (da buenos resultados aún). En tránsito evolutivo comienza a usar slice de drive. De revés intenta levantar de globo por falta de dominio del golpe rasante.', direccion: 'Buen direccionamiento dentro de sus limitaciones. El globo casi siempre cruzado.', velocidad: 'Pega generalmente fuerte, no cambia la velocidad. Cuando tira rasante de revés le imprime menor velocidad por falta de habilidad.', factor: 'Error: sigue siendo alto, 3/1. Se apuran en la definición y pegan todas con igual potencia.', par: 'De drive plano, también con slice en menor proporción. De revés sigue levantando en globo; cuando intenta rasante lo hace de forma poco consistente. Acompaña el golpe con movimiento hacia la red solo cuando pasa la línea de ataque rival.' },
+        5: { nombre: '5ª Categoría', aptitud: 'Tanto de drive como de revés impacta plano o con slice. Juega a media altura intentando cruzarla. Comienza a utilizar el paralelo.', direccion: 'Dirige con igual facilidad hacia cualquier dirección. Los globos cruzados o paralelos según la oportunidad.', velocidad: 'Imprime velocidad o "afloja" de acuerdo a lo más conveniente.', factor: 'Error: al poder manejar velocidades se reduce considerablemente. Cuando la devolución fue con mucha presión reduce la fuerza, logrando mayor seguridad. Cada 4/1.', par: 'Drive y revés plano o con slice. Comienza a manejar direccionamiento y velocidades en ambos lados. Ataca las pelotas aunque no hayan pasado la línea de ataque rival, lo que implica un cambio profundo en actitud y preparación física.' },
+        4: { nombre: '4ª Categoría', aptitud: 'Impacta tanto de drive como de revés plano o slice. De revés tanto rasante como en globo.', direccion: 'Dirige paralelos, cruzados y al medio con buen direccionamiento. Los globos generalmente cruzados.', velocidad: 'Los realiza tanto de drive como de revés (plano o slice).', factor: 'Error: cada 6/1.', par: 'Pegan de drive o revés plano o slice con dirección y cambios de velocidad, con mayor habilidad de drive. Factor de error menor que la categoría anterior. Se posiciona después de ejecutar el golpe e incluso se adelanta para bloquear el smash. El sobrepique aún no lo direccionan. Solo va decididamente a la red cuando pasan definitivamente a los rivales.' },
+        3: { nombre: '3ª Categoría', aptitud: 'Pega de drive o revés con slice o plano sin mayores dificultades.', direccion: 'Direcciona hacia laterales buscando alambres, al medio. Comienza a tirar pelotas muy rasantes para que el rival deba levantar. Globo a discreción, cruzado o paralelo, intentando que sea "llovido".', velocidad: 'Cambia a voluntad tanto de drive como de revés. Al medio fuerte y con potencia; a los laterales suave.', factor: 'Error: 7/1.', par: 'Impacta drive o revés plano o slice. Direcciona hacia cualquier lado según conveniencia. Imprime velocidades para complicar al rival. Una vez impactado avanza con movimientos verticales para contraatacar, también cuando tira suave a los laterales. Siempre tiende a ganar la red aún sin pasar a los rivales con un globo.' },
+        2: { nombre: '2ª Categoría', aptitud: 'Pegan plano o slice tanto de drive como de revés siendo muy hábiles.', direccion: 'Direccionan hacia cualquier lado con igual maestría. Globo cruzado o paralelo a voluntad en forma "llovida" o al rincón. El sobrepique es totalmente direccionado.', velocidad: 'Fuerte cuando es necesario de ambos lados, incluso buscan el cuerpo del rival para que impacten incómodos. Suavidad hacia los laterales muy rasante para que el rival levante y así contraatacar.', factor: 'Error: disminuye de 8 o 9 a 1.', par: 'Pegan slice o plano de drive y revés con total habilidad. Direccionan a voluntad siempre para ganar el tanto. Imprimen cambios de velocidad para presionar desde atrás. Sus movimientos son siempre tendientes hacia la red para ganarla.' }
+      }
+    },
+    pared: {
+      nombre: 'Salida de Pared',
+      categorias: {
+        7: { nombre: '7ª Categoría', aptitud: 'Habitualmente levanta en globo tanto de drive como de revés. El volver contra pared de fondo se usa de forma abusiva y con resultado incierto.', direccion: 'No posee direccionamiento en drive, revés ni globo.', velocidad: 'No posee habilidad para cambiar velocidades. Siempre impacta fuerte.', factor: 'Levantadas: margen de error amplio por falta de habilidad y maestría.', par: 'Se abusa de globos de drive y de revés. De drive sale fuerte y plano. No se levantan pelotas exigidas. Sin movimientos de ataque después del golpe salvo que el rival deba salir de pared de fondo.' },
+        6: { nombre: '6ª Categoría', aptitud: 'En drive se impacta plano y en revés se "acompaña" la pelota. Volver contra pared de fondo con factor de caída 5/2, permite pegarlo con mayor confianza.', direccion: 'De drive busca todas las direcciones; de revés básicamente el medio. Los globos se tratan de buscar cruzados. Contra pared sin direccionamiento.', velocidad: 'Comienza a variar la velocidad tanto de revés como de drive.', factor: 'Levantadas: comienza a levantar pelotas a muy baja altura, por lo general en globo o contra pared.', par: 'Juega de drive y revés. De revés acompaña la pelota generalmente al medio. El globo impactado cruzado; contra pared sin direccionamiento. Comienza a levantar pelotas a poca altura. No ataca si no superó al rival. Cuando lo supera se desplaza verticalmente a comienzo de Zona I.' },
+        5: { nombre: '5ª Categoría', aptitud: 'De drive o revés sale de pared con slice. La salida contra pared de fondo se usa con frecuencia por poder lograr buen factor de caída (5/3).', direccion: 'Busca todas las direcciones con gran porcentaje de acierto. De revés cambia el ángulo. Aún no direcciona el contra pared.', velocidad: 'Cambia velocidad tanto de drive como de revés, pegando plano o con slice.', factor: 'Levantadas: levanta pelotas de baja altura tanto de drive como de revés. Usa el globo en este golpe.', par: 'Tanto de drive como de revés sale plano o con slice, hacia todas las direcciones y manejando la velocidad según la conveniencia. Factor de levantada bueno, saliendo con pelotas flojas hacia costados o al medio. Ataca pelotas no firmes ya sea globo o rasante, flojas o fuertes.' },
+        4: { nombre: '4ª Categoría', aptitud: 'Ha adquirido el desarrollo necesario para impactar tanto de drive como de revés en forma rasante. Contra pared de fondo logra un factor de caída que permite pegar con gran confianza.', direccion: 'De drive busca todas las direcciones. De revés acentúa la pelota al medio. Los globos tanto cruzados como paralelos.', velocidad: 'Tanto de drive como de revés impacta fuerte y "aflojando" hacia costados o al medio.', factor: 'Levantadas: levanta pelotas a muy baja altura por lo general con globos o contra pared con buenos resultados.', par: 'Impacta de drive y revés con gran habilidad imprimiendo diferentes velocidades, direccionando a ángulos, alambres y medio. Comienza a levantar pelotas a baja altura direccionándolas cruzadas y paralelas. Intenta avanzar a Zona II luego de salir con globo o tiro rasante.' },
+        3: { nombre: '3ª Categoría', aptitud: 'Impacta plano o con slice tanto de drive como de revés.', direccion: 'Tanto de drive como de revés muy buen direccionamiento, busca alambres, ángulos y el medio. Los globos paralelos y cruzados.', velocidad: 'Los realiza tanto de drive como de revés, logrando manejo del slice.', factor: 'Levantadas: los realiza a muy baja altura utilizando drive y revés, saliendo con globo o pelota rasante.', par: 'Impacta de drive y revés plano o slice. Direcciona sin dificultad a alambres, ángulos y medio. Imprime cambios de velocidad. Levanta pelotas a muy escasa altura. Luego de impactar intenta tomar la red con movimientos verticales para ganar el tanto.' },
+        2: { nombre: '2ª Categoría', aptitud: 'Pega plano o con slice tanto de drive como de revés sin dificultad.', direccion: 'Direcciona sin dificultad a ángulos, alambres y medio en forma rasante. El globo es dirigido paralelo y cruzado en forma "llovida" dificultando su devolución.', velocidad: 'Los realiza según las circunstancias sin dificultad, tanto de drive como de revés. Al medio más fuerte; a los laterales suave; incluso busca el cuerpo del rival.', factor: 'Levantadas: levanta pelotas de muy baja altura saliendo sin problemas con tiros rasantes, globos cruzados o paralelos.', par: 'Impacta de drive y revés con gran habilidad. Plano o slice. Imprime velocidad según circunstancias y ubicación del rival. Levanta pelotas a muy escasa altura. Sus movimientos verticales son siempre tendientes a ganar la red.' }
+      }
+    }
+  };
+
+  function generarCategoriaHTML(golpeKey) {
+    const golpe = MANUAL_CATEGORIAS[golpeKey];
+    if (!golpe) return '<p>Sin datos</p>';
+    const colores = { 7: 'cat-color-7', 6: 'cat-color-6', 5: 'cat-color-5', 4: 'cat-color-4', 3: 'cat-color-3', 2: 'cat-color-2' };
+    const etiquetas = { 7: 'Principiante', 6: 'Básico', 5: 'Intermedio Bajo', 4: 'Intermedio', 3: 'Avanzado', 2: 'Elite' };
+    let html = '';
+    for (const [num, cat] of Object.entries(golpe.categorias)) {
+      html += `
+        <div class="manual-cat-card">
+          <div class="manual-cat-header ${colores[num]}" onclick="this.nextElementSibling.classList.toggle('open')">
+            <span class="cat-badge cat-${num}">${num}ª</span>
+            <span class="cat-titulo">${cat.nombre}</span>
+            <span class="cat-subtitulo">${etiquetas[num]} ▼</span>
+          </div>
+          <div class="manual-cat-body">
+            <div class="cat-grid">
+              <div class="cat-item">
+                <h5>🎯 Aptitud de Golpe-Impacto</h5>
+                <p>${cat.aptitud}</p>
+              </div>
+              <div class="cat-item">
+                <h5>🧭 Capacidad de Direccionamiento</h5>
+                <p>${cat.direccion}</p>
+              </div>
+              <div class="cat-item">
+                <h5>⚡ Cambios de Velocidad</h5>
+                <p>${cat.velocidad}</p>
+              </div>
+              <div class="cat-item">
+                <h5>📊 Factor Específico</h5>
+                <p>${cat.factor}</p>
+              </div>
+            </div>
+            <div class="cat-par">
+              <strong>Par completo (golpe + desplazamiento):</strong> ${cat.par}
+            </div>
+          </div>
+        </div>`;
+    }
+    return html;
+  }
+
+  function toggleManualSeccion(header) {
+    const body = header.nextElementSibling;
+    body.classList.toggle('collapsed');
+    const icon = header.querySelector('.toggle-icon');
+    if (icon) icon.textContent = body.classList.contains('collapsed') ? '▶' : '▼';
+  }
+
+  function mostrarGolpeManual(golpeKey, btn) {
+    document.querySelectorAll('.manual-golpe-content').forEach(el => el.style.display = 'none');
+    document.querySelectorAll('.manual-golpe-tab').forEach(el => el.classList.remove('active'));
+    const target = document.getElementById(`manual-golpe-${golpeKey}`);
+    if (target) target.style.display = 'block';
+    btn.classList.add('active');
+  }
+
+  // ========== MODAL MIS EVALUACIONES ==========
+  function configurarBotonMisEvaluaciones() {
+    const esAlumno = !(window.currentUserData?.rol === 'profesor' || window.currentUserData?.rol === 'fiscal');
+    const btnMisEval = document.getElementById('btnMisEvaluaciones');
+    if (btnMisEval) btnMisEval.style.display = esAlumno ? 'inline-block' : 'none';
+    if (esAlumno && btnMisEval) {
+      btnMisEval.addEventListener('click', async () => {
+        if (!window.currentUser) return;
+        const modal = document.getElementById('modalMisEvaluaciones');
+        const lista = document.getElementById('misEvaluacionesLista');
+        modal.style.display = 'flex';
+        lista.innerHTML = 'Cargando...';
+        try {
+          const snapshot = await db.collection('evaluaciones')
+            .where('uid', '==', window.currentUser.uid).orderBy('fecha', 'desc').limit(5).get();
+          if (snapshot.empty) { lista.innerHTML = '<p>No tenés evaluaciones guardadas.</p>'; return; }
+          let html = '<ul>';
+          snapshot.docs.forEach(doc => {
+            const eva = doc.data();
+            html += `<li><strong>${eva.golpe}</strong> – ${eva.fechaLocal || 'Sin fecha'} – Promedio: ${calcularPromedioEvaluacion(eva.selecciones)}ª</li>`;
+          });
+          html += '</ul>';
+          lista.innerHTML = html;
+        } catch (err) { lista.innerHTML = `<p>Error: ${err.message}</p>`; }
+      });
+      document.getElementById('cerrarModalMisEval').addEventListener('click', () => {
+        document.getElementById('modalMisEvaluaciones').style.display = 'none';
+      });
+    }
+  }
+
+  // ========== BOTONES ADICIONALES ==========
+  const actualizarGraficoBtn = document.getElementById('actualizarGraficoBtn');
+  if (actualizarGraficoBtn) actualizarGraficoBtn.addEventListener('click', cargarProgreso);
+  const analizarFortalezasBtn = document.getElementById('analizarFortalezasBtn');
+  if (analizarFortalezasBtn) analizarFortalezasBtn.addEventListener('click', analizarFortalezasDebilidades);
+  const cargarComparativaBtn = document.getElementById('cargarComparativaBtn');
+  if (cargarComparativaBtn) cargarComparativaBtn.addEventListener('click', cargarComparativa);
+
+  // ========== INICIALIZAR APP ==========
+  window.renderizarGolpe = renderizarGolpe;
+  window.toggleManualSeccion = toggleManualSeccion;
+  window.mostrarGolpeManual = mostrarGolpeManual;
+
+  window.initApp = function() {
+    if (window.currentUser) {
+      renderizarGolpe('smash');
+      const activeTab = document.querySelector('#mainNav .tab.active');
+      if (activeTab && activeTab.dataset.view) {
+        const view = activeTab.dataset.view;
+        if (view === 'historial') cargarHistorial().catch(console.error);
+        if (view === 'alumnos') cargarAlumnos().catch(console.error);
+        if (view === 'seguimiento') cargarAlumnosSeguimiento().catch(console.error);
+        if (view === 'planificaciones') cargarPlanificacionesAlumno().catch(console.error);
+        if (view === 'nuevaPlanificacion') cargarAlumnosParaPlanificacion().catch(console.error);
+        if (view === 'admin') cargarAdminUsuarios().catch(console.error);
+        if (view === 'progreso') prepararVistaProgreso().catch(console.error);
+        if (view === 'fortalezas') prepararVistaFortalezas().catch(console.error);
+        if (view === 'comparativa') prepararVistaComparativa().catch(console.error);
+        if (view === 'checklist') prepararVistaChecklist().catch(console.error);
+        if (view === 'manual') prepararVistaManual();
+      }
+      configurarBotonMisEvaluaciones();
+    } else {
+      if (golpeContent) golpeContent.innerHTML = '<p style="padding:20px;text-align:center;">Iniciá sesión para comenzar a evaluar.</p>';
+    }
+  };
+
+  if (window.currentUser) window.initApp();
+  else if (golpeContent) golpeContent.innerHTML = '<p style="padding:20px;text-align:center;">Iniciá sesión para comenzar a evaluar.</p>';
+});
