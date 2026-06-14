@@ -145,6 +145,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (view === 'comparativa')         prepararVistaComparativa().catch(console.error);
       if (view === 'checklist')           prepararVistaChecklist().catch(console.error);
       if (view === 'manual')              prepararVistaManual();
+      if (view === 'banco')               prepararVistaBanco().catch(console.error);
     }
   });
 
@@ -1782,7 +1783,7 @@ document.addEventListener('DOMContentLoaded', () => {
               ${generarCategoriaHTML('fondo')}
             </div>
             <div id="manual-golpe-pared" class="manual-golpe-content" style="display:none;">
-        ${generarCategoriaHTML('pared')}
+              ${generarCategoriaHTML('pared')}
             </div>
           </div>
         </div>
@@ -2013,6 +2014,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (view === 'comparativa') prepararVistaComparativa().catch(console.error);
         if (view === 'checklist') prepararVistaChecklist().catch(console.error);
         if (view === 'manual') prepararVistaManual();
+        if (view === 'banco') prepararVistaBanco().catch(console.error);
       }
       configurarBotonMisEvaluaciones();
     } else {
