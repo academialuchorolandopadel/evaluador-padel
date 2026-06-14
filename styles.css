@@ -1010,3 +1010,127 @@ body:not(.sin-sesion) #authOverlay { display: none !important; }
   body { background: white; }
   .ejercicio-item { break-inside: avoid; }
 }
+/* ============================================================
+   BANCO DE EJERCICIOS  (agregar al final de styles.css)
+   ============================================================ */
+.banco-header { margin-bottom: 16px; }
+.banco-header h2 { color: var(--azul); font-family: 'Oswald', sans-serif; }
+.banco-header p { color: var(--texto-secundario); font-size: 0.9rem; margin-top: 4px; }
+
+.banco-filtros {
+  display: flex;
+  gap: 12px;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  background: var(--fondo-tarjeta);
+  padding: 16px;
+  border-radius: var(--radio);
+  box-shadow: var(--sombra);
+  margin-bottom: 20px;
+}
+
+.banco-filtro-grupo { display: flex; flex-direction: column; gap: 4px; }
+.banco-filtro-grupo label { font-size: 0.8rem; font-weight: 600; color: var(--texto-secundario); }
+.banco-filtro-grupo select {
+  padding: 8px 10px;
+  border: 2px solid var(--borde);
+  border-radius: 6px;
+  background: white;
+  font-family: 'Inter', sans-serif;
+}
+
+.banco-lista { display: flex; flex-direction: column; gap: 24px; }
+
+.banco-cat-grupo { display: flex; flex-direction: column; gap: 10px; }
+.banco-cat-titulo {
+  color: var(--azul);
+  font-family: 'Oswald', sans-serif;
+  font-size: 1.05rem;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-bottom: 2px solid var(--dorado);
+  padding-bottom: 6px;
+}
+
+.banco-ejercicio {
+  background: var(--fondo-tarjeta);
+  border-radius: var(--radio);
+  padding: 14px;
+  box-shadow: var(--sombra);
+  border-left: 4px solid var(--azul);
+}
+
+.banco-ej-cabecera {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 6px;
+}
+.banco-ej-cabecera strong { color: var(--azul); font-size: 1rem; }
+
+.banco-cuant-tag {
+  background: var(--dorado-palido);
+  color: #8a6420;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 2px 10px;
+  border-radius: 12px;
+}
+
+.banco-ej-desc { font-size: 0.85rem; color: var(--texto-secundario); margin-bottom: 10px; line-height: 1.5; }
+
+.banco-ej-datos {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  font-size: 0.82rem;
+  color: var(--texto);
+  background: #F4F2EC;
+  padding: 8px 12px;
+  border-radius: 6px;
+  margin-bottom: 10px;
+}
+
+.banco-ej-acciones { display: flex; gap: 8px; flex-wrap: wrap; }
+
+/* Modal del banco */
+.banco-modal {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  background: rgba(0,0,0,0.5);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 10000;
+  padding: 16px;
+}
+
+.banco-modal-card {
+  background: white;
+  padding: 24px;
+  border-radius: 14px;
+  max-width: 460px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+  border-top: 4px solid var(--dorado);
+}
+
+.banco-modal-card h3 { color: var(--azul); margin-bottom: 16px; }
+.banco-form-fila { display: flex; gap: 12px; }
+.banco-form-fila .form-group { flex: 1; }
+.banco-modal-acciones { display: flex; gap: 10px; margin-top: 16px; }
+.banco-modal-acciones .btn-primary,
+.banco-modal-acciones .btn-secondary { flex: 1; justify-content: center; }
+
+@media screen and (max-width: 767px) {
+  .banco-filtros { flex-direction: column; align-items: stretch; }
+  .banco-filtro-grupo select { width: 100%; }
+  .banco-ej-datos { flex-direction: column; gap: 4px; }
+}
